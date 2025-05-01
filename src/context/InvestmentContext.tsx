@@ -2,12 +2,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { toast } from "@/components/ui/sonner";
 import { useAuth } from "./AuthContext";
-import { Investment, Product, Transaction } from "@/types";
+import { Investment, Product, Transaction, WithdrawalRequest } from "@/types";
 
 type InvestmentContextType = {
   products: Product[];
   userInvestments: Investment[];
   transactions: Transaction[];
+  withdrawalRequests: WithdrawalRequest[];
+  platformTrc20Address: string;
   invest: (productId: string, amount: number) => Promise<void>;
   getReferralBonus: (referralCode: string) => Promise<void>;
 };
@@ -45,17 +47,24 @@ const mockProducts: Product[] = [
   }
 ];
 
+// Platform TRC20 address
+const platformTrc20Address = "TRX3DcAfsJPKdHnNdXeZXCqnDmHqNnUUhH";
+
 // Mock investments data
 const mockInvestments: Investment[] = [];
 
 // Mock transactions data
 const mockTransactions: Transaction[] = [];
 
+// Mock withdrawal requests
+const mockWithdrawalRequests: WithdrawalRequest[] = [];
+
 export function InvestmentProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [products] = useState<Product[]>(mockProducts);
   const [userInvestments, setUserInvestments] = useState<Investment[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -66,10 +75,93 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
       // Filter transactions for current user
       const filteredTransactions = mockTransactions.filter(tx => tx.userId === user.id);
       setTransactions(filteredTransactions);
+      
+      // Filter withdrawal requests for current user
+      const filteredWithdrawalRequests = mockWithdrawalRequests.filter(wr => wr.userId === user.id);
+      setWithdrawalRequests(filteredWithdrawalRequests);
     } else {
       setUserInvestments([]);
       setTransactions([]);
+      setWithdrawalRequests([]);
     }
+  }, [user]);
+
+  // Listen for new deposit transactions
+  useEffect(() => {
+    const handleNewTransaction = (event: CustomEvent) => {
+      if (user && event.detail.userId === user.id) {
+        const { userId, type, amount, txHash } = event.detail;
+        
+        // Create transaction
+        const newTransaction: Transaction = {
+          id: `tx_${Date.now()}`,
+          userId,
+          type,
+          amount,
+          status: 'completed', // In a real app, this would be 'pending' until approved
+          date: new Date(),
+          txHash,
+          description: `${type.charAt(0).toUpperCase() + type.slice(1)} via TRC20`
+        };
+
+        // Update mock data
+        mockTransactions.push(newTransaction);
+        
+        // Update state
+        setTransactions(prevTransactions => [...prevTransactions, newTransaction]);
+      }
+    };
+
+    window.addEventListener('newTransaction', handleNewTransaction as EventListener);
+    
+    return () => {
+      window.removeEventListener('newTransaction', handleNewTransaction as EventListener);
+    };
+  }, [user]);
+
+  // Listen for new withdrawal requests
+  useEffect(() => {
+    const handleNewWithdrawalRequest = (event: CustomEvent) => {
+      if (user && event.detail.userId === user.id) {
+        const { userId, amount, trc20Address } = event.detail;
+        
+        // Create withdrawal request
+        const newWithdrawalRequest: WithdrawalRequest = {
+          id: `wr_${Date.now()}`,
+          userId,
+          amount,
+          status: 'pending',
+          date: new Date(),
+          trc20Address
+        };
+
+        // Create transaction for the withdrawal request
+        const newTransaction: Transaction = {
+          id: `tx_${Date.now()}`,
+          userId,
+          type: 'withdrawal',
+          amount: -amount, // Negative as money is leaving balance
+          status: 'pending',
+          date: new Date(),
+          description: `Withdrawal request to ${trc20Address.substring(0, 8)}...`,
+          trc20Address
+        };
+
+        // Update mock data
+        mockWithdrawalRequests.push(newWithdrawalRequest);
+        mockTransactions.push(newTransaction);
+        
+        // Update state
+        setWithdrawalRequests(prevRequests => [...prevRequests, newWithdrawalRequest]);
+        setTransactions(prevTransactions => [...prevTransactions, newTransaction]);
+      }
+    };
+
+    window.addEventListener('newWithdrawalRequest', handleNewWithdrawalRequest as EventListener);
+    
+    return () => {
+      window.removeEventListener('newWithdrawalRequest', handleNewWithdrawalRequest as EventListener);
+    };
   }, [user]);
 
   const invest = async (productId: string, amount: number) => {
@@ -200,7 +292,15 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <InvestmentContext.Provider value={{ products, userInvestments, transactions, invest, getReferralBonus }}>
+    <InvestmentContext.Provider value={{ 
+      products, 
+      userInvestments, 
+      transactions, 
+      withdrawalRequests,
+      platformTrc20Address,
+      invest, 
+      getReferralBonus 
+    }}>
       {children}
     </InvestmentContext.Provider>
   );

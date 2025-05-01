@@ -9,6 +9,7 @@ export type User = {
   referralBonus: number;
   referralCode: string;
   referredBy?: string;
+  trc20Address?: string;
   createdAt: Date;
 };
 
@@ -43,4 +44,16 @@ export type Transaction = {
   status: 'pending' | 'completed' | 'failed';
   date: Date;
   description?: string;
+  trc20Address?: string;
+  txHash?: string;
+};
+
+export type WithdrawalRequest = {
+  id: string;
+  userId: string;
+  amount: number;
+  status: 'pending' | 'approved' | 'rejected';
+  date: Date;
+  trc20Address: string;
+  txHash?: string;
 };

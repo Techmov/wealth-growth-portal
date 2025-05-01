@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -7,20 +7,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { formatDistanceToNow } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/sonner";
 
 const ProfilePage = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateTrc20Address } = useAuth();
   const navigate = useNavigate();
+  const [trc20Address, setTrc20Address] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (!user) {
       navigate("/login");
+    } else if (user.trc20Address) {
+      setTrc20Address(user.trc20Address);
     }
   }, [user, navigate]);
 
   if (!user) {
     return null;
   }
+
+  const handleSaveTrc20Address = async () => {
+    if (!trc20Address) {
+      toast.error("Please enter a valid TRC20 address");
+      return;
+    }
+
+    try {
+      await updateTrc20Address(trc20Address);
+      setIsEditing(false);
+      toast.success("TRC20 address updated successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update TRC20 address");
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -65,6 +87,38 @@ const ProfilePage = () => {
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Referral Code</div>
                     <div className="font-mono font-medium">{user.referralCode}</div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <div className="text-sm text-muted-foreground mb-1">TRC20 Withdrawal Address</div>
+                    {isEditing ? (
+                      <div className="flex gap-2 items-center">
+                        <Input 
+                          value={trc20Address} 
+                          onChange={(e) => setTrc20Address(e.target.value)}
+                          placeholder="Enter your TRC20 address"
+                          className="font-mono"
+                        />
+                        <Button size="sm" onClick={handleSaveTrc20Address}>Save</Button>
+                        <Button size="sm" variant="outline" onClick={() => {
+                          setIsEditing(false);
+                          setTrc20Address(user.trc20Address || "");
+                        }}>Cancel</Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center">
+                        <div className="font-mono font-medium break-all">
+                          {user.trc20Address || "No address set"}
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setIsEditing(true)}
+                        >
+                          {user.trc20Address ? "Change" : "Add"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
