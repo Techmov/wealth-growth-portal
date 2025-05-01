@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, User, Menu, X } from "lucide-react";
+import { LogIn, User, Menu, X, Home, Users, TrendingUp, UserCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -19,10 +19,12 @@ export function Header() {
   };
 
   const navItems = [
-    { title: "Dashboard", path: "/dashboard", authRequired: true },
-    { title: "Investments", path: "/investments", authRequired: true },
-    { title: "Deposit/Withdraw", path: "/transactions", authRequired: true },
-    { title: "Referrals", path: "/referrals", authRequired: true },
+    { title: "Dashboard", path: "/dashboard", icon: Home, authRequired: true },
+    { title: "Investments", path: "/investments", icon: TrendingUp, authRequired: true },
+    { title: "Deposit", path: "/deposit", icon: TrendingUp, authRequired: true },
+    { title: "Withdraw", path: "/withdraw", icon: TrendingUp, authRequired: true },
+    { title: "Referrals", path: "/referrals", icon: Users, authRequired: true },
+    { title: "Profile", path: "/profile", icon: UserCircle, authRequired: true },
   ];
 
   return (
@@ -41,8 +43,9 @@ export function Header() {
               <Link 
                 key={item.path}
                 to={item.path}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
               >
+                <item.icon className="h-4 w-4" />
                 {item.title}
               </Link>
             )
@@ -83,14 +86,14 @@ export function Header() {
         </button>
       </div>
 
-      {/* Mobile Navigation */}
+      {/* Mobile Navigation with solid background */}
       <div
         className={cn(
-          "fixed inset-0 top-16 z-50 flex flex-col bg-background dark:bg-sidebar-background md:hidden",
+          "fixed inset-0 top-16 z-50 flex flex-col bg-background md:hidden",
           mobileMenuOpen ? "animate-in slide-in-from-top" : "hidden"
         )}
         style={{ 
-          backgroundColor: 'var(--background)',
+          backgroundColor: 'var(--background)', // Solid background
           boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
         }}
       >
@@ -100,9 +103,10 @@ export function Header() {
               <Link 
                 key={item.path}
                 to={item.path}
-                className="text-lg py-2 border-b border-muted"
+                className="text-lg py-2 border-b border-muted flex items-center gap-2"
                 onClick={closeMobileMenu}
               >
+                <item.icon className="h-5 w-5" />
                 {item.title}
               </Link>
             )
@@ -110,13 +114,6 @@ export function Header() {
           
           {user ? (
             <>
-              <Link 
-                to="/profile" 
-                className="text-lg py-2 border-b border-muted"
-                onClick={closeMobileMenu}
-              >
-                Profile
-              </Link>
               <Button className="mt-4" onClick={() => { logout(); closeMobileMenu(); }}>
                 Logout
               </Button>

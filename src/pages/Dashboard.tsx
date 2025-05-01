@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -9,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useInvestment } from "@/context/InvestmentContext";
 import { TransactionsList } from "@/components/TransactionsList";
-import { ArrowUp, DollarSign, WalletIcon } from "lucide-react";
+import { ArrowUp, DollarSign, WalletIcon, TrendingUp, Users, UserCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -50,6 +50,45 @@ const Dashboard = () => {
           </p>
         </div>
 
+        {/* Quick Access Navigation Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+          <Link to="/investments" className="block">
+            <Card className="hover:bg-accent/10 transition-colors h-full">
+              <CardContent className="p-4 text-center">
+                <TrendingUp className="mx-auto h-8 w-8 mb-2" />
+                <p className="font-medium">Investments</p>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link to="/deposit" className="block">
+            <Card className="hover:bg-accent/10 transition-colors h-full">
+              <CardContent className="p-4 text-center">
+                <ArrowUp className="mx-auto h-8 w-8 mb-2" />
+                <p className="font-medium">Deposit</p>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link to="/withdraw" className="block">
+            <Card className="hover:bg-accent/10 transition-colors h-full">
+              <CardContent className="p-4 text-center">
+                <ArrowUp className="mx-auto h-8 w-8 mb-2 rotate-180" />
+                <p className="font-medium">Withdraw</p>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link to="/referrals" className="block">
+            <Card className="hover:bg-accent/10 transition-colors h-full">
+              <CardContent className="p-4 text-center">
+                <Users className="mx-auto h-8 w-8 mb-2" />
+                <p className="font-medium">Referrals</p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
@@ -88,11 +127,16 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Active Investments */}
           <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Active Investments</CardTitle>
-              <CardDescription>
-                Your current investment portfolio
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Active Investments</CardTitle>
+                <CardDescription>
+                  Your current investment portfolio
+                </CardDescription>
+              </div>
+              <Button onClick={() => navigate("/investments")} variant="outline" size="sm">
+                View All
+              </Button>
             </CardHeader>
             <CardContent>
               {userInvestments.length > 0 ? (
@@ -161,6 +205,9 @@ const Dashboard = () => {
                     Your latest activity
                   </CardDescription>
                 </div>
+                <Button variant="outline" size="sm" onClick={() => navigate("/transactions")}>
+                  View All
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
