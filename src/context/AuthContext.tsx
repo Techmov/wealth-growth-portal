@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { User } from "@/types";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +10,10 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
-  updateUser: (userData: Partial<User>) => void; // Add this method
+  updateUser: (userData: Partial<User>) => void;
+  updateTrc20Address: (address: string) => Promise<void>;
+  deposit: (amount: number, txHash: string, screenshot?: File) => Promise<void>;
+  requestWithdrawal: (amount: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -117,14 +121,71 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     navigate("/login");
   };
 
-    // Add the updateUser method
-    const updateUser = (userData: Partial<User>) => {
-      if (user) {
-        const updatedUser = { ...user, ...userData };
+  // Add the updateUser method
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    }
+  };
+
+  // Add the updateTrc20Address method
+  const updateTrc20Address = async (address: string) => {
+    if (user) {
+      try {
+        // In a real app, we would make an API call here
+        // For now, we'll just update the local user state
+        const updatedUser = { ...user, trc20Address: address };
         setUser(updatedUser);
         localStorage.setItem("user", JSON.stringify(updatedUser));
+        return Promise.resolve();
+      } catch (error) {
+        return Promise.reject(error);
       }
-    };
+    }
+    return Promise.reject(new Error("User not found"));
+  };
+
+  // Add the deposit method
+  const deposit = async (amount: number, txHash: string, screenshot?: File) => {
+    if (user) {
+      try {
+        // In a real app, we would make an API call here
+        // For now, we'll just update the local user state with a pending deposit
+        toast({
+          title: "Deposit Received",
+          description: "Your deposit request has been received and is pending approval.",
+        });
+        return Promise.resolve();
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }
+    return Promise.reject(new Error("User not found"));
+  };
+
+  // Add the requestWithdrawal method
+  const requestWithdrawal = async (amount: number) => {
+    if (user) {
+      try {
+        if (amount > user.balance) {
+          return Promise.reject(new Error("Insufficient balance"));
+        }
+        
+        // In a real app, we would make an API call here
+        // For now, we'll just update the local user state
+        toast({
+          title: "Withdrawal Requested",
+          description: `Your withdrawal request for $${amount.toFixed(2)} has been submitted for approval.`,
+        });
+        return Promise.resolve();
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }
+    return Promise.reject(new Error("User not found"));
+  };
 
   return (
     <AuthContext.Provider
@@ -134,7 +195,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         login,
         signup,
         logout,
-        updateUser, // Add the updateUser method to the context
+        updateUser,
+        updateTrc20Address,
+        deposit,
+        requestWithdrawal
       }}
     >
       {children}
