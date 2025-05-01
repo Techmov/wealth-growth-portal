@@ -16,6 +16,8 @@ import InvestmentsPage from "./pages/InvestmentsPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import ReferralsPage from "./pages/ReferralsPage";
 import ProfilePage from "./pages/ProfilePage";
+import DepositPage from "./pages/DepositPage";
+import WithdrawalPage from "./pages/WithdrawalPage";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/investments" element={<InvestmentsPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
+              <Route path="/deposit" element={<DepositPage />} />
+              <Route path="/withdraw" element={<WithdrawalPage />} />
               <Route path="/referrals" element={<ReferralsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="*" element={<NotFound />} />

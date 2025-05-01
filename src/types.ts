@@ -10,6 +10,7 @@ export type User = {
   referralCode: string;
   referredBy?: string;
   trc20Address?: string;
+  withdrawalPassword?: string;
   createdAt: Date;
 };
 
@@ -46,6 +47,7 @@ export type Transaction = {
   description?: string;
   trc20Address?: string;
   txHash?: string;
+  depositScreenshot?: string; // Add field for deposit screenshot
 };
 
 export type WithdrawalRequest = {

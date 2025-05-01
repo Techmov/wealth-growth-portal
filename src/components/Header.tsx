@@ -86,9 +86,13 @@ export function Header() {
       {/* Mobile Navigation */}
       <div
         className={cn(
-          "fixed inset-0 top-16 z-50 flex flex-col bg-background md:hidden",
+          "fixed inset-0 top-16 z-50 flex flex-col bg-background dark:bg-sidebar-background md:hidden",
           mobileMenuOpen ? "animate-in slide-in-from-top" : "hidden"
         )}
+        style={{ 
+          backgroundColor: 'var(--background)',
+          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+        }}
       >
         <div className="container py-4 flex flex-col gap-4">
           {navItems.map((item) => 

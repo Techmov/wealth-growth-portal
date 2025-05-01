@@ -1,6 +1,7 @@
 
 import { WithdrawalRequest } from "@/types";
 import { formatDistanceToNow } from "date-fns";
+import { Shield } from "lucide-react";
 
 interface WithdrawalsRequestListProps {
   withdrawalRequests: WithdrawalRequest[];
@@ -68,6 +69,10 @@ export function WithdrawalsRequestList({ withdrawalRequests }: WithdrawalsReques
                 <p className="text-sm text-muted-foreground">
                   {formatDistanceToNow(new Date(request.date), { addSuffix: true })}
                 </p>
+                <div className="flex items-center mt-1">
+                  <Shield className="h-3 w-3 text-primary/70 mr-1" />
+                  <span className="text-xs text-primary/70">Protected by withdrawal password</span>
+                </div>
               </div>
             </div>
             
