@@ -6,7 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { StatCard } from "@/components/StatCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AdminStats, Transaction, User, WithdrawalRequest } from "@/types";
+import { AdminStats } from "@/types";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { DepositApprovals } from "@/components/admin/DepositApprovals";
 import { WithdrawalApprovals } from "@/components/admin/WithdrawalApprovals";
