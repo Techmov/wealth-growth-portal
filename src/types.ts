@@ -12,6 +12,7 @@ export type User = {
   trc20Address?: string;
   withdrawalPassword?: string;
   createdAt: Date;
+  role?: 'user' | 'admin';
 };
 
 export type Investment = {
@@ -42,12 +43,13 @@ export type Transaction = {
   userId: string;
   type: 'deposit' | 'withdrawal' | 'investment' | 'return' | 'referral';
   amount: number;
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'completed' | 'failed' | 'rejected';
   date: Date;
   description?: string;
   trc20Address?: string;
   txHash?: string;
-  depositScreenshot?: string; // Add field for deposit screenshot
+  depositScreenshot?: string; // URL for deposit screenshot
+  rejectionReason?: string; // Reason for rejection
 };
 
 export type WithdrawalRequest = {
@@ -58,4 +60,14 @@ export type WithdrawalRequest = {
   date: Date;
   trc20Address: string;
   txHash?: string;
+  rejectionReason?: string; // Reason for rejection
+};
+
+export type AdminStats = {
+  totalDeposits: number;
+  totalWithdrawals: number;
+  totalReferralBonus: number;
+  pendingDeposits: number;
+  pendingWithdrawals: number;
+  totalUsers: number;
 };

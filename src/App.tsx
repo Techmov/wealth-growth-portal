@@ -18,6 +18,7 @@ import ReferralsPage from "./pages/ReferralsPage";
 import ProfilePage from "./pages/ProfilePage";
 import DepositPage from "./pages/DepositPage";
 import WithdrawalPage from "./pages/WithdrawalPage";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -36,7 +37,7 @@ const App = () => {
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 
-                {/* Protected Routes */}
+                {/* Protected User Routes */}
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/investments" element={<InvestmentsPage />} />
                 <Route path="/transactions" element={<TransactionsPage />} />
@@ -44,6 +45,9 @@ const App = () => {
                 <Route path="/withdraw" element={<WithdrawalPage />} />
                 <Route path="/referrals" element={<ReferralsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                
+                {/* Admin Routes */}
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 
                 {/* Catch all */}
                 <Route path="*" element={<NotFound />} />

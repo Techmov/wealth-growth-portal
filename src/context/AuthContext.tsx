@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { User } from "@/types";
 import { useNavigate } from "react-router-dom";
@@ -14,19 +13,30 @@ interface AuthContextType {
   updateTrc20Address: (address: string) => Promise<void>;
   deposit: (amount: number, txHash: string, screenshot?: File) => Promise<void>;
   requestWithdrawal: (amount: number) => Promise<void>;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Admin credentials
+const ADMIN_EMAIL = "Caltech@gmail.com";
+const ADMIN_PASSWORD = "Caltech2030";
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      // Check if user is admin
+      if (parsedUser.email === ADMIN_EMAIL) {
+        setIsAdmin(true);
+      }
     }
     setIsLoading(false);
   }, []);
@@ -34,6 +44,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      // Check if the user is admin
+      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+        const adminUser: User = {
+          id: "admin-id",
+          name: "Admin",
+          email: ADMIN_EMAIL,
+          balance: 0,
+          totalInvested: 0,
+          totalWithdrawn: 0,
+          referralBonus: 0,
+          referralCode: "ADMIN",
+          createdAt: new Date(),
+          role: "admin"
+        };
+        
+        setUser(adminUser);
+        setIsAdmin(true);
+        localStorage.setItem("user", JSON.stringify(adminUser));
+        
+        toast({
+          title: "Admin Login Successful",
+          description: "Welcome to the admin dashboard.",
+        });
+        
+        navigate("/admin/dashboard");
+        return;
+      }
+
+      // Regular user login
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: "POST",
         headers: {
@@ -74,31 +113,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email, password }),
+      // In a real app, we'd call an API endpoint
+      // Mock successful signup
+      const newUser: User = {
+        id: `user-${Date.now()}`,
+        name,
+        email,
+        balance: 0,
+        totalInvested: 0,
+        totalWithdrawn: 0,
+        referralBonus: 0,
+        referralCode: `REF${Math.floor(Math.random() * 10000)}`,
+        createdAt: new Date(),
+        role: "user"
+      };
+      
+      setUser(newUser);
+      localStorage.setItem("user", JSON.stringify(newUser));
+      
+      toast({
+        title: "Signup Successful",
+        description: "You have successfully signed up.",
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setUser(data.user);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        toast({
-          title: "Signup Successful",
-          description: "You have successfully signed up.",
-        });
-        navigate("/dashboard");
-      } else {
-        toast({
-          title: "Signup Failed",
-          description: data.message || "Failed to create account.",
-          variant: "destructive",
-        });
-      }
+      navigate("/dashboard");
     } catch (error) {
       console.error("Signup error:", error);
       toast({
@@ -153,10 +190,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         // In a real app, we would make an API call here
         // For now, we'll just update the local user state with a pending deposit
+        const screenshotUrl = screenshot ? URL.createObjectURL(screenshot) : undefined;
+        
         toast({
           title: "Deposit Received",
           description: "Your deposit request has been received and is pending approval.",
         });
+        
+        // In a real app, save the deposit with screenshot to backend
+        console.log("Deposit:", { amount, txHash, screenshot: screenshotUrl });
+        
         return Promise.resolve();
       } catch (error) {
         return Promise.reject(error);
@@ -198,7 +241,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         updateUser,
         updateTrc20Address,
         deposit,
-        requestWithdrawal
+        requestWithdrawal,
+        isAdmin
       }}
     >
       {children}

@@ -43,7 +43,9 @@ const SignupPage = () => {
     
     try {
       setIsSubmitting(true);
-      await signup(name, email, password, referralCode);
+      // Removed the referralCode parameter as the signup function only expects 3 args
+      await signup(name, email, password);
+      // Store referral code separately if needed
       navigate("/dashboard");
     } catch (error: any) {
       setError(error.message || "Failed to create account");
