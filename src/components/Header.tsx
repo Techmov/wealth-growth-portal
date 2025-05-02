@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, User, Menu, X, Home, Users, TrendingUp, UserCircle } from "lucide-react";
+import { LogIn, User, Menu, X, Home, Users, TrendingUp, UserCircle, Shield } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,9 @@ export function Header() {
     { title: "Profile", path: "/profile", icon: UserCircle, authRequired: true },
   ];
 
+  // Admin specific navigation item
+  const adminNavItem = { title: "Admin", path: "/admin/dashboard", icon: Shield, authRequired: true, adminOnly: true };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -49,6 +52,17 @@ export function Header() {
                 {item.title}
               </Link>
             )
+          )}
+          
+          {/* Admin Link - Only visible for admins */}
+          {user?.role === 'admin' && (
+            <Link 
+              to={adminNavItem.path}
+              className="text-primary hover:text-primary/80 transition-colors flex items-center gap-2 font-medium"
+            >
+              <adminNavItem.icon className="h-4 w-4" />
+              {adminNavItem.title}
+            </Link>
           )}
         </nav>
 
@@ -110,6 +124,18 @@ export function Header() {
                 {item.title}
               </Link>
             )
+          )}
+          
+          {/* Mobile Admin Link - Only visible for admins */}
+          {user?.role === 'admin' && (
+            <Link 
+              to={adminNavItem.path}
+              className="text-lg py-2 border-b border-muted flex items-center gap-2 text-primary"
+              onClick={closeMobileMenu}
+            >
+              <adminNavItem.icon className="h-5 w-5" />
+              {adminNavItem.title}
+            </Link>
           )}
           
           {user ? (
