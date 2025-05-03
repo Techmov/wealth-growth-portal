@@ -47,7 +47,7 @@ const InvestmentsPage = () => {
             </div>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            All products are designed to double your investment over their duration. Higher risk products have a shorter timeframe but may be more volatile.
+            All products are designed to double your investment over their duration. Fixed investment amounts with varying risk levels.
           </p>
         </div>
 

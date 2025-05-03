@@ -1,8 +1,7 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { toast } from "@/components/ui/sonner";
 import { useAuth } from "./AuthContext";
-import { Investment, Product, Transaction, WithdrawalRequest } from "@/types";
+import { Investment, Product, Transaction, WithdrawalRequest, Downline } from "@/types";
 
 type InvestmentContextType = {
   products: Product[];
@@ -10,39 +9,67 @@ type InvestmentContextType = {
   transactions: Transaction[];
   withdrawalRequests: WithdrawalRequest[];
   platformTrc20Address: string;
-  invest: (productId: string, amount: number) => Promise<void>;
+  invest: (productId: string) => Promise<void>;
   getReferralBonus: (referralCode: string) => Promise<void>;
+  getUserDownlines: () => Downline[];
 };
 
 const InvestmentContext = createContext<InvestmentContextType | undefined>(undefined);
 
-// Mock products data
+// Mock products data with fixed investment amounts
 const mockProducts: Product[] = [
   {
     id: "prod_1",
-    name: "Wealth Starter",
+    name: "Starter Plan",
     description: "Low risk investment that doubles over 30 days. Perfect for beginners.",
-    minAmount: 100,
+    amount: 50,
     duration: 30,
     growthRate: 3.33, // ~100% over 30 days
     risk: "low"
   },
   {
     id: "prod_2",
-    name: "Growth Accelerator",
-    description: "Medium risk investment with higher potential returns. Doubles over 20 days.",
-    minAmount: 500,
+    name: "Basic Plan",
+    description: "Low risk investment that doubles over 30 days.",
+    amount: 100,
+    duration: 30,
+    growthRate: 3.33, // ~100% over 30 days
+    risk: "low"
+  },
+  {
+    id: "prod_3",
+    name: "Standard Plan",
+    description: "Low risk investment with consistent returns over 30 days.",
+    amount: 250,
+    duration: 30,
+    growthRate: 3.33, // ~100% over 30 days
+    risk: "low"
+  },
+  {
+    id: "prod_4",
+    name: "Premium Plan",
+    description: "Medium risk investment with higher potential returns over 30 days.",
+    amount: 500,
+    duration: 30,
+    growthRate: 3.33, // ~100% over 30 days
+    risk: "medium"
+  },
+  {
+    id: "prod_5",
+    name: "Gold Plan",
+    description: "Medium risk investment with higher returns that doubles over 20 days.",
+    amount: 1000,
     duration: 20,
     growthRate: 5, // 100% over 20 days
     risk: "medium"
   },
   {
-    id: "prod_3",
-    name: "Wealth Maximizer",
-    description: "Higher risk with maximum returns. Doubles investment in just 15 days.",
-    minAmount: 1000,
-    duration: 15,
-    growthRate: 6.67, // 100% over 15 days
+    id: "prod_6",
+    name: "Elite Plan",
+    description: "Higher risk with maximum returns over 20 days.",
+    amount: 2000,
+    duration: 20,
+    growthRate: 5, // 100% over 20 days
     risk: "high"
   }
 ];
@@ -231,7 +258,7 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
-  const invest = async (productId: string, amount: number) => {
+  const invest = async (productId: string) => {
     if (!user) {
       toast.error("You must be logged in to invest");
       return;
@@ -243,9 +270,8 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
         throw new Error("Product not found");
       }
 
-      if (amount < product.minAmount) {
-        throw new Error(`Minimum investment amount is $${product.minAmount}`);
-      }
+      // Fixed amount from the product
+      const amount = product.amount;
 
       if (amount > user.balance) {
         throw new Error("Insufficient balance");
@@ -349,13 +375,49 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
         
         // This function now just notifies user that bonuses are automatic
         toast.info("Referral bonuses are now automatically added to your account when a referred user makes a deposit.");
-        // Remove the setReferralCode that's causing the error - we don't need it anymore
       } else {
         toast.error("Invalid referral code");
       }
     } catch (error) {
       toast.error("Failed to process referral code");
     }
+  };
+
+  const getUserDownlines = () => {
+    if (!user) return [];
+
+    // Get all users from storage
+    const allUsers = getStoredData("users", []);
+    const allTransactions = getStoredData("transactions", []);
+    
+    // Filter users referred by the current user
+    const referredUsers = allUsers.filter((u: User) => u.referredBy === user.referralCode);
+    
+    // Map them to downline format
+    const downlines: Downline[] = referredUsers.map((referredUser: User) => {
+      // Calculate total invested by this user
+      const totalInvested = referredUser.totalInvested || 0;
+      
+      // Find referral transactions for this referred user
+      const referralTransactions = allTransactions.filter(
+        (tx: Transaction) => tx.userId === user.id && 
+        tx.type === 'referral' && 
+        tx.description?.includes(referredUser.name || 'unknown')
+      );
+      
+      // Calculate total bonus generated from this user
+      const bonusGenerated = referralTransactions.reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
+      
+      return {
+        id: referredUser.id,
+        username: referredUser.username || referredUser.name || referredUser.email.split('@')[0],
+        totalInvested,
+        bonusGenerated,
+        date: new Date(referredUser.createdAt)
+      };
+    });
+    
+    return downlines;
   };
 
   return (
@@ -366,7 +428,8 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
       withdrawalRequests,
       platformTrc20Address,
       invest, 
-      getReferralBonus 
+      getReferralBonus,
+      getUserDownlines
     }}>
       {children}
     </InvestmentContext.Provider>

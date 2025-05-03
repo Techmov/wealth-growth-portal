@@ -13,6 +13,7 @@ export type User = {
   withdrawalPassword?: string;
   createdAt: Date;
   role?: 'user' | 'admin';
+  username?: string; // Adding username field
 };
 
 export type Investment = {
@@ -32,7 +33,7 @@ export type Product = {
   id: string;
   name: string;
   description: string;
-  minAmount: number;
+  amount: number; // Changed from minAmount to fixed amount
   duration: number; // in days
   growthRate: number; // percentage
   risk: 'low' | 'medium' | 'high';
@@ -70,4 +71,12 @@ export type AdminStats = {
   pendingDeposits: number;
   pendingWithdrawals: number;
   totalUsers: number;
+};
+
+export type Downline = {
+  id: string;
+  username: string;
+  totalInvested: number;
+  bonusGenerated: number;
+  date: Date;
 };

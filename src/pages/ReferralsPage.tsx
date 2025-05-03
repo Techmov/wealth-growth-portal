@@ -6,10 +6,13 @@ import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
+import { useInvestment } from "@/context/InvestmentContext";
 import { toast } from "@/components/ui/sonner";
+import { DownlinesList } from "@/components/DownlinesList";
 
 const ReferralsPage = () => {
   const { user } = useAuth();
+  const { getUserDownlines } = useInvestment();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,6 +27,9 @@ const ReferralsPage = () => {
 
   // Generate referral link
   const referralLink = `${window.location.origin}/signup?ref=${user.referralCode}`;
+  
+  // Get user's downlines
+  const downlines = getUserDownlines();
 
   const copyReferralLink = () => {
     navigator.clipboard.writeText(referralLink);
@@ -109,6 +115,10 @@ const ReferralsPage = () => {
               </div>
             </CardContent>
           </Card>
+          
+          <div className="lg:col-span-2">
+            <DownlinesList downlines={downlines} />
+          </div>
           
           <Card className="lg:col-span-2">
             <CardHeader>
