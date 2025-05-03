@@ -38,19 +38,6 @@ const LoginPage = () => {
     }
   };
 
-  // For demo account login
-  const handleDemoLogin = async () => {
-    try {
-      setIsSubmitting(true);
-      await login("demo@example.com", "password");
-      navigate("/dashboard");
-    } catch (error: any) {
-      setError(error.message || "Failed to login with demo account");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -106,24 +93,6 @@ const LoginPage = () => {
                   {isSubmitting ? "Logging in..." : "Login"}
                 </Button>
               </form>
-              
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or</span>
-                </div>
-              </div>
-              
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleDemoLogin}
-                disabled={isSubmitting}
-              >
-                Try Demo Account
-              </Button>
             </CardContent>
             
             <CardFooter className="flex justify-center">

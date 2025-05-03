@@ -50,14 +50,16 @@ const mockProducts: Product[] = [
 // Platform TRC20 address
 const platformTrc20Address = "TRX3DcAfsJPKdHnNdXeZXCqnDmHqNnUUhH";
 
-// Mock investments data
-const mockInvestments: Investment[] = [];
+// Get persistent storage for data
+const getStoredData = (key: string, defaultValue: any) => {
+  const stored = localStorage.getItem(key);
+  return stored ? JSON.parse(stored) : defaultValue;
+};
 
-// Mock transactions data
-const mockTransactions: Transaction[] = [];
-
-// Mock withdrawal requests
-const mockWithdrawalRequests: WithdrawalRequest[] = [];
+// Save data to persistent storage
+const saveStoredData = (key: string, data: any) => {
+  localStorage.setItem(key, JSON.stringify(data));
+};
 
 export function InvestmentProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -68,16 +70,21 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (user) {
+      // Load data from localStorage
+      const allInvestments = getStoredData("investments", []);
+      const allTransactions = getStoredData("transactions", []);
+      const allWithdrawalRequests = getStoredData("withdrawalRequests", []);
+      
       // Filter investments for current user
-      const filteredInvestments = mockInvestments.filter(inv => inv.userId === user.id);
+      const filteredInvestments = allInvestments.filter(inv => inv.userId === user.id);
       setUserInvestments(filteredInvestments);
       
       // Filter transactions for current user
-      const filteredTransactions = mockTransactions.filter(tx => tx.userId === user.id);
+      const filteredTransactions = allTransactions.filter(tx => tx.userId === user.id);
       setTransactions(filteredTransactions);
       
       // Filter withdrawal requests for current user
-      const filteredWithdrawalRequests = mockWithdrawalRequests.filter(wr => wr.userId === user.id);
+      const filteredWithdrawalRequests = allWithdrawalRequests.filter(wr => wr.userId === user.id);
       setWithdrawalRequests(filteredWithdrawalRequests);
     } else {
       setUserInvestments([]);
@@ -104,11 +111,58 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
           description: `${type.charAt(0).toUpperCase() + type.slice(1)} via TRC20`
         };
 
-        // Update mock data
-        mockTransactions.push(newTransaction);
+        // Update stored data
+        const allTransactions = getStoredData("transactions", []);
+        allTransactions.push(newTransaction);
+        saveStoredData("transactions", allTransactions);
         
         // Update state
         setTransactions(prevTransactions => [...prevTransactions, newTransaction]);
+        
+        // Check if this deposit should trigger a referral bonus
+        if (type === 'deposit' && user.referredBy) {
+          // Calculate referral bonus (10% of deposit amount)
+          const bonusAmount = amount * 0.1;
+          
+          // Find the referring user
+          const allUsers = getStoredData("users", []);
+          const referrer = allUsers.find(u => u.referralCode === user.referredBy);
+          
+          if (referrer) {
+            // Create referral bonus transaction for referrer
+            const referralTransaction: Transaction = {
+              id: `tx_${Date.now() + 1}`,
+              userId: referrer.id,
+              type: 'referral',
+              amount: bonusAmount,
+              status: 'completed',
+              date: new Date(),
+              description: `Referral bonus (10%) from ${user.name}'s deposit`
+            };
+            
+            // Update referrer's balance and referral bonus
+            referrer.balance += bonusAmount;
+            referrer.referralBonus += bonusAmount;
+            
+            // Save updated referrer data
+            const updatedUsers = allUsers.map(u => 
+              u.id === referrer.id ? referrer : u
+            );
+            saveStoredData("users", updatedUsers);
+            
+            // Save referral transaction
+            allTransactions.push(referralTransaction);
+            saveStoredData("transactions", allTransactions);
+            
+            // Dispatch an event to inform the UI about the referral bonus
+            window.dispatchEvent(new CustomEvent('referralBonusAdded', {
+              detail: {
+                userId: referrer.id,
+                amount: bonusAmount
+              }
+            }));
+          }
+        }
       }
     };
 
@@ -147,13 +201,26 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
           trc20Address
         };
 
-        // Update mock data
-        mockWithdrawalRequests.push(newWithdrawalRequest);
-        mockTransactions.push(newTransaction);
+        // Update stored data
+        const allWithdrawalRequests = getStoredData("withdrawalRequests", []);
+        allWithdrawalRequests.push(newWithdrawalRequest);
+        saveStoredData("withdrawalRequests", allWithdrawalRequests);
+        
+        const allTransactions = getStoredData("transactions", []);
+        allTransactions.push(newTransaction);
+        saveStoredData("transactions", allTransactions);
         
         // Update state
         setWithdrawalRequests(prevRequests => [...prevRequests, newWithdrawalRequest]);
         setTransactions(prevTransactions => [...prevTransactions, newTransaction]);
+        
+        // Update pending withdrawals for admin
+        const pendingWithdrawals = getStoredData("pendingWithdrawals", []);
+        pendingWithdrawals.push(newWithdrawalRequest);
+        saveStoredData("pendingWithdrawals", pendingWithdrawals);
+        
+        // Dispatch event to update admin dashboard
+        window.dispatchEvent(new CustomEvent('withdrawalStatusChange'));
       }
     };
 
@@ -215,23 +282,51 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
         description: `Investment in ${product.name}`
       };
 
-      // Update mock data
-      mockInvestments.push(newInvestment);
-      mockTransactions.push(newTransaction);
+      // Update stored data
+      const allInvestments = getStoredData("investments", []);
+      allInvestments.push(newInvestment);
+      saveStoredData("investments", allInvestments);
+      
+      const allTransactions = getStoredData("transactions", []);
+      allTransactions.push(newTransaction);
+      saveStoredData("transactions", allTransactions);
       
       // Update state
       setUserInvestments([...userInvestments, newInvestment]);
       setTransactions([...transactions, newTransaction]);
 
-      // Update user balance (would be done by AuthContext in a real app)
+      // Update user balance 
+      const allUsers = getStoredData("users", []);
+      const updatedUsers = allUsers.map(u => {
+        if (u.id === user.id) {
+          return {
+            ...u,
+            balance: u.balance - amount,
+            totalInvested: u.totalInvested + amount
+          };
+        }
+        return u;
+      });
+      
+      saveStoredData("users", updatedUsers);
+      
+      // Update user in local storage for current session
       const updatedUser = {
         ...user,
         balance: user.balance - amount,
         totalInvested: user.totalInvested + amount
       };
-      localStorage.setItem("wealthUser", JSON.stringify(updatedUser));
+      localStorage.setItem("user", JSON.stringify(updatedUser));
       
       toast.success(`Successfully invested $${amount} in ${product.name}`);
+      
+      // Dispatch event to update UI
+      window.dispatchEvent(new CustomEvent('investmentAdded', {
+        detail: {
+          userId: user.id,
+          amount
+        }
+      }));
       
       // Simulate page reload to reflect updated user data
       window.location.reload();
@@ -252,42 +347,14 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const bonusAmount = 50; // Fixed bonus amount
-        
-        // Create transaction
-        const newTransaction: Transaction = {
-          id: `tx_${Date.now()}`,
-          userId: user.id,
-          type: 'referral',
-          amount: bonusAmount,
-          status: 'completed',
-          date: new Date(),
-          description: `Referral bonus from code ${referralCode}`
-        };
-
-        // Update mock data
-        mockTransactions.push(newTransaction);
-        
-        // Update state
-        setTransactions([...transactions, newTransaction]);
-
-        // Update user balance and referral bonus
-        const updatedUser = {
-          ...user,
-          balance: user.balance + bonusAmount,
-          referralBonus: user.referralBonus + bonusAmount
-        };
-        localStorage.setItem("wealthUser", JSON.stringify(updatedUser));
-        
-        toast.success(`Successfully claimed $${bonusAmount} referral bonus!`);
-        
-        // Simulate page reload to reflect updated user data
-        window.location.reload();
+        // This function now just notifies user that bonuses are automatic
+        toast.info("Referral bonuses are now automatically added to your account when a referred user makes a deposit.");
+        setReferralCode("");
       } else {
         toast.error("Invalid referral code");
       }
     } catch (error) {
-      toast.error("Failed to claim referral bonus");
+      toast.error("Failed to process referral code");
     }
   };
 

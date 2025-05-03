@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -25,7 +26,7 @@ const AdminDashboard = () => {
   
   const updateStats = () => {
     // Calculate stats based on users
-    const users = JSON.parse(localStorage.getItem("adminUsers") || "[]");
+    const users = JSON.parse(localStorage.getItem("users") || "[]");
     
     // Get pending deposits
     const deposits = JSON.parse(localStorage.getItem("pendingDeposits") || "[]");
@@ -56,7 +57,6 @@ const AdminDashboard = () => {
     };
     
     setStats(newStats);
-    localStorage.setItem("adminStats", JSON.stringify(newStats));
   };
   
   useEffect(() => {
@@ -67,17 +67,20 @@ const AdminDashboard = () => {
     const handleDepositStatusChange = () => updateStats();
     const handleWithdrawalStatusChange = () => updateStats();
     const handleUserSignup = () => updateStats();
+    const handleReferralBonusAdded = () => updateStats();
     
     window.addEventListener("userDeleted", handleUserDeleted);
     window.addEventListener("depositStatusChange", handleDepositStatusChange);
     window.addEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
     window.addEventListener("userSignup", handleUserSignup);
+    window.addEventListener("referralBonusAdded", handleReferralBonusAdded);
     
     return () => {
       window.removeEventListener("userDeleted", handleUserDeleted);
       window.removeEventListener("depositStatusChange", handleDepositStatusChange);
       window.removeEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
       window.removeEventListener("userSignup", handleUserSignup);
+      window.removeEventListener("referralBonusAdded", handleReferralBonusAdded);
     };
   }, []);
 
@@ -154,15 +157,15 @@ const AdminDashboard = () => {
           </TabsList>
           
           <TabsContent value="users">
-            <UserManagement />
+            <UserManagement onUserDeleted={updateStats} />
           </TabsContent>
           
           <TabsContent value="deposits">
-            <DepositApprovals />
+            <DepositApprovals onStatusChange={updateStats} />
           </TabsContent>
           
           <TabsContent value="withdrawals">
-            <WithdrawalApprovals />
+            <WithdrawalApprovals onStatusChange={updateStats} />
           </TabsContent>
         </Tabs>
       </main>

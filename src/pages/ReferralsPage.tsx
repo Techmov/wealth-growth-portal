@@ -29,6 +29,14 @@ const ReferralsPage = () => {
     return null;
   }
 
+  // Generate referral link
+  const referralLink = `${window.location.origin}/signup?ref=${user.referralCode}`;
+
+  const copyReferralLink = () => {
+    navigator.clipboard.writeText(referralLink);
+    toast.success("Referral link copied to clipboard");
+  };
+
   const copyReferralCode = () => {
     navigator.clipboard.writeText(user.referralCode);
     toast.success("Referral code copied to clipboard");
@@ -46,9 +54,6 @@ const ReferralsPage = () => {
       setIsClaimingBonus(false);
     }
   };
-
-  // Generate referral link
-  const referralLink = `${window.location.origin}/signup?ref=${user.referralCode}`;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -74,7 +79,7 @@ const ReferralsPage = () => {
               <div className="p-4 bg-muted rounded-md">
                 <p className="font-mono text-sm break-all">{referralLink}</p>
               </div>
-              <Button onClick={copyReferralCode} className="w-full">
+              <Button onClick={copyReferralLink} className="w-full">
                 Copy Referral Link
               </Button>
               
@@ -96,7 +101,7 @@ const ReferralsPage = () => {
             <CardHeader>
               <CardTitle>Referral Rewards</CardTitle>
               <CardDescription>
-                Earn $50 for each friend who signs up and makes an investment
+                Earn 10% of your friend's deposit when they sign up and make an investment
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -129,7 +134,7 @@ const ReferralsPage = () => {
                     {isClaimingBonus ? "Claiming..." : "Claim Bonus"}
                   </Button>
                   <p className="text-xs text-center text-muted-foreground">
-                    Enter a valid referral code to claim your $50 bonus
+                    Enter a valid referral code to claim your bonus
                   </p>
                 </form>
               </div>
@@ -171,7 +176,7 @@ const ReferralsPage = () => {
                   </div>
                   <h3 className="font-semibold mb-2">You Get Rewarded</h3>
                   <p className="text-sm text-muted-foreground">
-                    Earn a $50 bonus for each friend who joins and invests.
+                    Earn 10% of your friend's deposit amount automatically added to your balance.
                   </p>
                 </div>
               </div>
