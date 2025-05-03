@@ -24,17 +24,69 @@ const AdminDashboard = () => {
     totalUsers: 0,
   });
   
-  useEffect(() => {
-    // In a real app, fetch stats from backend
-    // For now, we'll use mock data
-    setStats({
-      totalDeposits: 45000,
-      totalWithdrawals: 28000,
-      totalReferralBonus: 3200,
-      pendingDeposits: 5,
-      pendingWithdrawals: 12,
-      totalUsers: 87,
+  const updateStats = () => {
+    // Check for stored stats first
+    const storedStats = localStorage.getItem("adminStats");
+    if (storedStats) {
+      setStats(JSON.parse(storedStats));
+      return;
+    }
+
+    // Calculate stats based on users
+    const users = JSON.parse(localStorage.getItem("adminUsers") || "[]");
+    
+    // Get pending deposits
+    const deposits = JSON.parse(localStorage.getItem("pendingDeposits") || "[]");
+    const pendingDeposits = deposits.filter(d => d.status === "pending").length;
+    
+    // Get pending withdrawals
+    const withdrawals = JSON.parse(localStorage.getItem("pendingWithdrawals") || "[]");
+    const pendingWithdrawals = withdrawals.filter(w => w.status === "pending").length;
+    
+    // Calculate totals from users
+    let totalDeposits = 0;
+    let totalWithdrawals = 0;
+    let totalReferralBonus = 0;
+    
+    users.forEach(user => {
+      totalDeposits += user.totalInvested || 0;
+      totalWithdrawals += user.totalWithdrawn || 0;
+      totalReferralBonus += user.referralBonus || 0;
     });
+    
+    const newStats = {
+      totalDeposits,
+      totalWithdrawals,
+      totalReferralBonus,
+      pendingDeposits,
+      pendingWithdrawals,
+      totalUsers: users.length,
+    };
+    
+    setStats(newStats);
+    localStorage.setItem("adminStats", JSON.stringify(newStats));
+  };
+  
+  useEffect(() => {
+    updateStats();
+    
+    // Listen for events that should trigger stats update
+    const handleUserDeleted = () => updateStats();
+    const handleDepositStatusChange = () => updateStats();
+    const handleWithdrawalStatusChange = () => updateStats();
+    const handleUserSignup = () => updateStats();
+    
+    window.addEventListener("userDeleted", handleUserDeleted);
+    window.addEventListener("depositStatusChange", handleDepositStatusChange);
+    window.addEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
+    window.addEventListener("userSignup", handleUserSignup);
+    
+    return () => {
+      window.removeEventListener("userDeleted", handleUserDeleted);
+      window.removeEventListener("depositStatusChange", handleDepositStatusChange);
+      window.removeEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
+      window.removeEventListener("userSignup", handleUserSignup);
+    };
   }, []);
 
   if (isLoading) {

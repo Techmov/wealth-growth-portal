@@ -33,35 +33,41 @@ export function WithdrawalApprovals() {
 
   useEffect(() => {
     // In a real app, fetch pending withdrawals from backend
-    // For now, we'll use mock data
-    const mockWithdrawals: WithdrawalRequest[] = [
-      {
-        id: "withdrawal-1",
-        userId: "user-1",
-        amount: 500,
-        status: "pending",
-        date: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-        trc20Address: "TXyz123..."
-      },
-      {
-        id: "withdrawal-2",
-        userId: "user-2",
-        amount: 1200,
-        status: "pending",
-        date: new Date(Date.now() - 1000 * 60 * 60 * 8), // 8 hours ago
-        trc20Address: "TAbc456..."
-      },
-      {
-        id: "withdrawal-3",
-        userId: "user-3",
-        amount: 350,
-        status: "pending",
-        date: new Date(Date.now() - 1000 * 60 * 60 * 14), // 14 hours ago
-        trc20Address: "TDef789..."
-      }
-    ];
-    
-    setWithdrawals(mockWithdrawals);
+    // For now, check localStorage first or use mock data
+    const storedWithdrawals = localStorage.getItem("pendingWithdrawals");
+    if (storedWithdrawals) {
+      setWithdrawals(JSON.parse(storedWithdrawals));
+    } else {
+      const mockWithdrawals: WithdrawalRequest[] = [
+        {
+          id: "withdrawal-1",
+          userId: "user-1",
+          amount: 500,
+          status: "pending",
+          date: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
+          trc20Address: "TXyz123..."
+        },
+        {
+          id: "withdrawal-2",
+          userId: "user-2",
+          amount: 1200,
+          status: "pending",
+          date: new Date(Date.now() - 1000 * 60 * 60 * 8), // 8 hours ago
+          trc20Address: "TAbc456..."
+        },
+        {
+          id: "withdrawal-3",
+          userId: "user-3",
+          amount: 350,
+          status: "pending",
+          date: new Date(Date.now() - 1000 * 60 * 60 * 14), // 14 hours ago
+          trc20Address: "TDef789..."
+        }
+      ];
+      
+      setWithdrawals(mockWithdrawals);
+      localStorage.setItem("pendingWithdrawals", JSON.stringify(mockWithdrawals));
+    }
   }, []);
 
   const handleApprove = (withdrawalId: string) => {
@@ -74,12 +80,31 @@ export function WithdrawalApprovals() {
       return;
     }
     
-    // In a real app, call API to approve withdrawal
-    setWithdrawals(withdrawals.map(withdrawal => 
-      withdrawal.id === withdrawalId 
-        ? { ...withdrawal, status: "approved", txHash } 
-        : withdrawal
-    ));
+    // Find the withdrawal to approve
+    const withdrawal = withdrawals.find(w => w.id === withdrawalId);
+    if (!withdrawal) return;
+    
+    // Update withdrawal status
+    const updatedWithdrawals = withdrawals.map(w => 
+      w.id === withdrawalId 
+        ? { ...w, status: "approved", txHash } 
+        : w
+    );
+    
+    setWithdrawals(updatedWithdrawals);
+    localStorage.setItem("pendingWithdrawals", JSON.stringify(updatedWithdrawals));
+    
+    // Update admin stats
+    const currentStats = JSON.parse(localStorage.getItem("adminStats") || "{}");
+    const newStats = {
+      ...currentStats,
+      totalWithdrawals: (currentStats.totalWithdrawals || 0) + withdrawal.amount,
+      pendingWithdrawals: Math.max(0, (currentStats.pendingWithdrawals || 0) - 1)
+    };
+    localStorage.setItem("adminStats", JSON.stringify(newStats));
+    
+    // Dispatch event for stats update
+    window.dispatchEvent(new CustomEvent("withdrawalStatusChange"));
     
     setTxHash("");
     
@@ -106,12 +131,26 @@ export function WithdrawalApprovals() {
       return;
     }
     
-    // In a real app, call API to reject withdrawal
-    setWithdrawals(withdrawals.map(withdrawal => 
-      withdrawal.id === selectedWithdrawal 
-        ? { ...withdrawal, status: "rejected", rejectionReason } 
-        : withdrawal
-    ));
+    // Update withdrawal status
+    const updatedWithdrawals = withdrawals.map(w => 
+      w.id === selectedWithdrawal 
+        ? { ...w, status: "rejected", rejectionReason } 
+        : w
+    );
+    
+    setWithdrawals(updatedWithdrawals);
+    localStorage.setItem("pendingWithdrawals", JSON.stringify(updatedWithdrawals));
+    
+    // Update admin stats
+    const currentStats = JSON.parse(localStorage.getItem("adminStats") || "{}");
+    const newStats = {
+      ...currentStats,
+      pendingWithdrawals: Math.max(0, (currentStats.pendingWithdrawals || 0) - 1)
+    };
+    localStorage.setItem("adminStats", JSON.stringify(newStats));
+    
+    // Dispatch event for stats update
+    window.dispatchEvent(new CustomEvent("withdrawalStatusChange"));
     
     setRejectDialogOpen(false);
     setSelectedWithdrawal(null);

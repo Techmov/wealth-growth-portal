@@ -14,28 +14,16 @@ const WithdrawalPage = () => {
 
   useEffect(() => {
     // In a real app, you would fetch withdrawal requests from your backend
-    // This is just mock data for demonstration
     if (user) {
-      const mockRequests: WithdrawalRequest[] = [
-        {
-          id: "wr1",
-          userId: user.id,
-          amount: 100,
-          status: "pending",
-          date: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-          trc20Address: user.trc20Address || "",
-        },
-        {
-          id: "wr2",
-          userId: user.id,
-          amount: 50,
-          status: "approved",
-          date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-          trc20Address: user.trc20Address || "",
-          txHash: "0x123456789abcdef0123456789abcdef0123456789abcdef",
-        },
-      ];
-      setWithdrawalRequests(mockRequests);
+      // Check if the user has any withdrawal requests stored
+      const userWithdrawals = localStorage.getItem(`withdrawals_${user.id}`);
+      if (userWithdrawals) {
+        setWithdrawalRequests(JSON.parse(userWithdrawals));
+      } else {
+        // New users should have no withdrawal history
+        setWithdrawalRequests([]);
+        localStorage.setItem(`withdrawals_${user.id}`, JSON.stringify([]));
+      }
     }
   }, [user]);
 

@@ -26,53 +26,89 @@ export function DepositApprovals() {
 
   useEffect(() => {
     // In a real app, fetch pending deposits from backend
-    // For now, we'll use mock data
-    const mockDeposits: Transaction[] = [
-      {
-        id: "deposit-1",
-        userId: "user-1",
-        type: "deposit",
-        amount: 1000,
-        status: "pending",
-        date: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-        trc20Address: "TXyz123...",
-        txHash: "0x123456...",
-        depositScreenshot: "https://via.placeholder.com/800x600?text=Deposit+Screenshot+1"
-      },
-      {
-        id: "deposit-2",
-        userId: "user-2",
-        type: "deposit",
-        amount: 2500,
-        status: "pending",
-        date: new Date(Date.now() - 1000 * 60 * 60 * 6), // 6 hours ago
-        trc20Address: "TAbc456...",
-        txHash: "0x789012...",
-        depositScreenshot: "https://via.placeholder.com/800x600?text=Deposit+Screenshot+2"
-      },
-      {
-        id: "deposit-3",
-        userId: "user-3",
-        type: "deposit",
-        amount: 500,
-        status: "pending",
-        date: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
-        trc20Address: "TDef789...",
-        txHash: "0x345678...",
-        depositScreenshot: "https://via.placeholder.com/800x600?text=Deposit+Screenshot+3"
-      }
-    ];
-    
-    setDeposits(mockDeposits);
+    // For now, check localStorage first or use mock data
+    const storedDeposits = localStorage.getItem("pendingDeposits");
+    if (storedDeposits) {
+      setDeposits(JSON.parse(storedDeposits));
+    } else {
+      const mockDeposits: Transaction[] = [
+        {
+          id: "deposit-1",
+          userId: "user-1",
+          type: "deposit",
+          amount: 1000,
+          status: "pending",
+          date: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+          trc20Address: "TXyz123...",
+          txHash: "0x123456...",
+          depositScreenshot: "https://via.placeholder.com/800x600?text=Deposit+Screenshot+1"
+        },
+        {
+          id: "deposit-2",
+          userId: "user-2",
+          type: "deposit",
+          amount: 2500,
+          status: "pending",
+          date: new Date(Date.now() - 1000 * 60 * 60 * 6), // 6 hours ago
+          trc20Address: "TAbc456...",
+          txHash: "0x789012...",
+          depositScreenshot: "https://via.placeholder.com/800x600?text=Deposit+Screenshot+2"
+        },
+        {
+          id: "deposit-3",
+          userId: "user-3",
+          type: "deposit",
+          amount: 500,
+          status: "pending",
+          date: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
+          trc20Address: "TDef789...",
+          txHash: "0x345678...",
+          depositScreenshot: "https://via.placeholder.com/800x600?text=Deposit+Screenshot+3"
+        }
+      ];
+      
+      setDeposits(mockDeposits);
+      localStorage.setItem("pendingDeposits", JSON.stringify(mockDeposits));
+    }
   }, []);
 
   const handleApprove = (depositId: string) => {
-    // In a real app, call API to approve deposit
-    setDeposits(deposits.map(deposit => 
-      deposit.id === depositId 
-        ? { ...deposit, status: "completed" } 
-        : deposit
-    ));
+    // Find the deposit to approve
+    const deposit = deposits.find(d => d.id === depositId);
+    if (!deposit) return;
+
+    // Update the deposit status
+    const updatedDeposits = deposits.map(d => 
+      d.id === depositId ? { ...d, status: "completed" } : d
+    );
+    
+    setDeposits(updatedDeposits);
+    localStorage.setItem("pendingDeposits", JSON.stringify(updatedDeposits));
+    
+    // Update admin stats
+    const currentStats = JSON.parse(localStorage.getItem("adminStats") || "{}");
+    const newStats = {
+      ...currentStats,
+      totalDeposits: (currentStats.totalDeposits || 0) + deposit.amount,
+      pendingDeposits: Math.max(0, (currentStats.pendingDeposits || 0) - 1)
+    };
+    localStorage.setItem("adminStats", JSON.stringify(newStats));
+    
+    // Update user balance if they exist
+    const users = JSON.parse(localStorage.getItem("adminUsers") || "[]");
+    const updatedUsers = users.map(user => {
+      if (user.id === deposit.userId) {
+        return {
+          ...user,
+          balance: (user.balance || 0) + deposit.amount
+        };
+      }
+      return user;
+    });
+    localStorage.setItem("adminUsers", JSON.stringify(updatedUsers));
+    
+    // Dispatch event for stats update
+    window.dispatchEvent(new CustomEvent("depositStatusChange"));
     
     toast({
       title: "Deposit Approved",
@@ -81,12 +117,28 @@ export function DepositApprovals() {
   };
 
   const handleReject = (depositId: string) => {
-    // In a real app, call API to reject deposit
-    setDeposits(deposits.map(deposit => 
-      deposit.id === depositId 
-        ? { ...deposit, status: "failed" } 
-        : deposit
-    ));
+    // Find the deposit to reject
+    const deposit = deposits.find(d => d.id === depositId);
+    if (!deposit) return;
+
+    // Update the deposit status
+    const updatedDeposits = deposits.map(d => 
+      d.id === depositId ? { ...d, status: "failed" } : d
+    );
+    
+    setDeposits(updatedDeposits);
+    localStorage.setItem("pendingDeposits", JSON.stringify(updatedDeposits));
+    
+    // Update admin stats
+    const currentStats = JSON.parse(localStorage.getItem("adminStats") || "{}");
+    const newStats = {
+      ...currentStats,
+      pendingDeposits: Math.max(0, (currentStats.pendingDeposits || 0) - 1)
+    };
+    localStorage.setItem("adminStats", JSON.stringify(newStats));
+    
+    // Dispatch event for stats update
+    window.dispatchEvent(new CustomEvent("depositStatusChange"));
     
     toast({
       title: "Deposit Rejected",
