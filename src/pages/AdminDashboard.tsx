@@ -13,6 +13,16 @@ import { WithdrawalApprovals } from "@/components/admin/WithdrawalApprovals";
 import { DollarSign, LogOut, Users, Download, Upload, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+interface AdminComponentProps {
+  onUserDeleted?: () => void;
+  onStatusChange?: () => void;
+}
+
+// Create a HOC to pass the props correctly
+const withAdminProps = (Component: React.ComponentType<AdminComponentProps>, props: AdminComponentProps) => {
+  return <Component {...props} />;
+};
+
 const AdminDashboard = () => {
   const { user, isLoading, isAdmin, logout } = useAuth();
   const [stats, setStats] = useState<AdminStats>({
@@ -157,15 +167,15 @@ const AdminDashboard = () => {
           </TabsList>
           
           <TabsContent value="users">
-            <UserManagement onUserDeleted={updateStats} />
+            {withAdminProps(UserManagement, { onUserDeleted: updateStats })}
           </TabsContent>
           
           <TabsContent value="deposits">
-            <DepositApprovals onStatusChange={updateStats} />
+            {withAdminProps(DepositApprovals, { onStatusChange: updateStats })}
           </TabsContent>
           
           <TabsContent value="withdrawals">
-            <WithdrawalApprovals onStatusChange={updateStats} />
+            {withAdminProps(WithdrawalApprovals, { onStatusChange: updateStats })}
           </TabsContent>
         </Tabs>
       </main>

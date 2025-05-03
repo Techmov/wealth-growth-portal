@@ -349,7 +349,7 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
         
         // This function now just notifies user that bonuses are automatic
         toast.info("Referral bonuses are now automatically added to your account when a referred user makes a deposit.");
-        setReferralCode("");
+        // Remove the setReferralCode that's causing the error - we don't need it anymore
       } else {
         toast.error("Invalid referral code");
       }

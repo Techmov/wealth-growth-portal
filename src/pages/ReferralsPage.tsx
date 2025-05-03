@@ -1,22 +1,15 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
-import { useInvestment } from "@/context/InvestmentContext";
 import { toast } from "@/components/ui/sonner";
 
 const ReferralsPage = () => {
   const { user } = useAuth();
-  const { getReferralBonus } = useInvestment();
-  const [referralCode, setReferralCode] = useState("");
-  const [isClaimingBonus, setIsClaimingBonus] = useState(false);
-  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,19 +33,6 @@ const ReferralsPage = () => {
   const copyReferralCode = () => {
     navigator.clipboard.writeText(user.referralCode);
     toast.success("Referral code copied to clipboard");
-  };
-
-  const handleClaimBonus = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!referralCode) return;
-    
-    try {
-      setIsClaimingBonus(true);
-      await getReferralBonus(referralCode);
-      setReferralCode("");
-    } finally {
-      setIsClaimingBonus(false);
-    }
   };
 
   return (
@@ -101,7 +81,7 @@ const ReferralsPage = () => {
             <CardHeader>
               <CardTitle>Referral Rewards</CardTitle>
               <CardDescription>
-                Earn 10% of your friend's deposit when they sign up and make an investment
+                Earn 10% of your friend's deposit when they sign up and make a deposit
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -116,27 +96,16 @@ const ReferralsPage = () => {
               </div>
               
               <div className="border-t pt-4">
-                <form onSubmit={handleClaimBonus} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="claim-code">Claim a Referral Bonus</Label>
-                    <Input
-                      id="claim-code"
-                      placeholder="Enter referral code"
-                      value={referralCode}
-                      onChange={(e) => setReferralCode(e.target.value)}
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={!referralCode || isClaimingBonus}
-                  >
-                    {isClaimingBonus ? "Claiming..." : "Claim Bonus"}
-                  </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    Enter a valid referral code to claim your bonus
+                <div className="p-4 bg-green-50 border border-green-100 rounded-md">
+                  <h3 className="font-medium text-green-700 mb-2">Automatic Referral Bonuses</h3>
+                  <p className="text-sm text-green-600 mb-2">
+                    When your friend signs up using your link and makes a deposit, you automatically receive 10% of 
+                    their deposit amount in your account balance.
                   </p>
-                </form>
+                  <p className="text-sm text-green-600 font-semibold">
+                    No claims needed - bonuses are added instantly!
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -164,9 +133,9 @@ const ReferralsPage = () => {
                   <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
                     2
                   </div>
-                  <h3 className="font-semibold mb-2">They Sign Up</h3>
+                  <h3 className="font-semibold mb-2">They Sign Up & Deposit</h3>
                   <p className="text-sm text-muted-foreground">
-                    When they create an account using your link or enter your code.
+                    When they create an account using your link and make their first deposit.
                   </p>
                 </div>
                 
@@ -174,7 +143,7 @@ const ReferralsPage = () => {
                   <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
                     3
                   </div>
-                  <h3 className="font-semibold mb-2">You Get Rewarded</h3>
+                  <h3 className="font-semibold mb-2">You Get Rewarded Instantly</h3>
                   <p className="text-sm text-muted-foreground">
                     Earn 10% of your friend's deposit amount automatically added to your balance.
                   </p>
