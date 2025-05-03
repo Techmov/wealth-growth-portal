@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { toast } from "@/components/ui/sonner";
 import { useAuth } from "./AuthContext";
-import { Investment, Product, Transaction, WithdrawalRequest, Downline } from "@/types";
+import { Investment, Product, Transaction, WithdrawalRequest, Downline, User } from "@/types";
 
 type InvestmentContextType = {
   products: Product[];
@@ -373,7 +373,7 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // This function now just notifies user that bonuses are automatic
+        // This function now just notifies user that bonuses are automatically added
         toast.info("Referral bonuses are now automatically added to your account when a referred user makes a deposit.");
       } else {
         toast.error("Invalid referral code");
