@@ -85,9 +85,9 @@ export function WithdrawalApprovals() {
     if (!withdrawal) return;
     
     // Update withdrawal status
-    const updatedWithdrawals = withdrawals.map(w => 
+    const updatedWithdrawals: WithdrawalRequest[] = withdrawals.map(w => 
       w.id === withdrawalId 
-        ? { ...w, status: "approved", txHash } 
+        ? { ...w, status: "approved" as const, txHash } 
         : w
     );
     
@@ -132,9 +132,9 @@ export function WithdrawalApprovals() {
     }
     
     // Update withdrawal status
-    const updatedWithdrawals = withdrawals.map(w => 
+    const updatedWithdrawals: WithdrawalRequest[] = withdrawals.map(w => 
       w.id === selectedWithdrawal 
-        ? { ...w, status: "rejected", rejectionReason } 
+        ? { ...w, status: "rejected" as const, rejectionReason } 
         : w
     );
     

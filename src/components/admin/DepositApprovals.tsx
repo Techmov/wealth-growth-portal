@@ -78,8 +78,8 @@ export function DepositApprovals() {
     if (!deposit) return;
 
     // Update the deposit status
-    const updatedDeposits = deposits.map(d => 
-      d.id === depositId ? { ...d, status: "completed" } : d
+    const updatedDeposits: Transaction[] = deposits.map(d => 
+      d.id === depositId ? { ...d, status: "completed" as const } : d
     );
     
     setDeposits(updatedDeposits);
@@ -122,8 +122,8 @@ export function DepositApprovals() {
     if (!deposit) return;
 
     // Update the deposit status
-    const updatedDeposits = deposits.map(d => 
-      d.id === depositId ? { ...d, status: "failed" } : d
+    const updatedDeposits: Transaction[] = deposits.map(d => 
+      d.id === depositId ? { ...d, status: "failed" as const } : d
     );
     
     setDeposits(updatedDeposits);

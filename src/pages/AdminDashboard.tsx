@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -25,13 +24,6 @@ const AdminDashboard = () => {
   });
   
   const updateStats = () => {
-    // Check for stored stats first
-    const storedStats = localStorage.getItem("adminStats");
-    if (storedStats) {
-      setStats(JSON.parse(storedStats));
-      return;
-    }
-
     // Calculate stats based on users
     const users = JSON.parse(localStorage.getItem("adminUsers") || "[]");
     
@@ -43,7 +35,7 @@ const AdminDashboard = () => {
     const withdrawals = JSON.parse(localStorage.getItem("pendingWithdrawals") || "[]");
     const pendingWithdrawals = withdrawals.filter(w => w.status === "pending").length;
     
-    // Calculate totals from users
+    // Calculate totals from users and transactions
     let totalDeposits = 0;
     let totalWithdrawals = 0;
     let totalReferralBonus = 0;
