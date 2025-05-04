@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -9,17 +9,37 @@ import { useAuth } from "@/context/AuthContext";
 import { useInvestment } from "@/context/InvestmentContext";
 import { toast } from "@/components/ui/sonner";
 import { DownlinesList } from "@/components/DownlinesList";
+import { Downline } from "@/types";
 
 const ReferralsPage = () => {
   const { user } = useAuth();
   const { getUserDownlines } = useInvestment();
   const navigate = useNavigate();
+  const [downlines, setDownlines] = useState<Downline[]>([]);
 
   useEffect(() => {
     if (!user) {
       navigate("/login");
+      return;
     }
-  }, [user, navigate]);
+    
+    // Get user's downlines
+    const userDownlines = getUserDownlines();
+    setDownlines(userDownlines);
+    
+    // Listen for events that should trigger downlines update
+    const handleDownlineUpdate = () => {
+      setDownlines(getUserDownlines());
+    };
+    
+    window.addEventListener("referralBonusAdded", handleDownlineUpdate);
+    window.addEventListener("userSignup", handleDownlineUpdate);
+    
+    return () => {
+      window.removeEventListener("referralBonusAdded", handleDownlineUpdate);
+      window.removeEventListener("userSignup", handleDownlineUpdate);
+    };
+  }, [user, navigate, getUserDownlines]);
 
   if (!user) {
     return null;
@@ -27,9 +47,6 @@ const ReferralsPage = () => {
 
   // Generate referral link
   const referralLink = `${window.location.origin}/signup?ref=${user.referralCode}`;
-  
-  // Get user's downlines
-  const downlines = getUserDownlines();
 
   const copyReferralLink = () => {
     navigator.clipboard.writeText(referralLink);

@@ -28,7 +28,7 @@ export function DownlinesList({ downlines }: DownlinesListProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your Downlines</CardTitle>
+        <CardTitle>Your Downlines ({downlines.length})</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>

@@ -398,12 +398,12 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
       // Calculate total invested by this user
       const totalInvested = referredUser.totalInvested || 0;
       
-      // Find referral transactions for this referred user's deposits
+      // Find referral transactions for this referred user
       const referralTransactions = allTransactions.filter(
         (tx: Transaction) => 
           tx.userId === user.id && 
           tx.type === 'referral' &&
-          tx.description?.includes(referredUser.name)
+          tx.description?.includes(referredUser.name || referredUser.email)
       );
       
       // Calculate total bonus generated from this user
@@ -411,7 +411,7 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
       
       return {
         id: referredUser.id,
-        username: referredUser.username || referredUser.name || referredUser.email.split('@')[0],
+        username: referredUser.name || referredUser.email.split('@')[0],
         totalInvested,
         bonusGenerated,
         date: referredUser.createdAt ? new Date(referredUser.createdAt) : new Date()

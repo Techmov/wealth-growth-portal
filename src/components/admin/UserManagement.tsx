@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/components/ui/toast";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -30,9 +30,8 @@ export function UserManagement() {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   useEffect(() => {
-    // In a real app, fetch users from backend
-    // For now, we'll use mock data from localStorage or create default if not exists
-    const storedUsers = localStorage.getItem("adminUsers");
+    // Load users from localStorage
+    const storedUsers = localStorage.getItem("users");
     if (storedUsers) {
       setUsers(JSON.parse(storedUsers));
     } else {
@@ -76,7 +75,7 @@ export function UserManagement() {
       ];
       
       setUsers(mockUsers);
-      localStorage.setItem("adminUsers", JSON.stringify(mockUsers));
+      localStorage.setItem("users", JSON.stringify(mockUsers));
     }
   }, []);
 
@@ -93,7 +92,7 @@ export function UserManagement() {
     if (userToDelete) {
       const updatedUsers = users.filter(user => user.id !== userToDelete);
       setUsers(updatedUsers);
-      localStorage.setItem("adminUsers", JSON.stringify(updatedUsers));
+      localStorage.setItem("users", JSON.stringify(updatedUsers));
       
       // Update admin stats in localStorage
       const currentStats = JSON.parse(localStorage.getItem("adminStats") || "{}");
