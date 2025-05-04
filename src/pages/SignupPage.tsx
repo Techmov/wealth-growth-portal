@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { toast } from "@/components/ui/sonner";
 
 const SignupPage = () => {
   const [name, setName] = useState("");
@@ -20,6 +21,15 @@ const SignupPage = () => {
   
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Extract referral code from URL if present
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setReferralCode(refCode);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,9 +53,8 @@ const SignupPage = () => {
     
     try {
       setIsSubmitting(true);
-      // Removed the referralCode parameter as the signup function only expects 3 args
-      await signup(name, email, password);
-      // Store referral code separately if needed
+      await signup(name, email, password, referralCode);
+      toast.success("Account created successfully");
       navigate("/dashboard");
     } catch (error: any) {
       setError(error.message || "Failed to create account");

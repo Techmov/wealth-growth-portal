@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { User } from "@/types";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, password: string, referralCode?: string) => Promise<void>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   updateTrc20Address: (address: string) => Promise<void>;
@@ -153,7 +152,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signup = async (name: string, email: string, password: string) => {
+  const signup = async (name: string, email: string, password: string, referralCode?: string) => {
     setIsLoading(true);
     try {
       // Check if user already exists
@@ -168,7 +167,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       // Generate referral code
-      const referralCode = `REF${Math.floor(Math.random() * 10000)}`;
+      const userReferralCode = `REF${Math.floor(Math.random() * 10000)}`;
       
       // Create new user
       const newUser: User = {
@@ -179,9 +178,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         totalInvested: 0,
         totalWithdrawn: 0,
         referralBonus: 0,
-        referralCode,
+        referralCode: userReferralCode,
+        referredBy: referralCode || undefined,
         createdAt: new Date(),
-        role: "user"
+        role: "user",
+        username: email.split('@')[0] // Add username based on email
       };
       
       // Save user to "database"
@@ -225,7 +226,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     navigate("/login");
   };
 
-  // Add the updateUser method
   const updateUser = (userData: Partial<User>) => {
     if (user) {
       const updatedUser = { ...user, ...userData };
@@ -241,7 +241,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Add the updateTrc20Address method
   const updateTrc20Address = async (address: string) => {
     if (user) {
       try {
@@ -265,7 +264,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return Promise.reject(new Error("User not found"));
   };
 
-  // Add the deposit method
   const deposit = async (amount: number, txHash: string, screenshot?: File) => {
     if (user) {
       try {
@@ -306,7 +304,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return Promise.reject(new Error("User not found"));
   };
 
-  // Add the requestWithdrawal method
   const requestWithdrawal = async (amount: number) => {
     if (user) {
       try {

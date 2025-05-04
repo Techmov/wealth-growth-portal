@@ -9,7 +9,7 @@ interface DownlinesListProps {
 }
 
 export function DownlinesList({ downlines }: DownlinesListProps) {
-  if (downlines.length === 0) {
+  if (!downlines || downlines.length === 0) {
     return (
       <Card>
         <CardHeader>
