@@ -134,14 +134,21 @@ const SignupPage = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="referral">Referral Code (Optional)</Label>
+                  <Label htmlFor="referral">Referral Code {referralCode && "(Auto-filled)"}</Label>
                   <Input
                     id="referral"
                     type="text"
                     value={referralCode}
                     onChange={(e) => setReferralCode(e.target.value)}
                     placeholder="Enter referral code"
+                    className={referralCode ? "bg-gray-50 border-green-200" : ""}
+                    readOnly={!!searchParams.get('ref')}
                   />
+                  {referralCode && (
+                    <p className="text-xs text-green-600 mt-1">
+                      You were referred by someone! This code will earn them a bonus when you make your first deposit.
+                    </p>
+                  )}
                 </div>
                 
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
