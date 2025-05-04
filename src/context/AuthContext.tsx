@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
 import { User } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
@@ -18,6 +18,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Constants
+const SESSION_EXPIRY_TIME = 60 * 60 * 1000; // 1 hour in milliseconds
+const USER_STORAGE_KEY = "user_session";
+const SESSION_EXPIRY_KEY = "session_expiry";
+
 // Admin credentials
 const ADMIN_EMAIL = "Caltech@gmail.com";
 const ADMIN_PASSWORD = "Caltech2030";
@@ -30,57 +35,111 @@ const getUsers = () => {
 // Save users to localStorage
 const saveUsers = (users: User[]) => {
   localStorage.setItem("users", JSON.stringify(users));
-  localStorage.setItem("adminUsers", JSON.stringify(users)); // For admin panel
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [sessionTimer, setSessionTimer] = useState<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      // Check if user is admin
-      if (parsedUser.email === ADMIN_EMAIL) {
-        setIsAdmin(true);
-      }
+  // Function to set up session timeout
+  const setupSessionTimeout = useCallback(() => {
+    // Clear any existing timer
+    if (sessionTimer) {
+      clearTimeout(sessionTimer);
     }
-    setIsLoading(false);
     
-    // Initialize users storage if it doesn't exist
+    // Set the expiry time - 1 hour from now
+    const expiryTime = Date.now() + SESSION_EXPIRY_TIME;
+    localStorage.setItem(SESSION_EXPIRY_KEY, expiryTime.toString());
+    
+    // Set up the timer to log out when the session expires
+    const timer = setTimeout(() => {
+      logout();
+      toast({
+        title: "Session Expired",
+        description: "Your session has expired. Please log in again.",
+      });
+    }, SESSION_EXPIRY_TIME);
+    
+    setSessionTimer(timer);
+  }, []);
+
+  // Check for existing user session on load
+  useEffect(() => {
+    const checkSession = () => {
+      const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+      const expiryTime = localStorage.getItem(SESSION_EXPIRY_KEY);
+      
+      if (storedUser && expiryTime) {
+        const parsedUser = JSON.parse(storedUser);
+        const remainingTime = parseInt(expiryTime) - Date.now();
+        
+        // If session is still valid
+        if (remainingTime > 0) {
+          setUser(parsedUser);
+          
+          // Check if user is admin
+          if (parsedUser.email === ADMIN_EMAIL) {
+            setIsAdmin(true);
+          }
+          
+          // Set up a new timer for the remaining time
+          const timer = setTimeout(() => {
+            logout();
+            toast({
+              title: "Session Expired",
+              description: "Your session has expired. Please log in again.",
+            });
+          }, remainingTime);
+          
+          setSessionTimer(timer);
+        } else {
+          // Session expired, clear storage
+          localStorage.removeItem(USER_STORAGE_KEY);
+          localStorage.removeItem(SESSION_EXPIRY_KEY);
+        }
+      }
+      
+      setIsLoading(false);
+    };
+    
+    checkSession();
+    
+    // Initialize storage if it doesn't exist
     if (!localStorage.getItem("users")) {
       localStorage.setItem("users", "[]");
-      localStorage.setItem("adminUsers", "[]");
     }
     
-    // Initialize transaction storage
+    // Initialize other storage items
     if (!localStorage.getItem("transactions")) {
       localStorage.setItem("transactions", "[]");
     }
     
-    // Initialize investments storage
     if (!localStorage.getItem("investments")) {
       localStorage.setItem("investments", "[]");
     }
     
-    // Initialize withdrawal requests storage
     if (!localStorage.getItem("withdrawalRequests")) {
       localStorage.setItem("withdrawalRequests", "[]");
     }
     
-    // Initialize pending deposits storage
     if (!localStorage.getItem("pendingDeposits")) {
       localStorage.setItem("pendingDeposits", "[]");
     }
     
-    // Initialize pending withdrawals storage
     if (!localStorage.getItem("pendingWithdrawals")) {
       localStorage.setItem("pendingWithdrawals", "[]");
     }
+    
+    // Cleanup timer on unmount
+    return () => {
+      if (sessionTimer) {
+        clearTimeout(sessionTimer);
+      }
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -103,7 +162,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         setUser(adminUser);
         setIsAdmin(true);
-        localStorage.setItem("user", JSON.stringify(adminUser));
+        
+        // Store user in session storage
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(adminUser));
+        
+        // Set up session timeout
+        setupSessionTimeout();
         
         toast({
           title: "Admin Login Successful",
@@ -119,10 +183,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const foundUser = users.find(u => u.email === email);
       
       if (foundUser) {
-        // In a real app, we would verify password hash here
-        // For demo, we'll just check if the email exists
         setUser(foundUser);
-        localStorage.setItem("user", JSON.stringify(foundUser));
+        
+        // Store user in session storage
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(foundUser));
+        
+        // Set up session timeout
+        setupSessionTimeout();
         
         toast({
           title: "Login Successful",
@@ -169,6 +236,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Generate referral code
       const userReferralCode = `REF${Math.floor(Math.random() * 10000)}`;
       
+      // Create withdrawal password (same as transaction hash)
+      const withdrawalPassword = `TX${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+      
       // Create new user
       const newUser: User = {
         id: `user-${Date.now()}`,
@@ -182,7 +252,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         referredBy: referralCode || undefined,
         createdAt: new Date(),
         role: "user",
-        username: email.split('@')[0] // Add username based on email
+        username: email.split('@')[0],
+        withdrawalPassword,
       };
       
       // Save user to "database"
@@ -191,7 +262,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // Set current user
       setUser(newUser);
-      localStorage.setItem("user", JSON.stringify(newUser));
+      
+      // Store user in session storage
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+      
+      // Set up session timeout
+      setupSessionTimeout();
       
       // Dispatch event for admin dashboard
       window.dispatchEvent(new CustomEvent('userSignup'));
@@ -216,13 +292,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = () => {
+    // Clear user state
     setUser(null);
     setIsAdmin(false);
-    localStorage.removeItem("user");
+    
+    // Clear session data
+    localStorage.removeItem(USER_STORAGE_KEY);
+    localStorage.removeItem(SESSION_EXPIRY_KEY);
+    
+    // Clear any active session timer
+    if (sessionTimer) {
+      clearTimeout(sessionTimer);
+      setSessionTimer(null);
+    }
+    
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
     });
+    
     navigate("/login");
   };
 
@@ -230,7 +318,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (user) {
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      
+      // Update in session storage
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
       
       // Update user in the "database"
       const users = getUsers();

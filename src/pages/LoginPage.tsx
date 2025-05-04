@@ -30,7 +30,7 @@ const LoginPage = () => {
     try {
       setIsSubmitting(true);
       await login(email, password);
-      navigate("/dashboard");
+      // Navigation is handled in the login function now
     } catch (error: any) {
       setError(error.message || "Failed to login");
     } finally {
@@ -89,9 +89,11 @@ const LoginPage = () => {
                   />
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "Logging in..." : "Login"}
-                </Button>
+                <div className="pt-2">
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? "Logging in..." : "Login"}
+                  </Button>
+                </div>
               </form>
             </CardContent>
             

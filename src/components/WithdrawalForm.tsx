@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react";
 import { BindTrc20AddressForm } from "./BindTrc20AddressForm";
 
 export function WithdrawalForm() {
-  const { user } = useAuth();
+  const { user, requestWithdrawal } = useAuth();
   const [amount, setAmount] = useState("");
   const [withdrawalPassword, setWithdrawalPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,7 +37,7 @@ export function WithdrawalForm() {
       return;
     }
     
-    // In a real app, you would verify the withdrawal password on the backend
+    // Verify the withdrawal password matches the transaction hash
     if (withdrawalPassword !== user?.withdrawalPassword) {
       toast.error("Incorrect withdrawal password");
       return;
@@ -46,10 +46,8 @@ export function WithdrawalForm() {
     try {
       setLoading(true);
       
-      // In a real app, you would send the withdrawal request to your backend
-      
-      // Mock successful withdrawal request
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Process the withdrawal request
+      await requestWithdrawal(Number(amount));
       
       toast.success("Withdrawal request submitted successfully!");
       
@@ -127,13 +125,20 @@ export function WithdrawalForm() {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="withdrawalPassword">Withdrawal Password</Label>
+        <Label htmlFor="withdrawalPassword">
+          Transaction Hash / Withdrawal Password
+          {user.withdrawalPassword && (
+            <span className="ml-2 text-xs text-muted-foreground">
+              (Your password: {user.withdrawalPassword})
+            </span>
+          )}
+        </Label>
         <Input
           id="withdrawalPassword"
           type="password"
           value={withdrawalPassword}
           onChange={(e) => setWithdrawalPassword(e.target.value)}
-          placeholder="Enter your withdrawal password"
+          placeholder="Enter your transaction hash"
           className="w-full"
           required
         />
