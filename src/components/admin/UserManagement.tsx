@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { User } from "@/types";
 import { 
@@ -30,10 +31,12 @@ export function UserManagement() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load users from localStorage
+    // Load ALL users from localStorage
     const storedUsers = localStorage.getItem("users");
     if (storedUsers) {
-      setUsers(JSON.parse(storedUsers));
+      const parsedUsers = JSON.parse(storedUsers);
+      setUsers(parsedUsers);
+      console.log("Loaded users:", parsedUsers);
     } else {
       const mockUsers: User[] = [
         {
@@ -77,6 +80,18 @@ export function UserManagement() {
       setUsers(mockUsers);
       localStorage.setItem("users", JSON.stringify(mockUsers));
     }
+
+    // Listen for user signup events to update the list in real-time
+    const handleUserSignup = () => {
+      const updatedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+      setUsers(updatedUsers);
+    };
+
+    window.addEventListener("userSignup", handleUserSignup);
+    
+    return () => {
+      window.removeEventListener("userSignup", handleUserSignup);
+    };
   }, []);
 
   const filteredUsers = users.filter(user => 
@@ -141,29 +156,41 @@ export function UserManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>${user.balance.toFixed(2)}</TableCell>
-                <TableCell>${user.totalInvested.toFixed(2)}</TableCell>
-                <TableCell>${user.totalWithdrawn.toFixed(2)}</TableCell>
-                <TableCell>${user.referralBonus.toFixed(2)}</TableCell>
-                <TableCell>{formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}</TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">View</Button>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      onClick={() => handleDeleteUser(user.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>${user.balance?.toFixed(2) || "0.00"}</TableCell>
+                  <TableCell>${user.totalInvested?.toFixed(2) || "0.00"}</TableCell>
+                  <TableCell>${user.totalWithdrawn?.toFixed(2) || "0.00"}</TableCell>
+                  <TableCell>${user.referralBonus?.toFixed(2) || "0.00"}</TableCell>
+                  <TableCell>
+                    {user.createdAt ? 
+                      formatDistanceToNow(new Date(user.createdAt), { addSuffix: true }) : 
+                      "Unknown"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm">View</Button>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  No users found
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </div>
