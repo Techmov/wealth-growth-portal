@@ -24,6 +24,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface UserManagementProps {
   onUserDeleted?: () => void;
@@ -33,6 +42,8 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [newBalance, setNewBalance] = useState<string>("");
   const { toast: useToastHook } = useToast();
 
   // Load users function to be called whenever needed
@@ -139,6 +150,62 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
     setUserToDelete(userId);
   };
 
+  const handleEditBalance = (user: User) => {
+    setUserToEdit(user);
+    setNewBalance(user.balance.toString());
+  };
+
+  const confirmUpdateBalance = () => {
+    if (userToEdit) {
+      try {
+        // Validate balance
+        const balanceValue = parseFloat(newBalance);
+        if (isNaN(balanceValue) || balanceValue < 0) {
+          toast("Invalid Balance", {
+            description: "Please enter a valid positive number for the balance."
+          });
+          return;
+        }
+
+        // Update user's balance
+        const updatedUsers = users.map(user => {
+          if (user.id === userToEdit.id) {
+            return {
+              ...user,
+              balance: balanceValue
+            };
+          }
+          return user;
+        });
+
+        setUsers(updatedUsers);
+        localStorage.setItem("users", JSON.stringify(updatedUsers));
+        
+        // Notify about the change
+        toast("Balance Updated", {
+          description: `${userToEdit.name}'s balance has been updated successfully.`
+        });
+        
+        // Dispatch custom event to notify other components of the change
+        const event = new CustomEvent("userUpdated", { 
+          detail: { 
+            userId: userToEdit.id,
+            field: "balance",
+            value: balanceValue
+          } 
+        });
+        window.dispatchEvent(event);
+        
+        setUserToEdit(null);
+      } catch (error) {
+        console.error("Error updating balance:", error);
+        toast("Error", {
+          description: "Failed to update balance. Please try again."
+        });
+      }
+    }
+  };
+
   const confirmDelete = () => {
     if (userToDelete) {
       const updatedUsers = users.filter(user => user.id !== userToDelete);
@@ -212,7 +279,13 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">View</Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleEditBalance(user)}
+                      >
+                        Update Balance
+                      </Button>
                       <Button 
                         variant="destructive" 
                         size="sm"
@@ -235,6 +308,7 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
         </Table>
       </div>
 
+      {/* Delete User Confirmation Dialog */}
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -250,6 +324,40 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Update Balance Dialog */}
+      <Dialog open={!!userToEdit} onOpenChange={(open) => !open && setUserToEdit(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update User Balance</DialogTitle>
+            <DialogDescription>
+              {userToEdit ? `Update balance for ${userToEdit.name}` : "Update user balance"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="balance" className="text-right">
+                Balance ($)
+              </Label>
+              <Input
+                id="balance"
+                type="number"
+                step="0.01"
+                min="0"
+                value={newBalance}
+                onChange={(e) => setNewBalance(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUserToEdit(null)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmUpdateBalance}>Update Balance</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

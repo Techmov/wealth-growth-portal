@@ -109,12 +109,18 @@ const AdminDashboard = () => {
       updateStats();
     };
     
+    const handleUserUpdated = (event: Event) => {
+      console.log("User updated event received", (event as CustomEvent).detail);
+      updateStats();
+    };
+    
     // Add event listeners
     window.addEventListener("userDeleted", handleUserDeleted);
     window.addEventListener("depositStatusChange", handleDepositStatusChange);
     window.addEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
     window.addEventListener("userSignup", handleUserSignup);
     window.addEventListener("referralBonusAdded", handleReferralBonusAdded);
+    window.addEventListener("userUpdated", handleUserUpdated);
     
     // Set interval to periodically refresh stats (every 30 seconds)
     const statsInterval = setInterval(updateStats, 30000);
@@ -126,6 +132,7 @@ const AdminDashboard = () => {
       window.removeEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
       window.removeEventListener("userSignup", handleUserSignup);
       window.removeEventListener("referralBonusAdded", handleReferralBonusAdded);
+      window.removeEventListener("userUpdated", handleUserUpdated);
       clearInterval(statsInterval);
     };
   }, []);
