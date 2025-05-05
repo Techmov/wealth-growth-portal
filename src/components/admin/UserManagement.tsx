@@ -24,14 +24,18 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-export function UserManagement() {
+interface UserManagementProps {
+  onUserDeleted?: () => void;
+}
+
+export function UserManagement({ onUserDeleted }: UserManagementProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Load ALL users from localStorage
+  // Load users function to be called whenever needed
+  const loadUsers = () => {
     const storedUsers = localStorage.getItem("users");
     if (storedUsers) {
       const parsedUsers = JSON.parse(storedUsers);
@@ -80,11 +84,15 @@ export function UserManagement() {
       setUsers(mockUsers);
       localStorage.setItem("users", JSON.stringify(mockUsers));
     }
+  };
+
+  useEffect(() => {
+    // Initial load
+    loadUsers();
 
     // Listen for user signup events to update the list in real-time
     const handleUserSignup = () => {
-      const updatedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      setUsers(updatedUsers);
+      loadUsers(); // Reload all users when a new signup happens
     };
 
     window.addEventListener("userSignup", handleUserSignup);
@@ -95,8 +103,8 @@ export function UserManagement() {
   }, []);
 
   const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDeleteUser = (userId: string) => {
@@ -126,6 +134,10 @@ export function UserManagement() {
         description: "The user has been deleted successfully.",
       });
       
+      if (onUserDeleted) {
+        onUserDeleted();
+      }
+      
       setUserToDelete(null);
     }
   };
@@ -139,6 +151,7 @@ export function UserManagement() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
+        <Button onClick={loadUsers} variant="outline">Refresh</Button>
       </div>
       
       <div className="border rounded-md">
