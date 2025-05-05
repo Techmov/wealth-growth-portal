@@ -60,8 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up the timer to log out when the session expires
     const timer = setTimeout(() => {
       logout();
-      toast({
-        title: "Session Expired",
+      toast("Session Expired", {
         description: "Your session has expired. Please log in again.",
       });
     }, SESSION_EXPIRY_TIME);
@@ -91,8 +90,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Set up a new timer for the remaining time
           const timer = setTimeout(() => {
             logout();
-            toast({
-              title: "Session Expired",
+            toast("Session Expired", {
               description: "Your session has expired. Please log in again.",
             });
           }, remainingTime);
@@ -180,8 +178,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Set up session timeout
         setupSessionTimeout();
         
-        toast({
-          title: "Admin Login Successful",
+        toast("Admin Login Successful", {
           description: "Welcome to the admin dashboard.",
         });
         
@@ -202,15 +199,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Set up session timeout
         setupSessionTimeout();
         
-        toast({
-          title: "Login Successful",
+        toast("Login Successful", {
           description: `Welcome back, ${foundUser.name}!`,
         });
         
         navigate("/dashboard");
       } else {
-        toast({
-          title: "Login Failed",
+        toast("Login Failed", {
           description: "Invalid credentials. User not found.",
           variant: "destructive",
         });
@@ -219,8 +214,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (error) {
       console.error("Login error:", error);
-      toast({
-        title: "Login Error",
+      toast("Login Error", {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
@@ -236,8 +230,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Check if user already exists
       const users = getUsers();
       if (users.some(u => u.email === email)) {
-        toast({
-          title: "Signup Failed",
+        toast("Signup Failed", {
           description: "A user with this email already exists.",
           variant: "destructive",
         });
@@ -284,16 +277,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Dispatch event for admin dashboard
       window.dispatchEvent(new CustomEvent('userSignup', { detail: { user: newUser }}));
       
-      toast({
-        title: "Signup Successful",
+      toast("Signup Successful", {
         description: "You have successfully signed up.",
       });
       
       navigate("/dashboard");
     } catch (error) {
       console.error("Signup error:", error);
-      toast({
-        title: "Signup Error",
+      toast("Signup Error", {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
@@ -318,8 +309,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSessionTimer(null);
     }
     
-    toast({
-      title: "Logged out",
+    toast("Logged out", {
       description: "You have been successfully logged out.",
     });
     
@@ -397,8 +387,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           detail: { deposit: pendingDeposit } 
         }));
         
-        toast({
-          title: "Deposit Received",
+        toast("Deposit Received", {
           description: "Your deposit request has been received and is pending approval.",
         });
         
@@ -464,8 +453,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           detail: { withdrawal: withdrawalRequest }
         }));
         
-        toast({
-          title: "Withdrawal Requested",
+        toast("Withdrawal Requested", {
           description: `Your withdrawal request for $${amount.toFixed(2)} has been submitted for approval.`,
         });
         
@@ -489,8 +477,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // In a real app, we'd send an email with a reset link
       // For demo, we'll just show a success message
-      toast({
-        title: "Reset Link Sent",
+      toast("Reset Link Sent", {
         description: "If an account exists with this email, you'll receive a password reset link shortly.",
       });
       
