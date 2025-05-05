@@ -41,9 +41,10 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
       const storedUsers = localStorage.getItem("users");
       if (storedUsers) {
         const parsedUsers = JSON.parse(storedUsers);
+        console.log("Loaded users from localStorage:", parsedUsers);
         setUsers(parsedUsers);
-        console.log("Loaded users:", parsedUsers);
       } else {
+        console.log("No users found in localStorage, creating demo users");
         // If no users exist, create some demo users
         const mockUsers: User[] = [
           {
@@ -97,18 +98,22 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
 
   useEffect(() => {
     // Initial load
+    console.log("UserManagement component mounted, loading users...");
     loadUsers();
 
     // Listen for user signup and other events to update the list in real-time
-    const handleUserSignup = () => {
+    const handleUserSignup = (event: Event) => {
+      console.log("User signup event detected", (event as CustomEvent).detail);
       loadUsers(); // Reload all users when a new signup happens
     };
     
     const handleUserDeleted = () => {
+      console.log("User deleted event detected");
       loadUsers(); // Reload all users when a user is deleted
     };
     
     const handleStatusChange = () => {
+      console.log("Status change event detected");
       loadUsers(); // Reload users when status changes might affect user data
     };
 

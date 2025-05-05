@@ -38,8 +38,10 @@ const AdminDashboard = () => {
   
   const updateStats = () => {
     try {
+      console.log("Updating admin stats...");
       // Get all registered users
       const users = JSON.parse(localStorage.getItem("users") || "[]");
+      console.log("Users from localStorage:", users);
       
       // Get pending deposits
       const deposits = JSON.parse(localStorage.getItem("pendingDeposits") || "[]");
@@ -77,12 +79,13 @@ const AdminDashboard = () => {
   };
   
   useEffect(() => {
+    console.log("AdminDashboard mounted, initializing...");
     // Initial stats update
     updateStats();
     
     // Listen for events that should trigger stats update
     const handleUserDeleted = () => {
-      console.log("User deleted event received");
+      console.log("User deleted event received in AdminDashboard");
       updateStats();
     };
     
@@ -96,8 +99,8 @@ const AdminDashboard = () => {
       updateStats();
     };
     
-    const handleUserSignup = () => {
-      console.log("User signup event received");
+    const handleUserSignup = (event: Event) => {
+      console.log("User signup event received", (event as CustomEvent).detail);
       updateStats();
     };
     
