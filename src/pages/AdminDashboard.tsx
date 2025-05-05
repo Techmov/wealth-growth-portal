@@ -37,62 +37,93 @@ const AdminDashboard = () => {
   });
   
   const updateStats = () => {
-    // Calculate stats based on users
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    
-    // Get pending deposits
-    const deposits = JSON.parse(localStorage.getItem("pendingDeposits") || "[]");
-    const pendingDeposits = deposits.filter(d => d.status === "pending").length;
-    
-    // Get pending withdrawals
-    const withdrawals = JSON.parse(localStorage.getItem("pendingWithdrawals") || "[]");
-    const pendingWithdrawals = withdrawals.filter(w => w.status === "pending").length;
-    
-    // Calculate totals from users and transactions
-    let totalDeposits = 0;
-    let totalWithdrawals = 0;
-    let totalReferralBonus = 0;
-    
-    users.forEach(user => {
-      totalDeposits += user.totalInvested || 0;
-      totalWithdrawals += user.totalWithdrawn || 0;
-      totalReferralBonus += user.referralBonus || 0;
-    });
-    
-    const newStats = {
-      totalDeposits,
-      totalWithdrawals,
-      totalReferralBonus,
-      pendingDeposits,
-      pendingWithdrawals,
-      totalUsers: users.length,
-    };
-    
-    setStats(newStats);
+    try {
+      // Get all registered users
+      const users = JSON.parse(localStorage.getItem("users") || "[]");
+      
+      // Get pending deposits
+      const deposits = JSON.parse(localStorage.getItem("pendingDeposits") || "[]");
+      const pendingDeposits = deposits.filter(d => d.status === "pending").length;
+      
+      // Get pending withdrawals
+      const withdrawals = JSON.parse(localStorage.getItem("pendingWithdrawals") || "[]");
+      const pendingWithdrawals = withdrawals.filter(w => w.status === "pending").length;
+      
+      // Calculate totals from users and transactions
+      let totalDeposits = 0;
+      let totalWithdrawals = 0;
+      let totalReferralBonus = 0;
+      
+      users.forEach(user => {
+        totalDeposits += user.totalInvested || 0;
+        totalWithdrawals += user.totalWithdrawn || 0;
+        totalReferralBonus += user.referralBonus || 0;
+      });
+      
+      const newStats = {
+        totalDeposits,
+        totalWithdrawals,
+        totalReferralBonus,
+        pendingDeposits,
+        pendingWithdrawals,
+        totalUsers: users.length,
+      };
+      
+      setStats(newStats);
+      console.log("Updated admin stats:", newStats);
+    } catch (error) {
+      console.error("Error updating admin stats:", error);
+    }
   };
   
   useEffect(() => {
+    // Initial stats update
     updateStats();
     
     // Listen for events that should trigger stats update
-    const handleUserDeleted = () => updateStats();
-    const handleDepositStatusChange = () => updateStats();
-    const handleWithdrawalStatusChange = () => updateStats();
-    const handleUserSignup = () => updateStats();
-    const handleReferralBonusAdded = () => updateStats();
+    const handleUserDeleted = () => {
+      console.log("User deleted event received");
+      updateStats();
+    };
     
+    const handleDepositStatusChange = () => {
+      console.log("Deposit status change event received");
+      updateStats();
+    };
+    
+    const handleWithdrawalStatusChange = () => {
+      console.log("Withdrawal status change event received");
+      updateStats();
+    };
+    
+    const handleUserSignup = () => {
+      console.log("User signup event received");
+      updateStats();
+    };
+    
+    const handleReferralBonusAdded = () => {
+      console.log("Referral bonus added event received");
+      updateStats();
+    };
+    
+    // Add event listeners
     window.addEventListener("userDeleted", handleUserDeleted);
     window.addEventListener("depositStatusChange", handleDepositStatusChange);
     window.addEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
     window.addEventListener("userSignup", handleUserSignup);
     window.addEventListener("referralBonusAdded", handleReferralBonusAdded);
     
+    // Set interval to periodically refresh stats (every 30 seconds)
+    const statsInterval = setInterval(updateStats, 30000);
+    
+    // Clean up event listeners and interval on unmount
     return () => {
       window.removeEventListener("userDeleted", handleUserDeleted);
       window.removeEventListener("depositStatusChange", handleDepositStatusChange);
       window.removeEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
       window.removeEventListener("userSignup", handleUserSignup);
       window.removeEventListener("referralBonusAdded", handleReferralBonusAdded);
+      clearInterval(statsInterval);
     };
   }, []);
 

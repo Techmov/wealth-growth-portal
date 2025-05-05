@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
 import { User } from "@/types";
 import { useNavigate } from "react-router-dom";
@@ -61,7 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const timer = setTimeout(() => {
       logout();
       toast("Session Expired", {
-        description: "Your session has expired. Please log in again.",
+        description: "Your session has expired. Please log in again."
       });
     }, SESSION_EXPIRY_TIME);
     
@@ -91,7 +90,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const timer = setTimeout(() => {
             logout();
             toast("Session Expired", {
-              description: "Your session has expired. Please log in again.",
+              description: "Your session has expired. Please log in again."
             });
           }, remainingTime);
           
@@ -179,7 +178,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setupSessionTimeout();
         
         toast("Admin Login Successful", {
-          description: "Welcome to the admin dashboard.",
+          description: "Welcome to the admin dashboard."
         });
         
         navigate("/admin/dashboard");
@@ -200,14 +199,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setupSessionTimeout();
         
         toast("Login Successful", {
-          description: `Welcome back, ${foundUser.name}!`,
+          description: `Welcome back, ${foundUser.name}!`
         });
         
         navigate("/dashboard");
       } else {
         toast("Login Failed", {
-          description: "Invalid credentials. User not found.",
-          variant: "destructive",
+          description: "Invalid credentials. User not found."
         });
         
         throw new Error("Invalid credentials");
@@ -215,8 +213,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error("Login error:", error);
       toast("Login Error", {
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
+        description: "An unexpected error occurred. Please try again."
       });
       throw error;
     } finally {
@@ -231,8 +228,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const users = getUsers();
       if (users.some(u => u.email === email)) {
         toast("Signup Failed", {
-          description: "A user with this email already exists.",
-          variant: "destructive",
+          description: "A user with this email already exists."
         });
         throw new Error("User already exists");
       }
@@ -278,15 +274,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       window.dispatchEvent(new CustomEvent('userSignup', { detail: { user: newUser }}));
       
       toast("Signup Successful", {
-        description: "You have successfully signed up.",
+        description: "You have successfully signed up."
       });
       
       navigate("/dashboard");
     } catch (error) {
       console.error("Signup error:", error);
       toast("Signup Error", {
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
+        description: "An unexpected error occurred. Please try again."
       });
       throw error;
     } finally {
@@ -310,7 +305,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     
     toast("Logged out", {
-      description: "You have been successfully logged out.",
+      description: "You have been successfully logged out."
     });
     
     navigate("/login");
@@ -388,7 +383,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }));
         
         toast("Deposit Received", {
-          description: "Your deposit request has been received and is pending approval.",
+          description: "Your deposit request has been received and is pending approval."
         });
         
         return Promise.resolve();
@@ -454,7 +449,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }));
         
         toast("Withdrawal Requested", {
-          description: `Your withdrawal request for $${amount.toFixed(2)} has been submitted for approval.`,
+          description: `Your withdrawal request for $${amount.toFixed(2)} has been submitted for approval.`
         });
         
         return Promise.resolve();
@@ -478,7 +473,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // In a real app, we'd send an email with a reset link
       // For demo, we'll just show a success message
       toast("Reset Link Sent", {
-        description: "If an account exists with this email, you'll receive a password reset link shortly.",
+        description: "If an account exists with this email, you'll receive a password reset link shortly."
       });
       
       return Promise.resolve();

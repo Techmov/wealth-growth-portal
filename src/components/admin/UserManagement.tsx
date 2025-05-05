@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -32,57 +33,65 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { toast: useToastHook } = useToast();
 
   // Load users function to be called whenever needed
   const loadUsers = () => {
-    const storedUsers = localStorage.getItem("users");
-    if (storedUsers) {
-      const parsedUsers = JSON.parse(storedUsers);
-      setUsers(parsedUsers);
-      console.log("Loaded users:", parsedUsers);
-    } else {
-      const mockUsers: User[] = [
-        {
-          id: "user-1",
-          name: "John Doe",
-          email: "john@example.com",
-          balance: 2500,
-          totalInvested: 5000,
-          totalWithdrawn: 1000,
-          referralBonus: 200,
-          referralCode: "JD1234",
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
-          role: "user"
-        },
-        {
-          id: "user-2",
-          name: "Jane Smith",
-          email: "jane@example.com",
-          balance: 4200,
-          totalInvested: 8000,
-          totalWithdrawn: 2000,
-          referralBonus: 450,
-          referralCode: "JS5678",
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15), // 15 days ago
-          role: "user"
-        },
-        {
-          id: "user-3",
-          name: "Bob Johnson",
-          email: "bob@example.com",
-          balance: 1800,
-          totalInvested: 3000,
-          totalWithdrawn: 800,
-          referralBonus: 150,
-          referralCode: "BJ9012",
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
-          role: "user"
-        }
-      ];
-      
-      setUsers(mockUsers);
-      localStorage.setItem("users", JSON.stringify(mockUsers));
+    try {
+      const storedUsers = localStorage.getItem("users");
+      if (storedUsers) {
+        const parsedUsers = JSON.parse(storedUsers);
+        setUsers(parsedUsers);
+        console.log("Loaded users:", parsedUsers);
+      } else {
+        // If no users exist, create some demo users
+        const mockUsers: User[] = [
+          {
+            id: "user-1",
+            name: "John Doe",
+            email: "john@example.com",
+            balance: 2500,
+            totalInvested: 5000,
+            totalWithdrawn: 1000,
+            referralBonus: 200,
+            referralCode: "JD1234",
+            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
+            role: "user"
+          },
+          {
+            id: "user-2",
+            name: "Jane Smith",
+            email: "jane@example.com",
+            balance: 4200,
+            totalInvested: 8000,
+            totalWithdrawn: 2000,
+            referralBonus: 450,
+            referralCode: "JS5678",
+            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15), // 15 days ago
+            role: "user"
+          },
+          {
+            id: "user-3",
+            name: "Bob Johnson",
+            email: "bob@example.com",
+            balance: 1800,
+            totalInvested: 3000,
+            totalWithdrawn: 800,
+            referralBonus: 150,
+            referralCode: "BJ9012",
+            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
+            role: "user"
+          }
+        ];
+        
+        setUsers(mockUsers);
+        localStorage.setItem("users", JSON.stringify(mockUsers));
+      }
+    } catch (error) {
+      console.error("Error loading users:", error);
+      toast("Error", {
+        description: "Failed to load users. Please try again."
+      });
     }
   };
 
@@ -90,15 +99,29 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
     // Initial load
     loadUsers();
 
-    // Listen for user signup events to update the list in real-time
+    // Listen for user signup and other events to update the list in real-time
     const handleUserSignup = () => {
       loadUsers(); // Reload all users when a new signup happens
     };
+    
+    const handleUserDeleted = () => {
+      loadUsers(); // Reload all users when a user is deleted
+    };
+    
+    const handleStatusChange = () => {
+      loadUsers(); // Reload users when status changes might affect user data
+    };
 
     window.addEventListener("userSignup", handleUserSignup);
+    window.addEventListener("userDeleted", handleUserDeleted);
+    window.addEventListener("depositStatusChange", handleStatusChange);
+    window.addEventListener("withdrawalStatusChange", handleStatusChange);
     
     return () => {
       window.removeEventListener("userSignup", handleUserSignup);
+      window.removeEventListener("userDeleted", handleUserDeleted);
+      window.removeEventListener("depositStatusChange", handleStatusChange);
+      window.removeEventListener("withdrawalStatusChange", handleStatusChange);
     };
   }, []);
 
@@ -129,9 +152,8 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
       const event = new CustomEvent("userDeleted", { detail: { userId: userToDelete } });
       window.dispatchEvent(event);
       
-      toast({
-        title: "User Deleted",
-        description: "The user has been deleted successfully.",
+      toast("User Deleted", {
+        description: "The user has been deleted successfully."
       });
       
       if (onUserDeleted) {
