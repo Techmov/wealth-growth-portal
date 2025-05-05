@@ -10,8 +10,6 @@ import { AdminStats } from "@/types";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { DepositApprovals } from "@/components/admin/DepositApprovals";
 import { WithdrawalApprovals } from "@/components/admin/WithdrawalApprovals";
-import { AddUser } from "@/components/admin/AddUser";
-import { PaymentSettings } from "@/components/admin/PaymentSettings";
 import { DollarSign, LogOut, Users, Download, Upload, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -166,8 +164,6 @@ const AdminDashboard = () => {
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="deposits">Deposit Approvals</TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawal Approvals</TabsTrigger>
-            <TabsTrigger value="add-user">Add User</TabsTrigger>
-            <TabsTrigger value="payment-settings">Payment Settings</TabsTrigger>
           </TabsList>
           
           <TabsContent value="users">
@@ -180,14 +176,6 @@ const AdminDashboard = () => {
           
           <TabsContent value="withdrawals">
             {withAdminProps(WithdrawalApprovals, { onStatusChange: updateStats })}
-          </TabsContent>
-          
-          <TabsContent value="add-user">
-            <AddUser onUserAdded={updateStats} />
-          </TabsContent>
-          
-          <TabsContent value="payment-settings">
-            <PaymentSettings />
           </TabsContent>
         </Tabs>
       </main>

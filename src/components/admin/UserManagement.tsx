@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { User } from "@/types";
 import { 
@@ -24,23 +23,17 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-interface UserManagementProps {
-  onUserDeleted?: () => void;
-}
-
-export function UserManagement({ onUserDeleted }: UserManagementProps) {
+export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Load users function to be called whenever needed
-  const loadUsers = () => {
+  useEffect(() => {
+    // Load users from localStorage
     const storedUsers = localStorage.getItem("users");
     if (storedUsers) {
-      const parsedUsers = JSON.parse(storedUsers);
-      setUsers(parsedUsers);
-      console.log("Loaded users:", parsedUsers);
+      setUsers(JSON.parse(storedUsers));
     } else {
       const mockUsers: User[] = [
         {
@@ -84,27 +77,11 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
       setUsers(mockUsers);
       localStorage.setItem("users", JSON.stringify(mockUsers));
     }
-  };
-
-  useEffect(() => {
-    // Initial load
-    loadUsers();
-
-    // Listen for user signup events to update the list in real-time
-    const handleUserSignup = () => {
-      loadUsers(); // Reload all users when a new signup happens
-    };
-
-    window.addEventListener("userSignup", handleUserSignup);
-    
-    return () => {
-      window.removeEventListener("userSignup", handleUserSignup);
-    };
   }, []);
 
   const filteredUsers = users.filter(user => 
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDeleteUser = (userId: string) => {
@@ -134,10 +111,6 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
         description: "The user has been deleted successfully.",
       });
       
-      if (onUserDeleted) {
-        onUserDeleted();
-      }
-      
       setUserToDelete(null);
     }
   };
@@ -151,7 +124,6 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
-        <Button onClick={loadUsers} variant="outline">Refresh</Button>
       </div>
       
       <div className="border rounded-md">
@@ -169,41 +141,29 @@ export function UserManagement({ onUserDeleted }: UserManagementProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>${user.balance?.toFixed(2) || "0.00"}</TableCell>
-                  <TableCell>${user.totalInvested?.toFixed(2) || "0.00"}</TableCell>
-                  <TableCell>${user.totalWithdrawn?.toFixed(2) || "0.00"}</TableCell>
-                  <TableCell>${user.referralBonus?.toFixed(2) || "0.00"}</TableCell>
-                  <TableCell>
-                    {user.createdAt ? 
-                      formatDistanceToNow(new Date(user.createdAt), { addSuffix: true }) : 
-                      "Unknown"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">View</Button>
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => handleDeleteUser(user.id)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  No users found
+            {filteredUsers.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell>{user.name}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>${user.balance.toFixed(2)}</TableCell>
+                <TableCell>${user.totalInvested.toFixed(2)}</TableCell>
+                <TableCell>${user.totalWithdrawn.toFixed(2)}</TableCell>
+                <TableCell>${user.referralBonus.toFixed(2)}</TableCell>
+                <TableCell>{formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}</TableCell>
+                <TableCell>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm">View</Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => handleDeleteUser(user.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
