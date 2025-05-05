@@ -10,8 +10,6 @@ import { AdminStats } from "@/types";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { DepositApprovals } from "@/components/admin/DepositApprovals";
 import { WithdrawalApprovals } from "@/components/admin/WithdrawalApprovals";
-import { AddUser } from "@/components/admin/AddUser";
-import { PaymentSettings } from "@/components/admin/PaymentSettings";
 import { DollarSign, LogOut, Users, Download, Upload, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -37,103 +35,62 @@ const AdminDashboard = () => {
   });
   
   const updateStats = () => {
-    try {
-      console.log("Updating admin stats...");
-      // Get all registered users
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      console.log("Users from localStorage:", users);
-      
-      // Get pending deposits
-      const deposits = JSON.parse(localStorage.getItem("pendingDeposits") || "[]");
-      const pendingDeposits = deposits.filter(d => d.status === "pending").length;
-      
-      // Get pending withdrawals
-      const withdrawals = JSON.parse(localStorage.getItem("pendingWithdrawals") || "[]");
-      const pendingWithdrawals = withdrawals.filter(w => w.status === "pending").length;
-      
-      // Calculate totals from users and transactions
-      let totalDeposits = 0;
-      let totalWithdrawals = 0;
-      let totalReferralBonus = 0;
-      
-      users.forEach(user => {
-        totalDeposits += user.totalInvested || 0;
-        totalWithdrawals += user.totalWithdrawn || 0;
-        totalReferralBonus += user.referralBonus || 0;
-      });
-      
-      const newStats = {
-        totalDeposits,
-        totalWithdrawals,
-        totalReferralBonus,
-        pendingDeposits,
-        pendingWithdrawals,
-        totalUsers: users.length,
-      };
-      
-      setStats(newStats);
-      console.log("Updated admin stats:", newStats);
-    } catch (error) {
-      console.error("Error updating admin stats:", error);
-    }
+    // Calculate stats based on users
+    const users = JSON.parse(localStorage.getItem("users") || "[]");
+    
+    // Get pending deposits
+    const deposits = JSON.parse(localStorage.getItem("pendingDeposits") || "[]");
+    const pendingDeposits = deposits.filter(d => d.status === "pending").length;
+    
+    // Get pending withdrawals
+    const withdrawals = JSON.parse(localStorage.getItem("pendingWithdrawals") || "[]");
+    const pendingWithdrawals = withdrawals.filter(w => w.status === "pending").length;
+    
+    // Calculate totals from users and transactions
+    let totalDeposits = 0;
+    let totalWithdrawals = 0;
+    let totalReferralBonus = 0;
+    
+    users.forEach(user => {
+      totalDeposits += user.totalInvested || 0;
+      totalWithdrawals += user.totalWithdrawn || 0;
+      totalReferralBonus += user.referralBonus || 0;
+    });
+    
+    const newStats = {
+      totalDeposits,
+      totalWithdrawals,
+      totalReferralBonus,
+      pendingDeposits,
+      pendingWithdrawals,
+      totalUsers: users.length,
+    };
+    
+    setStats(newStats);
   };
   
   useEffect(() => {
-    console.log("AdminDashboard mounted, initializing...");
-    // Initial stats update
     updateStats();
     
     // Listen for events that should trigger stats update
-    const handleUserDeleted = () => {
-      console.log("User deleted event received in AdminDashboard");
-      updateStats();
-    };
+    const handleUserDeleted = () => updateStats();
+    const handleDepositStatusChange = () => updateStats();
+    const handleWithdrawalStatusChange = () => updateStats();
+    const handleUserSignup = () => updateStats();
+    const handleReferralBonusAdded = () => updateStats();
     
-    const handleDepositStatusChange = () => {
-      console.log("Deposit status change event received");
-      updateStats();
-    };
-    
-    const handleWithdrawalStatusChange = () => {
-      console.log("Withdrawal status change event received");
-      updateStats();
-    };
-    
-    const handleUserSignup = (event: Event) => {
-      console.log("User signup event received", (event as CustomEvent).detail);
-      updateStats();
-    };
-    
-    const handleReferralBonusAdded = () => {
-      console.log("Referral bonus added event received");
-      updateStats();
-    };
-    
-    const handleUserUpdated = (event: Event) => {
-      console.log("User updated event received", (event as CustomEvent).detail);
-      updateStats();
-    };
-    
-    // Add event listeners
     window.addEventListener("userDeleted", handleUserDeleted);
     window.addEventListener("depositStatusChange", handleDepositStatusChange);
     window.addEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
     window.addEventListener("userSignup", handleUserSignup);
     window.addEventListener("referralBonusAdded", handleReferralBonusAdded);
-    window.addEventListener("userUpdated", handleUserUpdated);
     
-    // Set interval to periodically refresh stats (every 30 seconds)
-    const statsInterval = setInterval(updateStats, 30000);
-    
-    // Clean up event listeners and interval on unmount
     return () => {
       window.removeEventListener("userDeleted", handleUserDeleted);
       window.removeEventListener("depositStatusChange", handleDepositStatusChange);
       window.removeEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
       window.removeEventListener("userSignup", handleUserSignup);
       window.removeEventListener("referralBonusAdded", handleReferralBonusAdded);
-      window.removeEventListener("userUpdated", handleUserUpdated);
-      clearInterval(statsInterval);
     };
   }, []);
 
@@ -207,8 +164,6 @@ const AdminDashboard = () => {
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="deposits">Deposit Approvals</TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawal Approvals</TabsTrigger>
-            <TabsTrigger value="add-user">Add User</TabsTrigger>
-            <TabsTrigger value="payment-settings">Payment Settings</TabsTrigger>
           </TabsList>
           
           <TabsContent value="users">
@@ -221,14 +176,6 @@ const AdminDashboard = () => {
           
           <TabsContent value="withdrawals">
             {withAdminProps(WithdrawalApprovals, { onStatusChange: updateStats })}
-          </TabsContent>
-          
-          <TabsContent value="add-user">
-            <AddUser onUserAdded={updateStats} />
-          </TabsContent>
-          
-          <TabsContent value="payment-settings">
-            <PaymentSettings />
           </TabsContent>
         </Tabs>
       </main>

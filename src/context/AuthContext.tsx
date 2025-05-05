@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
 import { User } from "@/types";
 import { useNavigate } from "react-router-dom";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/use-toast";
 
 interface AuthContextType {
   user: User | null;
@@ -14,7 +14,6 @@ interface AuthContextType {
   deposit: (amount: number, txHash: string, screenshot?: File) => Promise<void>;
   requestWithdrawal: (amount: number) => Promise<void>;
   isAdmin: boolean;
-  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,8 +58,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up the timer to log out when the session expires
     const timer = setTimeout(() => {
       logout();
-      toast("Session Expired", {
-        description: "Your session has expired. Please log in again."
+      toast({
+        title: "Session Expired",
+        description: "Your session has expired. Please log in again.",
       });
     }, SESSION_EXPIRY_TIME);
     
@@ -89,8 +89,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Set up a new timer for the remaining time
           const timer = setTimeout(() => {
             logout();
-            toast("Session Expired", {
-              description: "Your session has expired. Please log in again."
+            toast({
+              title: "Session Expired",
+              description: "Your session has expired. Please log in again.",
             });
           }, remainingTime);
           
@@ -133,15 +134,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.setItem("pendingWithdrawals", "[]");
     }
     
-    // Initialize payment gateway settings
-    if (!localStorage.getItem("paymentSettings")) {
-      const defaultSettings = {
-        trc20Address: "TG3XXX...Default TRC20 Address",
-        bep20Address: "0x123...Default BEP20 Address"
-      };
-      localStorage.setItem("paymentSettings", JSON.stringify(defaultSettings));
-    }
-    
     // Cleanup timer on unmount
     return () => {
       if (sessionTimer) {
@@ -177,8 +169,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Set up session timeout
         setupSessionTimeout();
         
-        toast("Admin Login Successful", {
-          description: "Welcome to the admin dashboard."
+        toast({
+          title: "Admin Login Successful",
+          description: "Welcome to the admin dashboard.",
         });
         
         navigate("/admin/dashboard");
@@ -198,22 +191,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Set up session timeout
         setupSessionTimeout();
         
-        toast("Login Successful", {
-          description: `Welcome back, ${foundUser.name}!`
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${foundUser.name}!`,
         });
         
         navigate("/dashboard");
       } else {
-        toast("Login Failed", {
-          description: "Invalid credentials. User not found."
+        toast({
+          title: "Login Failed",
+          description: "Invalid credentials. User not found.",
+          variant: "destructive",
         });
         
         throw new Error("Invalid credentials");
       }
     } catch (error) {
       console.error("Login error:", error);
-      toast("Login Error", {
-        description: "An unexpected error occurred. Please try again."
+      toast({
+        title: "Login Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
       throw error;
     } finally {
@@ -227,8 +225,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Check if user already exists
       const users = getUsers();
       if (users.some(u => u.email === email)) {
-        toast("Signup Failed", {
-          description: "A user with this email already exists."
+        toast({
+          title: "Signup Failed",
+          description: "A user with this email already exists.",
+          variant: "destructive",
         });
         throw new Error("User already exists");
       }
@@ -236,8 +236,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Generate referral code
       const userReferralCode = `REF${Math.floor(Math.random() * 10000)}`;
       
-      // Create transaction hash that will also serve as withdrawal password
-      const txHash = `TX${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+      // Create withdrawal password (same as transaction hash)
+      const withdrawalPassword = `TX${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
       
       // Create new user
       const newUser: User = {
@@ -253,8 +253,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         createdAt: new Date(),
         role: "user",
         username: email.split('@')[0],
-        withdrawalPassword: txHash,
-        trc20Address: ""
+        withdrawalPassword,
       };
       
       // Save user to "database"
@@ -271,17 +270,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setupSessionTimeout();
       
       // Dispatch event for admin dashboard
-      window.dispatchEvent(new CustomEvent('userSignup', { detail: { user: newUser }}));
+      window.dispatchEvent(new CustomEvent('userSignup'));
       
-      toast("Signup Successful", {
-        description: "You have successfully signed up."
+      toast({
+        title: "Signup Successful",
+        description: "You have successfully signed up.",
       });
       
       navigate("/dashboard");
     } catch (error) {
       console.error("Signup error:", error);
-      toast("Signup Error", {
-        description: "An unexpected error occurred. Please try again."
+      toast({
+        title: "Signup Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
       throw error;
     } finally {
@@ -304,8 +306,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSessionTimer(null);
     }
     
-    toast("Logged out", {
-      description: "You have been successfully logged out."
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
     });
     
     navigate("/login");
@@ -334,9 +337,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Update the user's TRC20 address
         const updatedUser = { ...user, trc20Address: address };
         setUser(updatedUser);
-        
-        // Update session storage
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
         
         // Update user in the "database"
         const users = getUsers();
@@ -378,12 +379,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.setItem("pendingDeposits", JSON.stringify(pendingDeposits));
         
         // Notify admin dashboard
-        window.dispatchEvent(new CustomEvent('depositStatusChange', { 
-          detail: { deposit: pendingDeposit } 
-        }));
+        window.dispatchEvent(new CustomEvent('depositStatusChange'));
         
-        toast("Deposit Received", {
-          description: "Your deposit request has been received and is pending approval."
+        toast({
+          title: "Deposit Received",
+          description: "Your deposit request has been received and is pending approval.",
         });
         
         return Promise.resolve();
@@ -405,17 +405,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return Promise.reject(new Error("Please set your TRC20 address before requesting withdrawal"));
         }
         
-        // Create withdrawal request
-        const withdrawalRequest = {
-          id: `wd_${Date.now()}`,
-          userId: user.id,
-          userEmail: user.email,
-          userName: user.name,
-          amount,
-          status: "pending",
-          date: new Date(),
-          trc20Address: user.trc20Address
-        };
+        // Create withdrawal request event
+        window.dispatchEvent(new CustomEvent('newWithdrawalRequest', {
+          detail: {
+            userId: user.id,
+            amount,
+            trc20Address: user.trc20Address
+          }
+        }));
         
         // Update user balance
         const updatedUser = {
@@ -424,7 +421,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
         
         setUser(updatedUser);
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
         
         // Update user in database
         const users = getUsers();
@@ -433,23 +430,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         );
         saveUsers(updatedUsers);
         
-        // Save withdrawal request
-        const pendingWithdrawals = JSON.parse(localStorage.getItem("pendingWithdrawals") || "[]");
-        pendingWithdrawals.push(withdrawalRequest);
-        localStorage.setItem("pendingWithdrawals", JSON.stringify(pendingWithdrawals));
-        
-        // Add to user's withdrawals history
-        const userWithdrawals = JSON.parse(localStorage.getItem(`withdrawals_${user.id}`) || "[]");
-        userWithdrawals.push(withdrawalRequest);
-        localStorage.setItem(`withdrawals_${user.id}`, JSON.stringify(userWithdrawals));
-        
-        // Notify admin dashboard
-        window.dispatchEvent(new CustomEvent('withdrawalStatusChange', {
-          detail: { withdrawal: withdrawalRequest }
-        }));
-        
-        toast("Withdrawal Requested", {
-          description: `Your withdrawal request for $${amount.toFixed(2)} has been submitted for approval.`
+        toast({
+          title: "Withdrawal Requested",
+          description: `Your withdrawal request for $${amount.toFixed(2)} has been submitted for approval.`,
         });
         
         return Promise.resolve();
@@ -458,28 +441,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
     return Promise.reject(new Error("User not found"));
-  };
-
-  const resetPassword = async (email: string) => {
-    try {
-      // Find user
-      const users = getUsers();
-      const userExists = users.some(u => u.email === email);
-      
-      if (!userExists) {
-        return Promise.reject(new Error("No account found with this email address"));
-      }
-      
-      // In a real app, we'd send an email with a reset link
-      // For demo, we'll just show a success message
-      toast("Reset Link Sent", {
-        description: "If an account exists with this email, you'll receive a password reset link shortly."
-      });
-      
-      return Promise.resolve();
-    } catch (error) {
-      return Promise.reject(error);
-    }
   };
 
   return (
@@ -494,8 +455,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         updateTrc20Address,
         deposit,
         requestWithdrawal,
-        isAdmin,
-        resetPassword
+        isAdmin
       }}
     >
       {children}

@@ -1,16 +1,14 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, User, Menu, X, Home, Users, TrendingUp, UserCircle, Shield, Moon, Sun } from "lucide-react";
+import { LogIn, User, Menu, X, Home, Users, TrendingUp, UserCircle, Shield } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/hooks/use-theme";
 
 export function Header() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -19,18 +17,6 @@ export function Header() {
   const closeMobileMenu = () => {
     setMobileMenuOpen(false);
   };
-
-  // Close the mobile menu when the window is resized to desktop size
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768 && mobileMenuOpen) {
-        setMobileMenuOpen(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [mobileMenuOpen]);
 
   const navItems = [
     { title: "Dashboard", path: "/dashboard", icon: Home, authRequired: true },
@@ -55,24 +41,18 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
-          {navItems.map((item) => {
-            const isActive = window.location.pathname === item.path;
-            return (!item.authRequired || user) && (
+          {navItems.map((item) => 
+            (!item.authRequired || user) && (
               <Link 
                 key={item.path}
                 to={item.path}
-                className={cn(
-                  "transition-colors flex items-center gap-2",
-                  isActive 
-                    ? "text-foreground font-medium" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
+                className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
               >
                 <item.icon className="h-4 w-4" />
                 {item.title}
               </Link>
-            );
-          })}
+            )
+          )}
           
           {/* Admin Link - Only visible for admins */}
           {user?.role === 'admin' && (
@@ -87,15 +67,6 @@ export function Header() {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            aria-label="Toggle theme"
-          >
-            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button>
-
           {user ? (
             <div className="flex items-center gap-4">
               <Link to="/profile">
@@ -124,19 +95,9 @@ export function Header() {
         </div>
 
         {/* Mobile Menu Button */}
-        <div className="flex items-center gap-2 md:hidden">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            aria-label="Toggle theme"
-          >
-            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button>
-          <button className="md:hidden" onClick={toggleMobileMenu}>
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
+        <button className="md:hidden" onClick={toggleMobileMenu}>
+          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
       </div>
 
       {/* Mobile Navigation with SOLID BLACK background */}
@@ -151,36 +112,25 @@ export function Header() {
         }}
       >
         <div className="container py-4 flex flex-col gap-4">
-          {navItems.map((item) => {
-            const isActive = window.location.pathname === item.path;
-            return (!item.authRequired || user) && (
+          {navItems.map((item) => 
+            (!item.authRequired || user) && (
               <Link 
                 key={item.path}
                 to={item.path}
-                className={cn(
-                  "text-lg py-2 border-b border-gray-800 flex items-center gap-2",
-                  isActive 
-                    ? "text-white bg-gray-800 px-2 rounded-md" 
-                    : "text-white"
-                )}
+                className="text-lg py-2 border-b border-gray-800 flex items-center gap-2 text-white"
                 onClick={closeMobileMenu}
               >
                 <item.icon className="h-5 w-5" />
                 {item.title}
               </Link>
-            );
-          })}
+            )
+          )}
           
           {/* Mobile Admin Link - Only visible for admins */}
           {user?.role === 'admin' && (
             <Link 
               to={adminNavItem.path}
-              className={cn(
-                "text-lg py-2 border-b border-gray-800 flex items-center gap-2",
-                window.location.pathname === adminNavItem.path 
-                  ? "text-primary bg-gray-800 px-2 rounded-md"
-                  : "text-primary"
-              )}
+              className="text-lg py-2 border-b border-gray-800 flex items-center gap-2 text-primary"
               onClick={closeMobileMenu}
             >
               <adminNavItem.icon className="h-5 w-5" />
