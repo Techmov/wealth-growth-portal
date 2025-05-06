@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { toast } from "sonner";
 import { useAuth } from "./AuthContext";
@@ -11,6 +10,7 @@ type InvestmentContextType = {
   transactions: Transaction[];
   withdrawalRequests: WithdrawalRequest[];
   platformTrc20Address: string;
+  isLoading: boolean; // Add isLoading property
   invest: (productId: string) => Promise<void>;
   getReferralBonus: (referralCode: string) => Promise<void>;
   getUserDownlines: () => Downline[];
@@ -27,10 +27,12 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
   const [userInvestments, setUserInvestments] = useState<Investment[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Initialize isLoading state
 
   // Fetch products from Supabase
   useEffect(() => {
     const fetchProducts = async () => {
+      setIsLoading(true); // Set loading state
       try {
         const { data, error } = await supabase
           .from('products')
@@ -58,6 +60,8 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("Unexpected error fetching products:", error);
+      } finally {
+        setIsLoading(false); // Clear loading state
       }
     };
 
@@ -89,10 +93,12 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
       setUserInvestments([]);
       setTransactions([]);
       setWithdrawalRequests([]);
+      setIsLoading(false);
       return;
     }
     
     const fetchUserData = async () => {
+      setIsLoading(true); // Set loading state
       try {
         // Fetch user's investments
         const { data: investmentsData, error: investmentsError } = await supabase
@@ -174,6 +180,8 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("Unexpected error fetching user data:", error);
+      } finally {
+        setIsLoading(false); // Clear loading state
       }
     };
 
@@ -361,6 +369,7 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
       transactions, 
       withdrawalRequests,
       platformTrc20Address,
+      isLoading, // Include isLoading in the context value
       invest, 
       getReferralBonus,
       getUserDownlines

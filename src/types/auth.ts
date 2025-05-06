@@ -45,10 +45,10 @@ export interface User {
   totalWithdrawn: number;
   referralBonus: number;
   referralCode: string;
-  referredBy?: string | null; // Make this optional to match the User type from types.ts
+  referredBy?: string | null;
   trc20Address?: string;
   withdrawalPassword?: string;
   createdAt: Date;
-  role?: 'user' | 'admin'; // Make role optional to match the User type from types.ts
+  role: 'user' | 'admin'; // Change from optional to required and restrict type to 'user' | 'admin'
   username?: string;
 }

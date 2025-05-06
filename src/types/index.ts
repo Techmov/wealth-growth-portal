@@ -75,7 +75,7 @@ export interface AdminStats {
   totalUsers: number;
 }
 
-// Add UserProfile type that was missing 'createdAt' property
+// Update UserProfile type to match User type
 export interface UserProfile {
   id: string;
   name: string;
@@ -87,6 +87,7 @@ export interface UserProfile {
   referralBonus: number;
   trc20Address: string;
   withdrawalPassword: string;
-  role: string;
-  createdAt: Date; // Added the missing createdAt field
+  role: 'user' | 'admin'; // Updated to match User type
+  createdAt: Date;
+  username?: string;
 }

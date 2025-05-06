@@ -35,6 +35,7 @@ export const useAuthState = () => {
       if (data) {
         // Check if the user has admin role or is the specific admin email
         const isAdminUser = data.role === 'admin' || data.email === 'cranetech.co.ke@gmail.com';
+        const userRole: 'user' | 'admin' = isAdminUser ? 'admin' : 'user';
         
         // Create a user profile object with all the fields we need
         const userProfile: UserProfile = {
@@ -48,8 +49,9 @@ export const useAuthState = () => {
           referralBonus: data.referral_bonus || 0,
           trc20Address: data.trc20_address || '',
           withdrawalPassword: data.withdrawal_password || '',
-          role: isAdminUser ? 'admin' : 'user',
-          createdAt: new Date(data.created_at || Date.now()) // Add createdAt field
+          role: userRole,
+          createdAt: new Date(data.created_at || Date.now()),
+          username: data.username
         };
         
         setUser(userProfile);

@@ -7,11 +7,12 @@ import { StatCard } from "@/components/StatCard";
 import { TransactionsList } from "@/components/TransactionsList";
 import { InvestmentCard } from "@/components/InvestmentCard";
 import { Loader2, TrendingUp, Wallet, ArrowUpDown, Users } from "lucide-react";
+import { Transaction } from "@/types";
 
 // Export the Dashboard component as default
 export default function Dashboard() {
   const { user } = useAuth();
-  const { products, investments, isLoading } = useInvestment();
+  const { products, userInvestments: investments, transactions, isLoading } = useInvestment();
 
   if (isLoading) {
     return (
@@ -40,28 +41,28 @@ export default function Dashboard() {
         <StatCard 
           title="Available Balance" 
           value={user ? `$${user.balance.toFixed(2)}` : "$0.00"} 
-          icon={Wallet} 
+          icon={<Wallet className="h-5 w-5" />}
           description="Current balance" 
           iconColor="text-blue-500" 
         />
         <StatCard 
           title="Active Investments" 
           value={user ? `$${totalActiveInvestments.toFixed(2)}` : "$0.00"} 
-          icon={TrendingUp} 
+          icon={<TrendingUp className="h-5 w-5" />}
           description="Across all plans" 
           iconColor="text-green-500" 
         />
         <StatCard 
           title="Total Returns" 
           value={user ? `$${totalReturns.toFixed(2)}` : "$0.00"} 
-          icon={ArrowUpDown} 
+          icon={<ArrowUpDown className="h-5 w-5" />}
           description={`${returnRate.toFixed(2)}% ROI`} 
           iconColor="text-yellow-500" 
         />
         <StatCard 
           title="Referral Bonus" 
           value={user ? `$${user.referralBonus.toFixed(2)}` : "$0.00"} 
-          icon={Users} 
+          icon={<Users className="h-5 w-5" />}
           description="From referrals" 
           iconColor="text-purple-500" 
         />
@@ -77,7 +78,6 @@ export default function Dashboard() {
               return product ? (
                 <InvestmentCard 
                   key={investment.id}
-                  investment={investment}
                   product={product}
                 />
               ) : null;
@@ -89,7 +89,7 @@ export default function Dashboard() {
       </div>
 
       {/* Transactions */}
-      <TransactionsList />
+      <TransactionsList transactions={transactions} />
     </UserLayout>
   );
 }
