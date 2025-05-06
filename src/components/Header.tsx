@@ -1,192 +1,285 @@
 
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, User, Menu, X, Home, Users, TrendingUp, UserCircle, Shield, ArrowUp, Wallet } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
-import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
-
-// Define a type for navigation items
-interface NavItem {
-  title: string;
-  path: string;
-  icon: React.ComponentType<any>;
-  iconClass?: string;
-  className?: string;
-}
+import { 
+  NavigationMenu, NavigationMenuLink, NavigationMenuList, NavigationMenuItem,
+  navigationMenuTriggerStyle
+} from "@/components/ui/navigation-menu";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ChevronDown, LogOut, Menu, User, Settings, LayoutDashboard, 
+  CreditCard, PiggyBank, Users2, BarChart } from "lucide-react";
 
 export function Header() {
-  const { user, logout } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
-  const isMobile = useIsMobile();
+  const { user, logout, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
-  const closeMobileMenu = () => {
-    setMobileMenuOpen(false);
-  };
-
-  // Determine if a nav link is active
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
-
-  // Dynamic navigation items based on authentication state
-  const getNavItems = (): NavItem[] => {
-    // Base navigation items always visible
-    const baseItems: NavItem[] = user ? [
-      { title: "Dashboard", path: "/dashboard", icon: Home },
-      { title: "Investments", path: "/investments", icon: TrendingUp },
-      { title: "Deposit", path: "/deposit", icon: ArrowUp },
-      { title: "Withdraw", path: "/withdraw", icon: ArrowUp, iconClass: "rotate-180" },
-      { title: "Referrals", path: "/referrals", icon: Users },
-      { title: "Profile", path: "/profile", icon: UserCircle },
-    ] : [
-      { title: "Home", path: "/", icon: Home },
-      { title: "Investment Plans", path: "/investments", icon: TrendingUp },
-    ];
-
-    // Admin nav item - only visible for admins
-    if (user?.role === 'admin') {
-      baseItems.push({ 
-        title: "Admin", 
-        path: "/admin/dashboard", 
-        icon: Shield, 
-        className: "text-primary hover:text-primary/80 font-medium"
-      });
+  // Navigate to admin dashboard if user is admin
+  const handleDashboardClick = () => {
+    if (isAdmin) {
+      navigate('/admin');
+    } else {
+      navigate('/dashboard');
     }
-
-    return baseItems;
+    if (isMobileMenuOpen) {
+      setIsMobileMenuOpen(false);
+    }
   };
 
-  const navItems = getNavItems();
+  // Handle logout functionality
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // Navigation is now handled inside the logout function
+    } catch (error) {
+      console.error('Logout failed', error);
+    }
+  };
+
+  // Get user initials for avatar
+  const getInitials = () => {
+    if (!user?.name) return 'U';
+    return user.name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header
+      className={`sticky top-0 z-50 w-full ${
+        isScrolled ? 'border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60' : ''
+      }`}
+    >
       <div className="container flex h-16 items-center justify-between">
-        <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 flex-shrink-0" onClick={closeMobileMenu}>
-          <div className="text-2xl font-bold bg-gradient-to-r from-wealth-primary to-wealth-accent bg-clip-text text-transparent">
-            WealthGrow
-          </div>
-        </Link>
+        <div className="flex items-center">
+          <Link to="/" className="flex items-center font-bold text-xl">
+            <span>Wealth</span>
+            <span className="text-primary">Growth</span>
+          </Link>
+        </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-4 lg:gap-6 overflow-x-auto">
-          {navItems.map((item) => (
-            <Link 
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex items-center gap-1.5 transition-colors whitespace-nowrap",
-                isActive(item.path) 
-                  ? "text-foreground font-medium" 
-                  : "text-muted-foreground hover:text-foreground",
-                item.className
-              )}
-            >
-              <item.icon className={cn("h-4 w-4", item.iconClass)} />
-              {item.title}
-            </Link>
-          ))}
-        </nav>
+        {user ? (
+          <div className="hidden md:flex items-center gap-4">
+            <NavigationMenu>
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <Link to={isAdmin ? "/admin" : "/dashboard"} className={navigationMenuTriggerStyle()}>
+                    Dashboard
+                  </Link>
+                </NavigationMenuItem>
+                {!isAdmin && (
+                  <>
+                    <NavigationMenuItem>
+                      <Link to="/investments" className={navigationMenuTriggerStyle()}>
+                        Investments
+                      </Link>
+                    </NavigationMenuItem>
+                    <NavigationMenuItem>
+                      <Link to="/deposit" className={navigationMenuTriggerStyle()}>
+                        Deposit
+                      </Link>
+                    </NavigationMenuItem>
+                    <NavigationMenuItem>
+                      <Link to="/withdrawal" className={navigationMenuTriggerStyle()}>
+                        Withdraw
+                      </Link>
+                    </NavigationMenuItem>
+                  </>
+                )}
+              </NavigationMenuList>
+            </NavigationMenu>
 
-        <div className="hidden md:flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="font-medium">
+                  {user.name}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {!isAdmin && (
+                  <>
+                    <DropdownMenuItem onSelect={() => navigate("/transactions")}>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      <span>Transactions</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => navigate("/referrals")}>
+                      <Users2 className="mr-2 h-4 w-4" />
+                      <span>Referrals</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuItem onSelect={() => navigate("/profile")}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          <div className="hidden md:flex gap-4">
+            <Link to="/login">
+              <Button variant="outline">Login</Button>
+            </Link>
+            <Link to="/signup">
+              <Button>Sign Up</Button>
+            </Link>
+          </div>
+        )}
+
+        {/* Mobile Navigation */}
+        <div className="md:hidden flex items-center">
           {user ? (
-            <div className="flex items-center gap-4">
-              {/* Show balance for authenticated users */}
-              <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-full text-sm">
-                <Wallet className="h-4 w-4 text-wealth-primary" />
-                <span>${user.balance.toFixed(2)}</span>
-              </div>
-              
-              <Link to="/profile">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="hidden lg:inline">Profile</span>
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Menu className="h-5 w-5" />
                 </Button>
-              </Link>
-              <Button variant="ghost" size="sm" onClick={logout}>
-                <span className="hidden lg:inline">Logout</span>
-                <span className="lg:hidden">Exit</span>
-              </Button>
-            </div>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <div className="flex flex-col mt-4 space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>{getInitials()}</AvatarFallback>
+                    </Avatar>
+                    <div className="font-medium">{user.name}</div>
+                  </div>
+                  
+                  <Button
+                    variant="ghost"
+                    className="flex items-center justify-start gap-2"
+                    onClick={handleDashboardClick}
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Dashboard
+                  </Button>
+
+                  {!isAdmin && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-start gap-2"
+                        onClick={() => {
+                          navigate('/investments');
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <BarChart className="h-4 w-4" />
+                        Investments
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-start gap-2"
+                        onClick={() => {
+                          navigate('/deposit');
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        Deposit
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-start gap-2"
+                        onClick={() => {
+                          navigate('/withdrawal');
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <PiggyBank className="h-4 w-4" />
+                        Withdraw
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-start gap-2"
+                        onClick={() => {
+                          navigate('/transactions');
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        Transactions
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-start gap-2"
+                        onClick={() => {
+                          navigate('/referrals');
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <Users2 className="h-4 w-4" />
+                        Referrals
+                      </Button>
+                    </>
+                  )}
+
+                  <Button
+                    variant="ghost"
+                    className="flex items-center justify-start gap-2"
+                    onClick={() => {
+                      navigate('/profile');
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    <User className="h-4 w-4" />
+                    Profile
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    className="flex items-center justify-start gap-2"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex gap-2">
               <Link to="/login">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <LogIn className="h-4 w-4" />
-                  <span className="hidden lg:inline">Login</span>
-                </Button>
+                <Button variant="outline" size="sm">Login</Button>
               </Link>
               <Link to="/signup">
                 <Button size="sm">Sign Up</Button>
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* Mobile Menu Button */}
-        <button className="md:hidden" onClick={toggleMobileMenu} aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}>
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </div>
-
-      {/* Mobile Navigation */}
-      <div
-        className={cn(
-          "fixed inset-0 top-16 z-50 flex flex-col bg-background md:hidden",
-          mobileMenuOpen ? "animate-in slide-in-from-top" : "hidden"
-        )}
-        style={{ 
-          backgroundColor: 'var(--background)',
-          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
-        }}
-      >
-        <div className="container py-4 flex flex-col gap-4">
-          {user && (
-            <div className="flex items-center justify-between mb-2 pb-2 border-b">
-              <div className="flex items-center gap-2">
-                <User className="h-5 w-5 text-wealth-primary" />
-                <span className="font-medium">{user.name}</span>
-              </div>
-              <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-full text-sm">
-                <Wallet className="h-4 w-4 text-wealth-primary" />
-                <span>${user.balance.toFixed(2)}</span>
-              </div>
-            </div>
-          )}
-
-          {navItems.map((item) => (
-            <Link 
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "text-lg py-3 border-b border-muted flex items-center gap-2",
-                isActive(item.path) ? "text-foreground font-medium" : "text-muted-foreground",
-                item.className
-              )}
-              onClick={closeMobileMenu}
-            >
-              <item.icon className={cn("h-5 w-5", item.iconClass)} />
-              {item.title}
-            </Link>
-          ))}
-          
-          {user ? (
-            <Button className="mt-4" onClick={() => { logout(); closeMobileMenu(); }}>
-              Logout
-            </Button>
-          ) : (
-            <div className="flex flex-col gap-3 mt-4">
-              <Link to="/login" onClick={closeMobileMenu}>
-                <Button variant="outline" className="w-full">Login</Button>
-              </Link>
-              <Link to="/signup" onClick={closeMobileMenu}>
-                <Button className="w-full">Sign Up</Button>
               </Link>
             </div>
           )}

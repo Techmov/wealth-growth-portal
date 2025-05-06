@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService";
+import { useNavigate } from "react-router-dom"; 
 
 export const useAuthActions = ({
   user,
@@ -99,10 +100,12 @@ export const useAuthActions = ({
     }
   };
 
-  // Logout function
+  // Fixed logout function - use async/await correctly and clear state
   const logout = async () => {
     try {
       setIsLoading(true);
+      
+      // Call Supabase auth signOut and await its completion
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -111,7 +114,14 @@ export const useAuthActions = ({
         throw error;
       }
       
+      // Clear session state after successful logout
+      setSession(null);
+      
       toast.success("Logged out successfully");
+      
+      // Force reload to ensure clean state
+      window.location.href = '/';
+      
     } catch (error: any) {
       console.error("Logout error:", error);
       throw error;
@@ -276,7 +286,7 @@ export const useAuthActions = ({
 
   return {
     login,
-    signup,
+    signup: authService.signup,
     logout,
     updateUser,
     updateTrc20Address,

@@ -13,7 +13,7 @@ import { InvestmentProvider } from "./context/InvestmentContext";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
-import Dashboard from "./pages/Dashboard"; // This should now work with the default export
+import Dashboard from "./pages/Dashboard";
 import InvestmentsPage from "./pages/InvestmentsPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -26,11 +26,11 @@ import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { useAuth } from "./context/AuthContext";
 
 // Create separate components for protected routes to avoid hook issues
-// Important fix: Move the components outside of the main App component
 const ProtectedRoute = () => {
   const { session } = useAuth();
   
   if (!session) {
+    console.log("ProtectedRoute: No session, redirecting to login");
     return <Navigate to="/login" replace />;
   }
   
@@ -41,14 +41,33 @@ const AdminRoute = () => {
   const { session, isAdmin } = useAuth();
   
   if (!session) {
+    console.log("AdminRoute: No session, redirecting to login");
     return <Navigate to="/login" replace />;
   }
   
   if (!isAdmin) {
+    console.log("AdminRoute: Not admin, redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
   
+  console.log("AdminRoute: User is admin, allowing access");
   return <Outlet />;
+};
+
+// Add component for admin redirection
+const AdminRedirect = () => {
+  const { isAdmin } = useAuth();
+  
+  useEffect(() => {
+    console.log("AdminRedirect: Admin status =", isAdmin);
+  }, [isAdmin]);
+  
+  if (isAdmin) {
+    console.log("AdminRedirect: Is admin, redirecting to admin dashboard");
+    return <Navigate to="/admin" replace />;
+  }
+  
+  return null;
 };
 
 function App() {
@@ -80,6 +99,7 @@ function App() {
             <Route element={
               <InvestmentProvider>
                 <Outlet />
+                <AdminRedirect />
               </InvestmentProvider>
             }>
               <Route path="/dashboard" element={<Dashboard />} />
@@ -87,7 +107,7 @@ function App() {
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/withdrawal" element={<WithdrawalPage />} />
-              <Route path="/withdraw" element={<WithdrawalPage />} /> {/* Added this alias */}
+              <Route path="/withdraw" element={<WithdrawalPage />} />
               <Route path="/deposit" element={<DepositPage />} />
               <Route path="/referrals" element={<ReferralsPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
@@ -100,7 +120,6 @@ function App() {
                   <AdminDashboard />
                 </InvestmentProvider>
               } />
-              {/* Add specific admin route for dashboard to fix 404 error */}
               <Route path="/admin/dashboard" element={
                 <InvestmentProvider>
                   <AdminDashboard />

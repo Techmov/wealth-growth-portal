@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
@@ -10,7 +9,8 @@ import { AdminStats } from "@/types";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { DepositApprovals } from "@/components/admin/DepositApprovals";
 import { WithdrawalApprovals } from "@/components/admin/WithdrawalApprovals";
-import { DollarSign, LogOut, Users, Download, Upload, Gift } from "lucide-react";
+import { InvestmentPlanManagement } from "@/components/admin/InvestmentPlanManagement";
+import { DollarSign, LogOut, Users, Download, Upload, Gift, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -91,13 +91,12 @@ const AdminDashboard = () => {
         stats.pendingWithdrawals = pendingWithdrawalsData.count;
       }
 
-      // Get total referral bonuses - fixing the type error here
+      // Get total referral bonuses
       const { data: referralData, error: referralError } = await supabase
         .from('profiles')
         .select('referral_bonus');
 
       if (!referralError && referralData) {
-        // Calculate sum manually instead of using PostgreSQL sum function
         const totalReferralBonus = referralData.reduce((sum, profile) => 
           sum + (profile.referral_bonus || 0), 0);
         stats.totalReferralBonus = totalReferralBonus;
@@ -228,6 +227,7 @@ const AdminDashboard = () => {
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="deposits">Deposit Approvals</TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawal Approvals</TabsTrigger>
+            <TabsTrigger value="plans">Investment Plans</TabsTrigger>
           </TabsList>
           
           <TabsContent value="users">
@@ -240,6 +240,10 @@ const AdminDashboard = () => {
           
           <TabsContent value="withdrawals">
             {withAdminProps(WithdrawalApprovals, { onStatusChange: () => updateStats() })}
+          </TabsContent>
+          
+          <TabsContent value="plans">
+            {withAdminProps(InvestmentPlanManagement, { onStatusChange: () => updateStats() })}
           </TabsContent>
         </Tabs>
       </main>
