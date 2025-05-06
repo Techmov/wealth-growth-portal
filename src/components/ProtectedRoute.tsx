@@ -15,29 +15,25 @@ export const ProtectedRoute = ({
   requireAdmin = false,
   redirectTo = "/login",
 }: ProtectedRouteProps) => {
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdmin, isLoading, session } = useAuth();
   const location = useLocation();
 
   // Log state only once per render to reduce noise
   useEffect(() => {
     console.log("ProtectedRoute - Current path:", location.pathname);
     console.log("ProtectedRoute - User state:", user ? "Authenticated" : "Not authenticated");
+    console.log("ProtectedRoute - Session state:", session ? "Session active" : "No session");
     console.log("ProtectedRoute - Loading state:", isLoading);
-  }, [location.pathname, user, isLoading]);
+  }, [location.pathname, user, session, isLoading]);
 
   // Handle loading state
-  if (isLoading && requireAuth && !location.pathname.includes("login") && !location.pathname.includes("signup")) {
+  if (isLoading) {
+    console.log("ProtectedRoute: Still loading, showing loading indicator");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
-  }
-
-  // Don't make any redirect decisions while loading
-  if (isLoading) {
-    console.log("ProtectedRoute: Still loading, deferring redirection decision");
-    return <Outlet />;
   }
 
   // If authentication is required and user is not logged in

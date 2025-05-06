@@ -15,10 +15,8 @@ export const useAuthActions = ({
     try {
       console.log("useAuthActions: Login attempt with email:", email);
       setIsLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      
+      const { data, error } = await authService.login({ email, password });
       
       if (error) {
         console.error("Login error:", error);
@@ -36,18 +34,27 @@ export const useAuthActions = ({
         throw error;
       }
       
-      const session = data.session;
+      const session = data?.session;
       
       if (session) {
         console.log("useAuthActions: Login successful, session:", session.user.id);
         setSession(session);
         
-        // Set login success flag to trigger redirect
-        setLoginSuccess(true);
-        
-        toast.success("Login successful!");
-        return { success: true, session };
+        // Fetch profile data before setting login success
+        try {
+          await fetchProfile(session.user.id);
+          // Set login success flag to trigger redirect
+          setLoginSuccess(true);
+          toast.success("Login successful!");
+          return { success: true, session };
+        } catch (profileError) {
+          console.error("Error fetching profile:", profileError);
+          toast.error("Login successful but error loading profile data");
+          // Still return success since auth was successful
+          return { success: true, session };
+        }
       }
+      
       setIsLoading(false);
       return { success: false };
     } catch (error: any) {

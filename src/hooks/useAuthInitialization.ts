@@ -27,7 +27,7 @@ export const useAuthInitialization = ({
     
     // Set up the auth state change listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
         console.log("Auth state changed:", event);
         
         if (!isMounted) return;
@@ -38,12 +38,19 @@ export const useAuthInitialization = ({
         // Handle changes to auth state
         if (event === "SIGNED_IN" && currentSession) {
           console.log("User signed in, fetching profile...");
-          // Use setTimeout to avoid potential auth deadlock issues
-          setTimeout(() => {
+          try {
+            await fetchProfile(currentSession.user.id);
+          } catch (error) {
+            console.error("Failed to fetch profile on sign in:", error);
+            // Clear user data if profile fetch fails
+            setUser(null);
+            setProfile(null);
+            setIsAdmin(false);
+          } finally {
             if (isMounted) {
-              fetchProfile(currentSession.user.id);
+              setIsLoading(false);
             }
-          }, 0);
+          }
         } else if (event === "SIGNED_OUT") {
           console.log("User signed out, clearing user data");
           // Clear user data on sign out
@@ -67,8 +74,20 @@ export const useAuthInitialization = ({
         if (initialSession && isMounted) {
           setSession(initialSession);
           
-          // Fetch the user profile
-          await fetchProfile(initialSession.user.id);
+          try {
+            // Fetch the user profile
+            await fetchProfile(initialSession.user.id);
+          } catch (error) {
+            console.error("Error getting initial profile:", error);
+            // Clear user data if profile fetch fails
+            setUser(null);
+            setProfile(null);
+            setIsAdmin(false);
+          } finally {
+            if (isMounted) {
+              setIsLoading(false);
+            }
+          }
         } else if (isMounted) {
           setIsLoading(false);
         }

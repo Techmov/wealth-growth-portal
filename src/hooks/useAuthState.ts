@@ -23,6 +23,8 @@ export const useAuthState = () => {
   const fetchProfile = useCallback(async (userId: string) => {
     try {
       console.log("useAuthState: Fetching profile for user:", userId);
+      setIsLoading(true);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -32,7 +34,7 @@ export const useAuthState = () => {
       if (error) {
         console.error("useAuthState: Error fetching profile:", error);
         setIsLoading(false);
-        return;
+        throw error;
       }
       
       if (data) {
@@ -46,12 +48,15 @@ export const useAuthState = () => {
         setUser(appUser);
       } else {
         console.log("useAuthState: No profile found for user", userId);
+        throw new Error("No profile found for user");
       }
       
       setIsLoading(false);
+      return data;
     } catch (error) {
       console.error("useAuthState: Unexpected error fetching profile:", error);
       setIsLoading(false);
+      throw error;
     }
   }, []);
 
