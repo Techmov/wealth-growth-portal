@@ -1,4 +1,3 @@
-
 // Re-export auth types from types/auth
 export * from './auth';
 
@@ -73,4 +72,19 @@ export interface AdminStats {
   pendingDeposits: number;
   pendingWithdrawals: number;
   totalUsers: number;
+}
+
+// Add UserProfile type that was missing
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  referralCode: string;
+  balance: number;
+  totalInvested: number;
+  totalWithdrawn: number;
+  referralBonus: number;
+  trc20Address: string;
+  withdrawalPassword: string;
+  role: string;
 }

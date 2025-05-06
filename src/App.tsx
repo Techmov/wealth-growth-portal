@@ -25,8 +25,9 @@ import NotFound from "./pages/NotFound";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { useAuth } from "./context/AuthContext";
 
-// Separate ProtectedRoute component to use the useAuth hook
-function ProtectedRouteContent() {
+// Create separate components for protected routes to avoid hook issues
+// Important fix: Move the components outside of the main App component
+const ProtectedRoute = () => {
   const { session } = useAuth();
   
   if (!session) {
@@ -34,10 +35,9 @@ function ProtectedRouteContent() {
   }
   
   return <Outlet />;
-}
+};
 
-// AdminRoute component to check if user is an admin
-function AdminRouteContent() {
+const AdminRoute = () => {
   const { session, isAdmin } = useAuth();
   
   if (!session) {
@@ -49,7 +49,7 @@ function AdminRouteContent() {
   }
   
   return <Outlet />;
-}
+};
 
 function App() {
   const [initializing, setInitializing] = useState(true);
@@ -76,7 +76,7 @@ function App() {
           <Route path="/signup" element={<SignupPage />} />
           
           {/* Protected routes - wrapped with InvestmentProvider */}
-          <Route element={<ProtectedRouteContent />}>
+          <Route element={<ProtectedRoute />}>
             <Route element={
               <InvestmentProvider>
                 <Outlet />
@@ -94,7 +94,7 @@ function App() {
             </Route>
             
             {/* Admin routes */}
-            <Route element={<AdminRouteContent />}>
+            <Route element={<AdminRoute />}>
               <Route path="/admin" element={
                 <InvestmentProvider>
                   <AdminDashboard />

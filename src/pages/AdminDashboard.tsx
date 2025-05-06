@@ -91,13 +91,16 @@ const AdminDashboard = () => {
         stats.pendingWithdrawals = pendingWithdrawalsData.count;
       }
 
-      // Get total referral bonuses
+      // Get total referral bonuses - fixing the type error here
       const { data: referralData, error: referralError } = await supabase
         .from('profiles')
-        .select('sum(referral_bonus)');
+        .select('referral_bonus');
 
-      if (!referralError && referralData && referralData[0]?.sum) {
-        stats.totalReferralBonus = referralData[0].sum;
+      if (!referralError && referralData) {
+        // Calculate sum manually instead of using PostgreSQL sum function
+        const totalReferralBonus = referralData.reduce((sum, profile) => 
+          sum + (profile.referral_bonus || 0), 0);
+        stats.totalReferralBonus = totalReferralBonus;
       }
 
       // Get total users count
