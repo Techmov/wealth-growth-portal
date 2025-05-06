@@ -12,7 +12,7 @@ try {
   execSync('npm install date-fns sonner lucide-react', { stdio: 'inherit' });
   
   console.log('Installing dev dependencies...');
-  execSync('npm install --save-dev @types/react @types/react-dom @types/node vite', { stdio: 'inherit' });
+  execSync('npm install --save-dev @types/react @types/react-dom @types/node vite @vitejs/plugin-react-swc', { stdio: 'inherit' });
   
   console.log('Installation complete! Running npm run dev...');
   execSync('npm run dev', { stdio: 'inherit' });

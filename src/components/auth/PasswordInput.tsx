@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 interface PasswordInputProps {
   id: string;
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: any) => void;
   placeholder?: string;
   required?: boolean;
   autoComplete?: string;
