@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { toast } from "@/components/ui/sonner";
+import { Eye, EyeOff } from "lucide-react";
 
 const SignupPage = () => {
   const [name, setName] = useState("");
@@ -17,6 +19,8 @@ const SignupPage = () => {
   const [referralCode, setReferralCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const { signup, user } = useAuth();
   const navigate = useNavigate();
@@ -36,6 +40,14 @@ const SignupPage = () => {
       navigate("/dashboard");
     }
   }, [user, navigate]);
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,10 +76,17 @@ const SignupPage = () => {
       // Navigation is handled by auth state change listener
     } catch (error: any) {
       console.error("Signup error:", error);
+      
+      // More specific error messages
       if (error.message && error.message.includes("Database error saving new user")) {
-        setError("Our system is currently experiencing issues. Please try again later or contact support.");
+        setError("Our system is experiencing technical issues. Please try again later or contact support.");
+        toast.error("Signup failed. System issue detected.");
+      } else if (error.message && error.message.includes("User already registered")) {
+        setError("This email is already registered. Please login instead.");
+        toast.error("Email already registered");
       } else {
-        setError(error.message || "Failed to create account");
+        setError(error.message || "Failed to create account. Please try again.");
+        toast.error("Signup failed");
       }
     } finally {
       setIsSubmitting(false);
@@ -122,26 +141,45 @@ const SignupPage = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button 
+                      type="button"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                      onClick={togglePasswordVisibility}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password">Confirm Password</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button 
+                      type="button"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                      onClick={toggleConfirmPasswordVisibility}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
