@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService";
@@ -16,51 +15,49 @@ export const useAuthActions = ({
       console.log("useAuthActions: Login attempt with email:", email);
       setIsLoading(true);
       
-      const { data, error } = await authService.login({ email, password });
+      const result = await authService.login({ email, password });
       
-      if (error) {
-        console.error("Login error:", error);
-        
-        // Handle specific error codes
-        if (error.message?.includes("Email not confirmed")) {
-          toast.error("Please confirm your email before logging in");
-        } else if (error.message?.includes("Invalid login credentials")) {
-          toast.error("Invalid email or password");
-        } else {
-          toast.error(error.message || "Failed to login");
-        }
-        
+      if (!result || !result.session) {
+        console.error("Login error: No session returned");
+        toast.error("Failed to login");
         setIsLoading(false);
-        throw error;
+        return { success: false };
       }
       
-      const session = data?.session;
+      const session = result.session;
       
-      if (session) {
-        console.log("useAuthActions: Login successful, session:", session.user.id);
-        setSession(session);
-        
-        // Fetch profile data before setting login success
-        try {
-          await fetchProfile(session.user.id);
-          // Set login success flag to trigger redirect
-          setLoginSuccess(true);
-          toast.success("Login successful!");
-          return { success: true, session };
-        } catch (profileError) {
-          console.error("Error fetching profile:", profileError);
-          toast.error("Login successful but error loading profile data");
-          // Still return success since auth was successful
-          return { success: true, session };
-        }
+      console.log("useAuthActions: Login successful, session:", session.user.id);
+      setSession(session);
+      
+      // Fetch profile data before setting login success
+      try {
+        await fetchProfile(session.user.id);
+        // Set login success flag to trigger redirect
+        setLoginSuccess(true);
+        toast.success("Login successful!");
+        return { success: true, session };
+      } catch (profileError) {
+        console.error("Error fetching profile:", profileError);
+        toast.error("Login successful but error loading profile data");
+        // Still return success since auth was successful
+        return { success: true, session };
       }
-      
-      setIsLoading(false);
-      return { success: false };
     } catch (error: any) {
       console.error("Login error:", error);
+      
+      // Handle specific error codes
+      if (error.message?.includes("Email not confirmed")) {
+        toast.error("Please confirm your email before logging in");
+      } else if (error.message?.includes("Invalid login credentials")) {
+        toast.error("Invalid email or password");
+      } else {
+        toast.error(error.message || "Failed to login");
+      }
+      
       setIsLoading(false);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 

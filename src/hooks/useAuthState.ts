@@ -20,7 +20,7 @@ export const useAuthState = () => {
   }, []);
 
   // Function to fetch user profile from Supabase
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string): Promise<void> => {
     try {
       console.log("useAuthState: Fetching profile for user:", userId);
       setIsLoading(true);
@@ -52,7 +52,6 @@ export const useAuthState = () => {
       }
       
       setIsLoading(false);
-      return data;
     } catch (error) {
       console.error("useAuthState: Unexpected error fetching profile:", error);
       setIsLoading(false);
