@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 
 const SignupPage = () => {
@@ -77,17 +77,8 @@ const SignupPage = () => {
     } catch (error: any) {
       console.error("Signup error:", error);
       
-      // More specific error messages
-      if (error.message && error.message.includes("Database error saving new user")) {
-        setError("Our system is experiencing technical issues. Please try again later or contact support.");
-        toast.error("Signup failed. System issue detected.");
-      } else if (error.message && error.message.includes("User already registered")) {
-        setError("This email is already registered. Please login instead.");
-        toast.error("Email already registered");
-      } else {
-        setError(error.message || "Failed to create account. Please try again.");
-        toast.error("Signup failed");
-      }
+      // Error is now handled in the AuthContext with better error messages
+      setError(error.message || "Failed to create account. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -152,8 +143,9 @@ const SignupPage = () => {
                     />
                     <button 
                       type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
                       onClick={togglePasswordVisibility}
+                      tabIndex={-1}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -174,8 +166,9 @@ const SignupPage = () => {
                     />
                     <button 
                       type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
                       onClick={toggleConfirmPasswordVisibility}
+                      tabIndex={-1}
                     >
                       {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -188,7 +181,7 @@ const SignupPage = () => {
                     id="referral"
                     type="text"
                     value={referralCode}
-                    onChange={(e) => setReferralCode(e.target.value)}
+                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                     placeholder="Enter referral code"
                     className={referralCode ? "bg-gray-50 border-green-200" : ""}
                     readOnly={!!searchParams.get('ref')}

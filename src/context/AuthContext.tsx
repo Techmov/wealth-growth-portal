@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
 import { Profile } from "@/types/supabase";
 import { useNavigate } from "react-router-dom";
@@ -65,14 +64,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           trc20Address: data.trc20_address,
           withdrawalPassword: data.withdrawal_password,
           createdAt: new Date(data.created_at || Date.now()),
-          role: data.role as 'user' | 'admin', // Fix: Cast the string to the specific type
+          role: data.role as 'user' | 'admin',
           username: data.username
         };
         
         setUser(appUser);
+      } else {
+        // If no profile found but user exists, we might need to create one
+        console.log("No profile found for user", userId);
       }
+      
+      setIsLoading(false);
     } catch (error) {
       console.error("Unexpected error fetching profile:", error);
+      setIsLoading(false);
     }
   }, []);
 
@@ -168,10 +173,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Signup function using Supabase auth
+  // Signup function using Supabase auth - Updated to handle DB errors
   const signup = async (name: string, email: string, password: string, referralCode?: string) => {
     try {
       setIsLoading(true);
+      
+      // Generate a unique referral code client-side as fallback
+      const userReferralCode = referralCode || Math.random().toString(36).substring(2, 10).toUpperCase();
       
       // Sign up with email and password
       const { data, error } = await supabase.auth.signUp({
@@ -180,7 +188,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         options: {
           data: {
             name,
-            referral_code: referralCode
+            referral_code: userReferralCode
           }
         }
       });
@@ -196,7 +204,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // Handle successful signup
       if (data?.user) {
-        // Create profile manually if needed (since trigger might be failing)
+        console.log("User signed up successfully, creating profile manually");
+        
+        // Always create profile manually since the database trigger might fail
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
@@ -204,32 +214,52 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             name: name,
             email: email,
             username: `user_${data.user.id.substring(0, 8)}`,
-            referral_code: referralCode || Math.random().toString(36).substring(2, 10).toUpperCase(),
-            referred_by: referralCode ? null : undefined, // Will be updated later if referral code exists
+            referral_code: userReferralCode,
+            referred_by: referralCode || null,
             balance: 0,
             total_invested: 0,
             total_withdrawn: 0,
-            referral_bonus: 0
-          });
+            referral_bonus: 0,
+            role: 'user'
+          }, { onConflict: 'id' });
           
         if (profileError) {
           console.error("Error creating profile:", profileError);
           toast({
-            title: "Profile Creation Failed",
-            description: "Your account was created but profile setup failed. Please contact support.",
-            variant: "destructive",
+            title: "Profile Creation Issue",
+            description: "Your account was created but there might be an issue with your profile. Please contact support if you experience any problems.",
+            variant: "warning",
           });
         } else {
           toast({
             title: "Signup Successful",
-            description: "You have successfully signed up.",
+            description: "Your account has been created successfully.",
           });
+          
+          // Fetch the profile right away
+          await fetchProfile(data.user.id);
         }
       }
       
       // Navigation will be handled by auth state change
     } catch (error: any) {
       console.error("Signup error:", error);
+      
+      let errorMessage = "Failed to create account. Please try again.";
+      
+      // Provide more specific error messages
+      if (error.message && error.message.includes("Database error saving new user")) {
+        errorMessage = "There was an issue creating your account. Please try again or contact support.";
+      } else if (error.message && error.message.includes("User already registered")) {
+        errorMessage = "This email is already registered. Please login instead.";
+      }
+      
+      toast({
+        title: "Signup Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      
       throw error;
     } finally {
       setIsLoading(false);
