@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LogIn, User, Menu, X, Home, Users, TrendingUp, UserCircle, Shield, ArrowUp, Wallet } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Define a type for navigation items
 interface NavItem {
@@ -19,6 +20,7 @@ export function Header() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const isMobile = useIsMobile();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -66,20 +68,20 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2" onClick={closeMobileMenu}>
+        <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 flex-shrink-0" onClick={closeMobileMenu}>
           <div className="text-2xl font-bold bg-gradient-to-r from-wealth-primary to-wealth-accent bg-clip-text text-transparent">
             WealthGrow
           </div>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-4 lg:gap-6 overflow-x-auto">
           {navItems.map((item) => (
             <Link 
               key={item.path}
               to={item.path}
               className={cn(
-                "flex items-center gap-2 transition-colors",
+                "flex items-center gap-1.5 transition-colors whitespace-nowrap",
                 isActive(item.path) 
                   ? "text-foreground font-medium" 
                   : "text-muted-foreground hover:text-foreground",
@@ -104,11 +106,12 @@ export function Header() {
               <Link to="/profile">
                 <Button variant="outline" size="sm" className="gap-2">
                   <User className="h-4 w-4" />
-                  Profile
+                  <span className="hidden lg:inline">Profile</span>
                 </Button>
               </Link>
               <Button variant="ghost" size="sm" onClick={logout}>
-                Logout
+                <span className="hidden lg:inline">Logout</span>
+                <span className="lg:hidden">Exit</span>
               </Button>
             </div>
           ) : (
@@ -116,7 +119,7 @@ export function Header() {
               <Link to="/login">
                 <Button variant="outline" size="sm" className="gap-2">
                   <LogIn className="h-4 w-4" />
-                  Login
+                  <span className="hidden lg:inline">Login</span>
                 </Button>
               </Link>
               <Link to="/signup">
@@ -162,7 +165,7 @@ export function Header() {
               key={item.path}
               to={item.path}
               className={cn(
-                "text-lg py-2 border-b border-muted flex items-center gap-2",
+                "text-lg py-3 border-b border-muted flex items-center gap-2",
                 isActive(item.path) ? "text-foreground font-medium" : "text-muted-foreground",
                 item.className
               )}

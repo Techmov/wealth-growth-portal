@@ -5,6 +5,8 @@ import { Product } from "@/types";
 import { useState } from "react";
 import { useInvestment } from "@/context/InvestmentContext";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface InvestmentCardProps {
   product: Product;
@@ -16,9 +18,23 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
   const { user } = useAuth();
 
   const handleInvest = async () => {
+    if (!user) {
+      toast.error("Please log in to invest");
+      return;
+    }
+    
+    if (product.amount > user.balance) {
+      toast.error("Insufficient balance. Please deposit more funds.");
+      return;
+    }
+    
     try {
       setIsInvesting(true);
       await invest(product.id);
+      toast.success(`Successfully invested in ${product.name}!`);
+    } catch (error) {
+      console.error("Investment failed:", error);
+      toast.error("Failed to process investment. Please try again.");
     } finally {
       setIsInvesting(false);
     }
@@ -75,10 +91,17 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
       <CardFooter>
         <Button 
           className="w-full" 
-          disabled={!user || isInvesting || (user && product.amount > user.balance)}
           onClick={handleInvest}
+          disabled={isInvesting || (user && product.amount > user.balance)}
         >
-          {isInvesting ? "Processing..." : "Invest Now"}
+          {isInvesting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            "Invest Now"
+          )}
         </Button>
       </CardFooter>
     </Card>

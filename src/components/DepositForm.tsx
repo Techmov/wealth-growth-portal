@@ -1,48 +1,87 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Upload } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Loader2, Copy, CheckCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export function DepositForm() {
   const { user } = useAuth();
   const [amount, setAmount] = useState("");
-  const [txHash, setTxHash] = useState("");
   const [loading, setLoading] = useState(false);
-  const [screenshot, setScreenshot] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showWaitingDialog, setShowWaitingDialog] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
+  const [depositSuccess, setDepositSuccess] = useState(false);
 
-  // Mock company TRC20 address - in a real app, this would come from your backend
-  const companyTrc20Address = "TRC20CompanyAddress123456789";
+  // Company TRC20 address
+  const companyTrc20Address = "TMRKGbNjvhHnvK9p3LRtvACs7t6ttn3adN";
 
-  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    // Check if file is an image
-    if (!file.type.match('image.*')) {
-      toast.error("Please upload an image file");
-      return;
+  // Format time in MM:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Handle copy to clipboard
+  const handleCopyAddress = () => {
+    navigator.clipboard.writeText(companyTrc20Address);
+    toast.success("Address copied to clipboard");
+  };
+
+  // Timer effect for waiting window
+  useEffect(() => {
+    let timer;
+    if (showWaitingDialog && timeLeft > 0 && !depositSuccess) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          const newTime = prev - 1;
+          setProgress(100 - ((newTime / 600) * 100));
+          return newTime;
+        });
+      }, 1000);
     }
-    
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size should be less than 5MB");
-      return;
-    }
-    
-    setScreenshot(file);
-    
-    // Create a preview URL
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreviewUrl(reader.result as string);
+
+    return () => {
+      clearInterval(timer);
     };
-    reader.readAsDataURL(file);
+  }, [showWaitingDialog, timeLeft, depositSuccess]);
+
+  // Effect to check if time has run out
+  useEffect(() => {
+    if (timeLeft === 0 && !depositSuccess) {
+      toast.error("Deposit confirmation time expired. Please try again or contact support.");
+      setShowWaitingDialog(false);
+      setTimeLeft(600); // Reset timer
+    }
+  }, [timeLeft, depositSuccess]);
+
+  // Mock successful deposit (for demo purposes)
+  const mockDepositConfirmation = () => {
+    // Simulate random success between 30s and 2 minutes
+    const randomTime = Math.floor(Math.random() * 90) + 30;
+    
+    setTimeout(() => {
+      if (showWaitingDialog) {
+        setDepositSuccess(true);
+        toast.success("Your deposit has been confirmed!");
+        
+        // Close dialog after 3 seconds of showing success
+        setTimeout(() => {
+          setShowWaitingDialog(false);
+          setAmount("");
+          setTimeLeft(600);
+          setProgress(0);
+          setDepositSuccess(false);
+        }, 3000);
+      }
+    }, randomTime * 1000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,32 +92,17 @@ export function DepositForm() {
       return;
     }
     
-    if (!txHash.trim()) {
-      toast.error("Please enter the transaction hash");
-      return;
-    }
-    
-    if (!screenshot) {
-      toast.error("Please upload a screenshot of your deposit");
-      return;
-    }
-    
     try {
       setLoading(true);
       
-      // In a real app, you would upload the screenshot to your server/storage
-      // and create a deposit transaction record
+      // In a real app, you would create a deposit record here
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Mock successful deposit
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Show waiting dialog
+      setShowWaitingDialog(true);
       
-      toast.success("Deposit submitted for processing!");
-      
-      // Reset form
-      setAmount("");
-      setTxHash("");
-      setScreenshot(null);
-      setPreviewUrl(null);
+      // Start mock confirmation process (would be replaced by real admin confirmation)
+      mockDepositConfirmation();
       
     } catch (error) {
       console.error("Error processing deposit:", error);
@@ -94,21 +118,26 @@ export function DepositForm() {
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Company USDT Deposit Address (TRC20)</h3>
           <div className="p-3 bg-muted rounded-md flex flex-col gap-2">
-            <code className="text-sm font-mono break-all select-all">{companyTrc20Address}</code>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => {
-                navigator.clipboard.writeText(companyTrc20Address);
-                toast.success("Address copied to clipboard");
-              }}
-            >
-              Copy Address
-            </Button>
+            <div className="flex items-center justify-between">
+              <code className="text-sm font-mono break-all select-all">{companyTrc20Address}</code>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleCopyAddress}
+                className="ml-2"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Send USDT to this address from your wallet. After sending, complete the form below.
-          </p>
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+            <p className="font-medium mb-2">Important Deposit Instructions:</p>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>Send only USDT (TRC20) to this address</li>
+              <li>After sending, enter the amount below and click Submit</li>
+              <li>Wait for admin confirmation (up to 10 minutes)</li>
+            </ol>
+          </div>
         </div>
       </Card>
 
@@ -121,77 +150,12 @@ export function DepositForm() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            min="0"
+            min="10"
             step="0.01"
             className="w-full"
             required
           />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="txHash">Transaction Hash (TXID)</Label>
-          <Input
-            id="txHash"
-            value={txHash}
-            onChange={(e) => setTxHash(e.target.value)}
-            placeholder="Enter transaction hash"
-            className="w-full"
-            required
-          />
-          <p className="text-xs text-muted-foreground">
-            Copy the transaction hash from your wallet after making the transfer
-          </p>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="screenshot">Upload Deposit Screenshot</Label>
-          <div className="flex items-center justify-center w-full">
-            <label 
-              htmlFor="screenshot" 
-              className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-background hover:bg-secondary/10"
-            >
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <Upload className="w-8 h-8 mb-2 text-primary" />
-                <p className="mb-2 text-sm text-muted-foreground">
-                  <span className="font-semibold">Click to upload</span> or drag and drop
-                </p>
-                <p className="text-xs text-muted-foreground">PNG, JPG or JPEG (MAX. 5MB)</p>
-              </div>
-              <Input
-                id="screenshot"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleScreenshotChange}
-                required
-              />
-            </label>
-          </div>
-          
-          {previewUrl && (
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Screenshot Preview:</h4>
-              <div className="relative border rounded-lg overflow-hidden">
-                <img 
-                  src={previewUrl} 
-                  alt="Deposit screenshot preview" 
-                  className="w-full max-h-[300px] object-contain"
-                />
-                <Button 
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  className="absolute top-2 right-2"
-                  onClick={() => {
-                    setScreenshot(null);
-                    setPreviewUrl(null);
-                  }}
-                >
-                  Remove
-                </Button>
-              </div>
-            </div>
-          )}
+          <p className="text-xs text-muted-foreground">Minimum deposit: 10 USDT</p>
         </div>
         
         <div className="pt-2">
@@ -207,6 +171,50 @@ export function DepositForm() {
           </Button>
         </div>
       </form>
+
+      {/* Waiting confirmation dialog */}
+      <Dialog open={showWaitingDialog} onOpenChange={setShowWaitingDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {!depositSuccess ? "Awaiting Deposit Confirmation" : "Deposit Confirmed!"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-6">
+            {!depositSuccess ? (
+              <>
+                <div className="flex flex-col items-center justify-center space-y-6">
+                  <div className="w-full space-y-2">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Waiting for admin confirmation</span>
+                      <span className="font-mono">{formatTime(timeLeft)}</span>
+                    </div>
+                    <Progress value={progress} className="h-2" />
+                  </div>
+
+                  <div className="flex items-center justify-center h-20 w-20">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  </div>
+                  
+                  <div className="text-center text-sm text-muted-foreground">
+                    <p>Please wait while an admin confirms your deposit.</p>
+                    <p className="mt-1">This may take up to 10 minutes.</p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <CheckCircle className="h-16 w-16 text-green-500" />
+                <p className="text-lg font-medium">Your deposit of ${amount} USDT has been confirmed!</p>
+                <p className="text-center text-sm text-muted-foreground">
+                  The funds have been added to your account.
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
