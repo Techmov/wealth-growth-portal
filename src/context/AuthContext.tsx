@@ -1,15 +1,20 @@
+
 import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
-import { User } from "@/types";
+import { Profile } from "@/types/supabase";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Session, User } from "@supabase/supabase-js";
 
 interface AuthContextType {
   user: User | null;
+  profile: Profile | null;
   isLoading: boolean;
+  session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string, referralCode?: string) => Promise<void>;
-  logout: () => void;
-  updateUser: (userData: Partial<User>) => void;
+  logout: () => Promise<void>;
+  updateProfile: (userData: Partial<Profile>) => Promise<void>;
   updateTrc20Address: (address: string) => Promise<void>;
   deposit: (amount: number, txHash: string, screenshot?: File) => Promise<void>;
   requestWithdrawal: (amount: number) => Promise<void>;
@@ -18,440 +23,379 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Constants
-const SESSION_EXPIRY_TIME = 60 * 60 * 1000; // 1 hour in milliseconds
-const USER_STORAGE_KEY = "user_session";
-const SESSION_EXPIRY_KEY = "session_expiry";
-
-// Admin credentials
-const ADMIN_EMAIL = "Caltech@gmail.com";
-const ADMIN_PASSWORD = "Caltech2030";
-
-// Get users from localStorage
-const getUsers = () => {
-  return JSON.parse(localStorage.getItem("users") || "[]");
-};
-
-// Save users to localStorage
-const saveUsers = (users: User[]) => {
-  localStorage.setItem("users", JSON.stringify(users));
-};
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [sessionTimer, setSessionTimer] = useState<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
-
-  // Function to set up session timeout
-  const setupSessionTimeout = useCallback(() => {
-    // Clear any existing timer
-    if (sessionTimer) {
-      clearTimeout(sessionTimer);
+  
+  // Function to fetch user profile from Supabase
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (error) {
+        console.error("Error fetching profile:", error);
+        return;
+      }
+      
+      if (data) {
+        setProfile(data);
+        setIsAdmin(data.role === 'admin');
+      }
+    } catch (error) {
+      console.error("Unexpected error fetching profile:", error);
     }
-    
-    // Set the expiry time - 1 hour from now
-    const expiryTime = Date.now() + SESSION_EXPIRY_TIME;
-    localStorage.setItem(SESSION_EXPIRY_KEY, expiryTime.toString());
-    
-    // Set up the timer to log out when the session expires
-    const timer = setTimeout(() => {
-      logout();
-      toast({
-        title: "Session Expired",
-        description: "Your session has expired. Please log in again.",
-      });
-    }, SESSION_EXPIRY_TIME);
-    
-    setSessionTimer(timer);
   }, []);
 
-  // Check for existing user session on load
+  // Set up authentication state listener
   useEffect(() => {
-    const checkSession = () => {
-      const storedUser = localStorage.getItem(USER_STORAGE_KEY);
-      const expiryTime = localStorage.getItem(SESSION_EXPIRY_KEY);
+    setIsLoading(true);
+    
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
       
-      if (storedUser && expiryTime) {
-        const parsedUser = JSON.parse(storedUser);
-        const remainingTime = parseInt(expiryTime) - Date.now();
-        
-        // If session is still valid
-        if (remainingTime > 0) {
-          setUser(parsedUser);
-          
-          // Check if user is admin
-          if (parsedUser.email === ADMIN_EMAIL) {
-            setIsAdmin(true);
-          }
-          
-          // Set up a new timer for the remaining time
-          const timer = setTimeout(() => {
-            logout();
-            toast({
-              title: "Session Expired",
-              description: "Your session has expired. Please log in again.",
-            });
-          }, remainingTime);
-          
-          setSessionTimer(timer);
-        } else {
-          // Session expired, clear storage
-          localStorage.removeItem(USER_STORAGE_KEY);
-          localStorage.removeItem(SESSION_EXPIRY_KEY);
-        }
+      if (initialSession?.user) {
+        // Use setTimeout to avoid potential deadlocks with Supabase auth
+        setTimeout(() => {
+          fetchProfile(initialSession.user.id);
+        }, 0);
       }
       
       setIsLoading(false);
-    };
+    });
     
-    checkSession();
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        console.log("Auth state changed:", event);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        if (currentSession?.user) {
+          // Use setTimeout to avoid potential deadlocks with Supabase auth
+          setTimeout(() => {
+            fetchProfile(currentSession.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+          setIsAdmin(false);
+        }
+        
+        setIsLoading(false);
+      }
+    );
     
-    // Initialize storage if it doesn't exist
-    if (!localStorage.getItem("users")) {
-      localStorage.setItem("users", "[]");
-    }
-    
-    // Initialize other storage items
-    if (!localStorage.getItem("transactions")) {
-      localStorage.setItem("transactions", "[]");
-    }
-    
-    if (!localStorage.getItem("investments")) {
-      localStorage.setItem("investments", "[]");
-    }
-    
-    if (!localStorage.getItem("withdrawalRequests")) {
-      localStorage.setItem("withdrawalRequests", "[]");
-    }
-    
-    if (!localStorage.getItem("pendingDeposits")) {
-      localStorage.setItem("pendingDeposits", "[]");
-    }
-    
-    if (!localStorage.getItem("pendingWithdrawals")) {
-      localStorage.setItem("pendingWithdrawals", "[]");
-    }
-    
-    // Cleanup timer on unmount
     return () => {
-      if (sessionTimer) {
-        clearTimeout(sessionTimer);
-      }
+      subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
+  // Login function using Supabase auth
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
     try {
-      // Check if the user is admin
-      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        const adminUser: User = {
-          id: "admin-id",
-          name: "Admin",
-          email: ADMIN_EMAIL,
-          balance: 0,
-          totalInvested: 0,
-          totalWithdrawn: 0,
-          referralBonus: 0,
-          referralCode: "ADMIN",
-          createdAt: new Date(),
-          role: "admin"
-        };
-        
-        setUser(adminUser);
-        setIsAdmin(true);
-        
-        // Store user in session storage
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(adminUser));
-        
-        // Set up session timeout
-        setupSessionTimeout();
-        
-        toast({
-          title: "Admin Login Successful",
-          description: "Welcome to the admin dashboard.",
-        });
-        
-        navigate("/admin/dashboard");
-        return;
-      }
-
-      // Regular user login - find user in our "database"
-      const users = getUsers();
-      const foundUser = users.find(u => u.email === email);
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      if (foundUser) {
-        setUser(foundUser);
-        
-        // Store user in session storage
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(foundUser));
-        
-        // Set up session timeout
-        setupSessionTimeout();
-        
-        toast({
-          title: "Login Successful",
-          description: `Welcome back, ${foundUser.name}!`,
-        });
-        
-        navigate("/dashboard");
-      } else {
+      if (error) {
         toast({
           title: "Login Failed",
-          description: "Invalid credentials. User not found.",
+          description: error.message,
           variant: "destructive",
         });
-        
-        throw new Error("Invalid credentials");
+        throw error;
       }
-    } catch (error) {
+      
+      if (data?.user) {
+        toast({
+          title: "Login Successful",
+          description: `Welcome back!`,
+        });
+        
+        // Navigation will be handled by auth state change
+      }
+    } catch (error: any) {
       console.error("Login error:", error);
-      toast({
-        title: "Login Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Signup function using Supabase auth
   const signup = async (name: string, email: string, password: string, referralCode?: string) => {
-    setIsLoading(true);
     try {
-      // Check if user already exists
-      const users = getUsers();
-      if (users.some(u => u.email === email)) {
+      setIsLoading(true);
+      
+      // Sign up with email and password
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            referral_code: referralCode
+          }
+        }
+      });
+      
+      if (error) {
         toast({
           title: "Signup Failed",
-          description: "A user with this email already exists.",
+          description: error.message,
           variant: "destructive",
         });
-        throw new Error("User already exists");
+        throw error;
       }
-      
-      // Generate referral code
-      const userReferralCode = `REF${Math.floor(Math.random() * 10000)}`;
-      
-      // Create withdrawal password (same as transaction hash)
-      const withdrawalPassword = `TX${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-      
-      // Create new user
-      const newUser: User = {
-        id: `user-${Date.now()}`,
-        name,
-        email,
-        balance: 0,
-        totalInvested: 0,
-        totalWithdrawn: 0,
-        referralBonus: 0,
-        referralCode: userReferralCode,
-        referredBy: referralCode || undefined,
-        createdAt: new Date(),
-        role: "user",
-        username: email.split('@')[0],
-        withdrawalPassword,
-      };
-      
-      // Save user to "database"
-      users.push(newUser);
-      saveUsers(users);
-      
-      // Set current user
-      setUser(newUser);
-      
-      // Store user in session storage
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
-      
-      // Set up session timeout
-      setupSessionTimeout();
-      
-      // Dispatch event for admin dashboard
-      window.dispatchEvent(new CustomEvent('userSignup'));
       
       toast({
         title: "Signup Successful",
         description: "You have successfully signed up.",
       });
       
-      navigate("/dashboard");
-    } catch (error) {
+      // Navigation will be handled by auth state change
+    } catch (error: any) {
       console.error("Signup error:", error);
-      toast({
-        title: "Signup Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    // Clear user state
-    setUser(null);
-    setIsAdmin(false);
-    
-    // Clear session data
-    localStorage.removeItem(USER_STORAGE_KEY);
-    localStorage.removeItem(SESSION_EXPIRY_KEY);
-    
-    // Clear any active session timer
-    if (sessionTimer) {
-      clearTimeout(sessionTimer);
-      setSessionTimer(null);
-    }
-    
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
-    
-    navigate("/login");
-  };
-
-  const updateUser = (userData: Partial<User>) => {
-    if (user) {
-      const updatedUser = { ...user, ...userData };
-      setUser(updatedUser);
+  // Logout function using Supabase auth
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
       
-      // Update in session storage
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+      if (error) {
+        toast({
+          title: "Logout Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
       
-      // Update user in the "database"
-      const users = getUsers();
-      const updatedUsers = users.map(u => 
-        u.id === user.id ? updatedUser : u
-      );
-      saveUsers(updatedUsers);
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+      
+      // Navigation will be handled by auth state change
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
     }
   };
 
+  // Update profile function
+  const updateProfile = async (userData: Partial<Profile>) => {
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(userData)
+        .eq('id', user.id);
+      
+      if (error) {
+        toast({
+          title: "Update Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      // Refresh profile data
+      fetchProfile(user.id);
+      
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+    } catch (error) {
+      console.error("Update profile error:", error);
+      throw error;
+    }
+  };
+
+  // Update TRC20 address function
   const updateTrc20Address = async (address: string) => {
-    if (user) {
-      try {
-        // Update the user's TRC20 address
-        const updatedUser = { ...user, trc20Address: address };
-        setUser(updatedUser);
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        
-        // Update user in the "database"
-        const users = getUsers();
-        const updatedUsers = users.map(u => 
-          u.id === user.id ? updatedUser : u
-        );
-        saveUsers(updatedUsers);
-        
-        return Promise.resolve();
-      } catch (error) {
-        return Promise.reject(error);
-      }
+    try {
+      await updateProfile({ trc20_address: address });
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
     }
-    return Promise.reject(new Error("User not found"));
   };
 
+  // Deposit function
   const deposit = async (amount: number, txHash: string, screenshot?: File) => {
-    if (user) {
-      try {
-        const screenshotUrl = screenshot ? URL.createObjectURL(screenshot) : undefined;
-        
-        // Create a pending deposit
-        const pendingDeposit = {
-          id: `dep_${Date.now()}`,
-          userId: user.id,
-          userEmail: user.email,
-          userName: user.name,
-          amount,
-          status: "pending",
-          date: new Date(),
-          txHash,
-          type: "deposit",
-          depositScreenshot: screenshotUrl
-        };
-        
-        // Save pending deposit to localStorage
-        const pendingDeposits = JSON.parse(localStorage.getItem("pendingDeposits") || "[]");
-        pendingDeposits.push(pendingDeposit);
-        localStorage.setItem("pendingDeposits", JSON.stringify(pendingDeposits));
-        
-        // Notify admin dashboard
-        window.dispatchEvent(new CustomEvent('depositStatusChange'));
-        
-        toast({
-          title: "Deposit Received",
-          description: "Your deposit request has been received and is pending approval.",
-        });
-        
-        return Promise.resolve();
-      } catch (error) {
-        return Promise.reject(error);
-      }
+    if (!user || !profile) {
+      throw new Error("User not authenticated");
     }
-    return Promise.reject(new Error("User not found"));
+    
+    try {
+      let screenshotUrl: string | undefined = undefined;
+      
+      // If screenshot is provided, upload it to storage
+      if (screenshot) {
+        const fileExt = screenshot.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('deposit_screenshots')
+          .upload(fileName, screenshot);
+        
+        if (uploadError) {
+          toast({
+            title: "Upload Failed",
+            description: uploadError.message,
+            variant: "destructive",
+          });
+          throw uploadError;
+        }
+        
+        // Get public URL for the screenshot
+        const { data: urlData } = supabase.storage
+          .from('deposit_screenshots')
+          .getPublicUrl(fileName);
+        
+        screenshotUrl = urlData.publicUrl;
+      }
+      
+      // Create transaction record
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          amount,
+          status: 'pending',
+          type: 'deposit',
+          tx_hash: txHash,
+          deposit_screenshot: screenshotUrl
+        });
+      
+      if (transactionError) {
+        toast({
+          title: "Deposit Failed",
+          description: transactionError.message,
+          variant: "destructive",
+        });
+        throw transactionError;
+      }
+      
+      toast({
+        title: "Deposit Received",
+        description: "Your deposit request has been received and is pending approval.",
+      });
+      
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
+    }
   };
 
+  // Request withdrawal function
   const requestWithdrawal = async (amount: number) => {
-    if (user) {
-      try {
-        if (amount > user.balance) {
-          return Promise.reject(new Error("Insufficient balance"));
-        }
-        
-        if (!user.trc20Address) {
-          return Promise.reject(new Error("Please set your TRC20 address before requesting withdrawal"));
-        }
-        
-        // Create withdrawal request event
-        window.dispatchEvent(new CustomEvent('newWithdrawalRequest', {
-          detail: {
-            userId: user.id,
-            amount,
-            trc20Address: user.trc20Address
-          }
-        }));
-        
-        // Update user balance
-        const updatedUser = {
-          ...user,
-          balance: user.balance - amount
-        };
-        
-        setUser(updatedUser);
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        
-        // Update user in database
-        const users = getUsers();
-        const updatedUsers = users.map(u => 
-          u.id === user.id ? updatedUser : u
-        );
-        saveUsers(updatedUsers);
-        
-        toast({
-          title: "Withdrawal Requested",
-          description: `Your withdrawal request for $${amount.toFixed(2)} has been submitted for approval.`,
-        });
-        
-        return Promise.resolve();
-      } catch (error) {
-        return Promise.reject(error);
-      }
+    if (!user || !profile) {
+      throw new Error("User not authenticated");
     }
-    return Promise.reject(new Error("User not found"));
+    
+    try {
+      if (amount > (profile.balance || 0)) {
+        toast({
+          title: "Withdrawal Failed",
+          description: "Insufficient balance",
+          variant: "destructive",
+        });
+        return Promise.reject(new Error("Insufficient balance"));
+      }
+      
+      if (!profile.trc20_address) {
+        toast({
+          title: "Withdrawal Failed",
+          description: "Please set your TRC20 address before requesting withdrawal",
+          variant: "destructive",
+        });
+        return Promise.reject(new Error("TRC20 address not set"));
+      }
+      
+      // Create withdrawal request
+      const { error } = await supabase
+        .from('withdrawal_requests')
+        .insert({
+          user_id: user.id,
+          amount,
+          status: 'pending',
+          trc20_address: profile.trc20_address
+        });
+      
+      if (error) {
+        toast({
+          title: "Withdrawal Request Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      // Update user balance
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          balance: (profile.balance || 0) - amount
+        })
+        .eq('id', user.id);
+      
+      if (updateError) {
+        toast({
+          title: "Balance Update Failed",
+          description: updateError.message,
+          variant: "destructive",
+        });
+        throw updateError;
+      }
+      
+      // Refresh profile data
+      fetchProfile(user.id);
+      
+      toast({
+        title: "Withdrawal Requested",
+        description: `Your withdrawal request for $${amount.toFixed(2)} has been submitted for approval.`,
+      });
+      
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        profile,
+        session,
         isLoading,
         login,
         signup,
         logout,
-        updateUser,
+        updateProfile,
         updateTrc20Address,
         deposit,
         requestWithdrawal,

@@ -19,7 +19,7 @@ const SignupPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   
-  const { signup } = useAuth();
+  const { signup, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -30,6 +30,13 @@ const SignupPage = () => {
       setReferralCode(refCode);
     }
   }, [searchParams]);
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +62,7 @@ const SignupPage = () => {
       setIsSubmitting(true);
       await signup(name, email, password, referralCode);
       toast.success("Account created successfully");
-      navigate("/dashboard");
+      // Navigation is handled by auth state change listener
     } catch (error: any) {
       setError(error.message || "Failed to create account");
     } finally {

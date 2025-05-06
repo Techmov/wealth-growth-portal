@@ -10,3 +10,15 @@
   
 [build.environment]
   NODE_VERSION = "18"
+
+# Set cache headers for improved performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Set cache headers for static assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

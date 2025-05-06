@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { InvestmentProvider } from "./context/InvestmentContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -34,20 +35,28 @@ const App = () => {
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Index />} />
-                <Route path="/signup" element={<SignupPage />} />
-                <Route path="/login" element={<LoginPage />} />
+                
+                {/* Auth Routes - Redirect to dashboard if already logged in */}
+                <Route element={<ProtectedRoute requireAuth={false} />}>
+                  <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                </Route>
                 
                 {/* Protected User Routes */}
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/investments" element={<InvestmentsPage />} />
-                <Route path="/transactions" element={<TransactionsPage />} />
-                <Route path="/deposit" element={<DepositPage />} />
-                <Route path="/withdraw" element={<WithdrawalPage />} />
-                <Route path="/referrals" element={<ReferralsPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
+                <Route element={<ProtectedRoute requireAuth={true} />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/investments" element={<InvestmentsPage />} />
+                  <Route path="/transactions" element={<TransactionsPage />} />
+                  <Route path="/deposit" element={<DepositPage />} />
+                  <Route path="/withdraw" element={<WithdrawalPage />} />
+                  <Route path="/referrals" element={<ReferralsPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                </Route>
                 
                 {/* Admin Routes */}
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route element={<ProtectedRoute requireAuth={true} requireAdmin={true} />}>
+                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                </Route>
                 
                 {/* Catch all */}
                 <Route path="*" element={<NotFound />} />
