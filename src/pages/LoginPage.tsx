@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,25 @@ const LoginPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   
-  const { login } = useAuth();
+  const { login, user, isLoading, loginSuccess, resetLoginSuccess } = useAuth();
   const navigate = useNavigate();
+
+  // Effect to handle redirect after successful login
+  useEffect(() => {
+    if (loginSuccess && !isLoading) {
+      console.log("LoginPage: Login success flag detected, navigating to dashboard");
+      resetLoginSuccess();
+      navigate("/dashboard", { replace: true });
+    }
+  }, [loginSuccess, isLoading, navigate, resetLoginSuccess]);
+
+  // Effect to handle already authenticated users
+  useEffect(() => {
+    if (user && !isLoading) {
+      console.log("LoginPage: User already authenticated, redirecting to dashboard");
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, isLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,16 +50,9 @@ const LoginPage = () => {
       setIsSubmitting(true);
       console.log("LoginPage: Attempting login with email:", email);
       
-      const result = await login(email, password);
-      console.log("LoginPage: Login result:", result);
-      
-      if (result.success) {
-        toast.success("Login successful!");
-        console.log("LoginPage: Login successful, navigating to dashboard");
-        
-        // Force navigation to dashboard with replace to prevent back navigation to login
-        navigate("/dashboard", { replace: true });
-      }
+      await login(email, password);
+      console.log("LoginPage: Login function completed");
+      // The redirect is now handled by the useEffect
     } catch (error: any) {
       console.error("LoginPage: Login error:", error);
       setError(error.message || "Failed to login. Please check your credentials.");

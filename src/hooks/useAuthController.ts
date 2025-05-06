@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Session } from "@supabase/supabase-js";
 import { User } from "@/types";
@@ -18,6 +17,8 @@ export const useAuthController = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Add a specific state for tracking login redirect
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   // Fetch user profile
   const fetchProfile = async (userId: string) => {
@@ -58,6 +59,7 @@ export const useAuthController = () => {
   // Login function
   const login = async (email: string, password: string) => {
     try {
+      console.log("useAuthController: Login attempt with email:", email);
       setIsLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -76,24 +78,34 @@ export const useAuthController = () => {
           toast.error(error.message || "Failed to login");
         }
         
+        setIsLoading(false);
         throw error;
       }
       
       const session = data.session;
       
       if (session) {
+        console.log("useAuthController: Login successful, session:", session.user.id);
         setSession(session);
-        await fetchProfile(session.user.id);
+        
+        // Set login success flag to trigger redirect
+        setLoginSuccess(true);
+        
         toast.success("Login successful!");
         return { success: true, session };
       }
+      setIsLoading(false);
       return { success: false };
     } catch (error: any) {
       console.error("Login error:", error);
-      throw error;
-    } finally {
       setIsLoading(false);
+      throw error;
     }
+  };
+
+  // Reset login success flag after redirection
+  const resetLoginSuccess = () => {
+    setLoginSuccess(false);
   };
 
   // Signup function
@@ -317,6 +329,8 @@ export const useAuthController = () => {
     setIsLoading,
     isAdmin,
     setIsAdmin,
+    loginSuccess,
+    resetLoginSuccess,
     
     // Methods
     fetchProfile,

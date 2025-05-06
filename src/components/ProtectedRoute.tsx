@@ -2,6 +2,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 
 interface ProtectedRouteProps {
   requireAuth?: boolean;
@@ -17,12 +18,14 @@ export const ProtectedRoute = ({
   const { user, isAdmin, isLoading } = useAuth();
   const location = useLocation();
 
-  console.log("ProtectedRoute - Current path:", location.pathname);
-  console.log("ProtectedRoute - User state:", user ? "Authenticated" : "Not authenticated");
-  console.log("ProtectedRoute - Loading state:", isLoading);
+  // Log state only once per render to reduce noise
+  useEffect(() => {
+    console.log("ProtectedRoute - Current path:", location.pathname);
+    console.log("ProtectedRoute - User state:", user ? "Authenticated" : "Not authenticated");
+    console.log("ProtectedRoute - Loading state:", isLoading);
+  }, [location.pathname, user, isLoading]);
 
-  // Only show loading indicator for protected routes that require authentication
-  // This prevents unnecessary loading state on auth pages
+  // Handle loading state
   if (isLoading && requireAuth && !location.pathname.includes("login") && !location.pathname.includes("signup")) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -31,14 +34,20 @@ export const ProtectedRoute = ({
     );
   }
 
+  // Don't make any redirect decisions while loading
+  if (isLoading) {
+    console.log("ProtectedRoute: Still loading, deferring redirection decision");
+    return <Outlet />;
+  }
+
   // If authentication is required and user is not logged in
-  if (requireAuth && !user && !isLoading) {
+  if (requireAuth && !user) {
     console.log("Authentication required but user not logged in - redirecting to login");
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
   // If admin privileges are required and user is not an admin
-  if (requireAdmin && !isAdmin && !isLoading) {
+  if (requireAdmin && !isAdmin) {
     console.log("Admin privileges required but user is not admin - redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }

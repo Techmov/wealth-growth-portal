@@ -9,6 +9,8 @@ export interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isAdmin: boolean;
+  loginSuccess: boolean;
+  resetLoginSuccess: () => void;
   login: (email: string, password: string) => Promise<{ success: boolean; session?: Session }>;
   signup: (name: string, email: string, password: string, referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -16,7 +18,7 @@ export interface AuthContextType {
   updateTrc20Address: (address: string) => Promise<void>;
   requestWithdrawal: (amount: number) => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
-  deposit: (amount: number, txHash: string) => Promise<void>;  // Added deposit function to type
+  deposit: (amount: number, txHash: string) => Promise<void>;
 }
 
 // User credentials for login
