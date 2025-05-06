@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -64,7 +63,12 @@ const SignupPage = () => {
       toast.success("Account created successfully");
       // Navigation is handled by auth state change listener
     } catch (error: any) {
-      setError(error.message || "Failed to create account");
+      console.error("Signup error:", error);
+      if (error.message && error.message.includes("Database error saving new user")) {
+        setError("Our system is currently experiencing issues. Please try again later or contact support.");
+      } else {
+        setError(error.message || "Failed to create account");
+      }
     } finally {
       setIsSubmitting(false);
     }

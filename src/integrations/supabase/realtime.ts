@@ -1,51 +1,64 @@
 
-import { supabase } from "./client";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import { supabase } from './client';
 
-// Enable Postgres replication for a table
-export const enableRealtimeForTable = async (tableName: "profiles" | "investments" | "products" | "transactions" | "withdrawal_requests") => {
-  try {
-    // Execute a query to enable replication for the table
-    const { data, error } = await supabase
-      .from(tableName)
-      .select()
-      .limit(0);
-
-    if (error) {
-      console.error(`Error enabling realtime for ${tableName}:`, error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error(`Error in enableRealtimeForTable:`, error);
-    return false;
-  }
-};
-
-// Setup a realtime listener for a table
-export const setupRealtimeListener = (
-  tableName: "profiles" | "investments" | "products" | "transactions" | "withdrawal_requests",
-  event: 'INSERT' | 'UPDATE' | 'DELETE' | '*', 
-  callback: (payload: any) => void
-): RealtimeChannel => {
-  const channel = supabase
-    .channel('table-changes')
+// Initialize all realtime subscriptions
+export function initializeRealtimeSubscriptions() {
+  // Listen for profile changes
+  const profilesChannel = supabase
+    .channel('profiles-changes')
     .on(
       'postgres_changes',
       {
-        event: event,
+        event: '*', 
         schema: 'public',
-        table: tableName,
+        table: 'profiles'
       },
-      callback
+      (payload) => {
+        console.log('Profile change received:', payload);
+      }
     )
     .subscribe();
 
-  return channel;
-};
+  // Listen for transaction changes
+  const transactionsChannel = supabase
+    .channel('transactions-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*', 
+        schema: 'public',
+        table: 'transactions'
+      },
+      (payload) => {
+        console.log('Transaction change received:', payload);
+      }
+    )
+    .subscribe();
 
-// Remove a realtime listener
-export const removeRealtimeListener = (channel: RealtimeChannel) => {
-  supabase.removeChannel(channel);
-};
+  // Listen for investment changes
+  const investmentsChannel = supabase
+    .channel('investments-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*', 
+        schema: 'public',
+        table: 'investments'
+      },
+      (payload) => {
+        console.log('Investment change received:', payload);
+      }
+    )
+    .subscribe();
+
+  return {
+    profilesChannel,
+    transactionsChannel,
+    investmentsChannel,
+    cleanup: () => {
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(transactionsChannel);
+      supabase.removeChannel(investmentsChannel);
+    }
+  };
+}

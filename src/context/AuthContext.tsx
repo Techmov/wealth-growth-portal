@@ -194,10 +194,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw error;
       }
       
-      toast({
-        title: "Signup Successful",
-        description: "You have successfully signed up.",
-      });
+      // Handle successful signup
+      if (data?.user) {
+        // Create profile manually if needed (since trigger might be failing)
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            name: name,
+            email: email,
+            username: `user_${data.user.id.substring(0, 8)}`,
+            referral_code: referralCode || Math.random().toString(36).substring(2, 10).toUpperCase(),
+            referred_by: referralCode ? null : undefined, // Will be updated later if referral code exists
+            balance: 0,
+            total_invested: 0,
+            total_withdrawn: 0,
+            referral_bonus: 0
+          });
+          
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+          toast({
+            title: "Profile Creation Failed",
+            description: "Your account was created but profile setup failed. Please contact support.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Signup Successful",
+            description: "You have successfully signed up.",
+          });
+        }
+      }
       
       // Navigation will be handled by auth state change
     } catch (error: any) {
