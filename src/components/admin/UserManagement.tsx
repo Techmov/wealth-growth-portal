@@ -1,4 +1,6 @@
+
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { User } from "@/types";
 import { 
   Table, 
@@ -11,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -27,57 +29,67 @@ export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load users from localStorage
-    const storedUsers = localStorage.getItem("users");
-    if (storedUsers) {
-      setUsers(JSON.parse(storedUsers));
-    } else {
-      const mockUsers: User[] = [
-        {
-          id: "user-1",
-          name: "John Doe",
-          email: "john@example.com",
-          balance: 2500,
-          totalInvested: 5000,
-          totalWithdrawn: 1000,
-          referralBonus: 200,
-          referralCode: "JD1234",
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
-          role: "user"
-        },
-        {
-          id: "user-2",
-          name: "Jane Smith",
-          email: "jane@example.com",
-          balance: 4200,
-          totalInvested: 8000,
-          totalWithdrawn: 2000,
-          referralBonus: 450,
-          referralCode: "JS5678",
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15), // 15 days ago
-          role: "user"
-        },
-        {
-          id: "user-3",
-          name: "Bob Johnson",
-          email: "bob@example.com",
-          balance: 1800,
-          totalInvested: 3000,
-          totalWithdrawn: 800,
-          referralBonus: 150,
-          referralCode: "BJ9012",
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 days ago
-          role: "user"
-        }
-      ];
-      
-      setUsers(mockUsers);
-      localStorage.setItem("users", JSON.stringify(mockUsers));
-    }
+    fetchUsers();
+
+    // Set up real-time subscription for profiles
+    const channel = supabase
+      .channel('admin-profiles-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => fetchUsers()
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        const formattedUsers: User[] = data.map(profile => ({
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          username: profile.username,
+          balance: profile.balance,
+          totalInvested: profile.total_invested,
+          totalWithdrawn: profile.total_withdrawn,
+          referralBonus: profile.referral_bonus,
+          referralCode: profile.referral_code,
+          trc20Address: profile.trc20_address || '',
+          withdrawalPassword: profile.withdrawal_password || '',
+          role: profile.role === 'admin' ? 'admin' : 'user',
+          createdAt: new Date(profile.created_at || Date.now())
+        }));
+        
+        setUsers(formattedUsers);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load users",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,30 +100,35 @@ export function UserManagement() {
     setUserToDelete(userId);
   };
 
-  const confirmDelete = () => {
-    if (userToDelete) {
-      const updatedUsers = users.filter(user => user.id !== userToDelete);
-      setUsers(updatedUsers);
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userToDelete);
       
-      // Update admin stats in localStorage
-      const currentStats = JSON.parse(localStorage.getItem("adminStats") || "{}");
-      const newStats = {
-        ...currentStats,
-        totalUsers: (currentStats.totalUsers || updatedUsers.length + 1) - 1
-      };
-      localStorage.setItem("adminStats", JSON.stringify(newStats));
+      if (error) {
+        throw error;
+      }
       
-      // Dispatch custom event to notify other components of the change
-      const event = new CustomEvent("userDeleted", { detail: { userId: userToDelete } });
-      window.dispatchEvent(event);
+      // Remove user from local state
+      setUsers(users.filter(user => user.id !== userToDelete));
       
       toast({
         title: "User Deleted",
-        description: "The user has been deleted successfully.",
+        description: "The user has been successfully deleted.",
       });
       
       setUserToDelete(null);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive"
+      });
     }
   };
 
@@ -127,45 +144,55 @@ export function UserManagement() {
       </div>
       
       <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Balance</TableHead>
-              <TableHead>Total Invested</TableHead>
-              <TableHead>Total Withdrawn</TableHead>
-              <TableHead>Referral Bonus</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>${user.balance.toFixed(2)}</TableCell>
-                <TableCell>${user.totalInvested.toFixed(2)}</TableCell>
-                <TableCell>${user.totalWithdrawn.toFixed(2)}</TableCell>
-                <TableCell>${user.referralBonus.toFixed(2)}</TableCell>
-                <TableCell>{formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}</TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">View</Button>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      onClick={() => handleDeleteUser(user.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </TableCell>
+        {isLoading ? (
+          <div className="text-center py-8">Loading users...</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Balance</TableHead>
+                <TableHead>Total Invested</TableHead>
+                <TableHead>Total Withdrawn</TableHead>
+                <TableHead>Referral Bonus</TableHead>
+                <TableHead>Joined</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-4">No users found</TableCell>
+                </TableRow>
+              ) : (
+                filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>${user.balance.toFixed(2)}</TableCell>
+                    <TableCell>${user.totalInvested.toFixed(2)}</TableCell>
+                    <TableCell>${user.totalWithdrawn.toFixed(2)}</TableCell>
+                    <TableCell>${user.referralBonus.toFixed(2)}</TableCell>
+                    <TableCell>{formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" size="sm">View</Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => handleDeleteUser(user.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>

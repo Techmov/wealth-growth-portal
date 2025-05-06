@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/types";
 import { 
   Table, 
@@ -23,136 +24,147 @@ import {
 export function DepositApprovals() {
   const [deposits, setDeposits] = useState<Transaction[]>([]);
   const [viewingScreenshot, setViewingScreenshot] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, fetch pending deposits from backend
-    // For now, check localStorage first or use mock data
-    const storedDeposits = localStorage.getItem("pendingDeposits");
-    if (storedDeposits) {
-      setDeposits(JSON.parse(storedDeposits));
-    } else {
-      const mockDeposits: Transaction[] = [
-        {
-          id: "deposit-1",
-          userId: "user-1",
-          type: "deposit",
-          amount: 1000,
-          status: "pending",
-          date: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-          trc20Address: "TXyz123...",
-          txHash: "0x123456...",
-          depositScreenshot: "https://via.placeholder.com/800x600?text=Deposit+Screenshot+1"
-        },
-        {
-          id: "deposit-2",
-          userId: "user-2",
-          type: "deposit",
-          amount: 2500,
-          status: "pending",
-          date: new Date(Date.now() - 1000 * 60 * 60 * 6), // 6 hours ago
-          trc20Address: "TAbc456...",
-          txHash: "0x789012...",
-          depositScreenshot: "https://via.placeholder.com/800x600?text=Deposit+Screenshot+2"
-        },
-        {
-          id: "deposit-3",
-          userId: "user-3",
-          type: "deposit",
-          amount: 500,
-          status: "pending",
-          date: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
-          trc20Address: "TDef789...",
-          txHash: "0x345678...",
-          depositScreenshot: "https://via.placeholder.com/800x600?text=Deposit+Screenshot+3"
-        }
-      ];
-      
-      setDeposits(mockDeposits);
-      localStorage.setItem("pendingDeposits", JSON.stringify(mockDeposits));
-    }
+    fetchPendingDeposits();
+    
+    // Set up real-time subscription for transactions
+    const channel = supabase
+      .channel('admin-transactions-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'transactions', filter: "type=eq.deposit" },
+        () => fetchPendingDeposits()
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const handleApprove = (depositId: string) => {
-    // Find the deposit to approve
-    const deposit = deposits.find(d => d.id === depositId);
-    if (!deposit) return;
-
-    // Update the deposit status
-    const updatedDeposits: Transaction[] = deposits.map(d => 
-      d.id === depositId ? { ...d, status: "completed" as const } : d
-    );
-    
-    setDeposits(updatedDeposits);
-    localStorage.setItem("pendingDeposits", JSON.stringify(updatedDeposits));
-    
-    // Update admin stats
-    const currentStats = JSON.parse(localStorage.getItem("adminStats") || "{}");
-    const newStats = {
-      ...currentStats,
-      totalDeposits: (currentStats.totalDeposits || 0) + deposit.amount,
-      pendingDeposits: Math.max(0, (currentStats.pendingDeposits || 0) - 1)
-    };
-    localStorage.setItem("adminStats", JSON.stringify(newStats));
-    
-    // Update user balance if they exist
-    const users = JSON.parse(localStorage.getItem("adminUsers") || "[]");
-    const updatedUsers = users.map(user => {
-      if (user.id === deposit.userId) {
-        return {
-          ...user,
-          balance: (user.balance || 0) + deposit.amount
-        };
+  const fetchPendingDeposits = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('type', 'deposit')
+        .eq('status', 'pending')
+        .order('date', { ascending: false });
+      
+      if (error) {
+        throw error;
       }
-      return user;
-    });
-    localStorage.setItem("adminUsers", JSON.stringify(updatedUsers));
-    
-    // Dispatch event for stats update
-    window.dispatchEvent(new CustomEvent("depositStatusChange"));
-    
-    toast({
-      title: "Deposit Approved",
-      description: `Deposit #${depositId} has been approved.`,
-    });
+
+      if (data) {
+        const formattedDeposits: Transaction[] = data.map(tx => ({
+          id: tx.id,
+          userId: tx.user_id,
+          type: tx.type as 'deposit',
+          amount: tx.amount,
+          status: tx.status as 'pending',
+          date: new Date(tx.date || Date.now()),
+          description: tx.description,
+          trc20Address: tx.trc20_address,
+          txHash: tx.tx_hash,
+          depositScreenshot: tx.deposit_screenshot,
+          rejectionReason: tx.rejection_reason
+        }));
+        
+        setDeposits(formattedDeposits);
+      }
+    } catch (error) {
+      console.error("Error fetching pending deposits:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load pending deposits",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleReject = (depositId: string) => {
-    // Find the deposit to reject
-    const deposit = deposits.find(d => d.id === depositId);
-    if (!deposit) return;
+  const handleApprove = async (depositId: string) => {
+    try {
+      // Find the deposit to approve
+      const deposit = deposits.find(d => d.id === depositId);
+      if (!deposit) return;
 
-    // Update the deposit status
-    const updatedDeposits: Transaction[] = deposits.map(d => 
-      d.id === depositId ? { ...d, status: "failed" as const } : d
-    );
-    
-    setDeposits(updatedDeposits);
-    localStorage.setItem("pendingDeposits", JSON.stringify(updatedDeposits));
-    
-    // Update admin stats
-    const currentStats = JSON.parse(localStorage.getItem("adminStats") || "{}");
-    const newStats = {
-      ...currentStats,
-      pendingDeposits: Math.max(0, (currentStats.pendingDeposits || 0) - 1)
-    };
-    localStorage.setItem("adminStats", JSON.stringify(newStats));
-    
-    // Dispatch event for stats update
-    window.dispatchEvent(new CustomEvent("depositStatusChange"));
-    
-    toast({
-      title: "Deposit Rejected",
-      description: `Deposit #${depositId} has been rejected.`,
-    });
+      // Update transaction status
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .update({ status: 'completed' })
+        .eq('id', depositId);
+
+      if (transactionError) throw transactionError;
+
+      // Update user balance
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          balance: supabase.rpc('increment', { row_id: deposit.userId, amount: deposit.amount }),
+        })
+        .eq('id', deposit.userId);
+
+      if (profileError) throw profileError;
+      
+      // Update local state
+      setDeposits(deposits.filter(d => d.id !== depositId));
+      
+      toast({
+        title: "Deposit Approved",
+        description: `Deposit has been approved and funds added to user's balance.`,
+      });
+    } catch (error) {
+      console.error("Error approving deposit:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve deposit",
+        variant: "destructive"
+      });
+    }
   };
 
-  const pendingDeposits = deposits.filter(deposit => deposit.status === "pending");
+  const handleReject = async (depositId: string) => {
+    try {
+      // Update transaction status
+      const { error } = await supabase
+        .from('transactions')
+        .update({ 
+          status: 'rejected',
+          rejection_reason: 'Rejected by admin'
+        })
+        .eq('id', depositId);
+
+      if (error) throw error;
+      
+      // Update local state
+      setDeposits(deposits.filter(d => d.id !== depositId));
+      
+      toast({
+        title: "Deposit Rejected",
+        description: `Deposit has been rejected.`,
+      });
+    } catch (error) {
+      console.error("Error rejecting deposit:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reject deposit",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium">Pending Deposits ({pendingDeposits.length})</h3>
+      <h3 className="text-lg font-medium">Pending Deposits ({deposits.length})</h3>
       
-      {pendingDeposits.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-8">Loading deposits...</div>
+      ) : deposits.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           No pending deposits to approve
         </div>
@@ -171,7 +183,7 @@ export function DepositApprovals() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pendingDeposits.map((deposit) => (
+              {deposits.map((deposit) => (
                 <TableRow key={deposit.id}>
                   <TableCell>{deposit.userId}</TableCell>
                   <TableCell>${deposit.amount.toFixed(2)}</TableCell>

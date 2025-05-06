@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { WithdrawalRequest } from "@/types";
 import { 
   Table, 
@@ -30,88 +31,132 @@ export function WithdrawalApprovals() {
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [txHash, setTxHash] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, fetch pending withdrawals from backend
-    // For now, check localStorage first or use mock data
-    const storedWithdrawals = localStorage.getItem("pendingWithdrawals");
-    if (storedWithdrawals) {
-      setWithdrawals(JSON.parse(storedWithdrawals));
-    } else {
-      const mockWithdrawals: WithdrawalRequest[] = [
-        {
-          id: "withdrawal-1",
-          userId: "user-1",
-          amount: 500,
-          status: "pending",
-          date: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-          trc20Address: "TXyz123..."
-        },
-        {
-          id: "withdrawal-2",
-          userId: "user-2",
-          amount: 1200,
-          status: "pending",
-          date: new Date(Date.now() - 1000 * 60 * 60 * 8), // 8 hours ago
-          trc20Address: "TAbc456..."
-        },
-        {
-          id: "withdrawal-3",
-          userId: "user-3",
-          amount: 350,
-          status: "pending",
-          date: new Date(Date.now() - 1000 * 60 * 60 * 14), // 14 hours ago
-          trc20Address: "TDef789..."
-        }
-      ];
-      
-      setWithdrawals(mockWithdrawals);
-      localStorage.setItem("pendingWithdrawals", JSON.stringify(mockWithdrawals));
-    }
+    fetchPendingWithdrawals();
+    
+    // Set up real-time subscription for withdrawal requests
+    const channel = supabase
+      .channel('admin-withdrawals-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'withdrawal_requests' },
+        () => fetchPendingWithdrawals()
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const handleApprove = (withdrawalId: string) => {
-    if (!txHash.trim()) {
+  const fetchPendingWithdrawals = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('withdrawal_requests')
+        .select('*')
+        .eq('status', 'pending')
+        .order('date', { ascending: false });
+      
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        const formattedWithdrawals: WithdrawalRequest[] = data.map(wr => ({
+          id: wr.id,
+          userId: wr.user_id,
+          amount: wr.amount,
+          status: wr.status as 'pending',
+          date: new Date(wr.date || Date.now()),
+          trc20Address: wr.trc20_address,
+          txHash: wr.tx_hash,
+          rejectionReason: wr.rejection_reason
+        }));
+        
+        setWithdrawals(formattedWithdrawals);
+      }
+    } catch (error) {
+      console.error("Error fetching pending withdrawals:", error);
       toast({
         title: "Error",
-        description: "Please provide a transaction hash.",
+        description: "Failed to load pending withdrawals",
         variant: "destructive"
       });
-      return;
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Find the withdrawal to approve
-    const withdrawal = withdrawals.find(w => w.id === withdrawalId);
-    if (!withdrawal) return;
-    
-    // Update withdrawal status
-    const updatedWithdrawals: WithdrawalRequest[] = withdrawals.map(w => 
-      w.id === withdrawalId 
-        ? { ...w, status: "approved" as const, txHash } 
-        : w
-    );
-    
-    setWithdrawals(updatedWithdrawals);
-    localStorage.setItem("pendingWithdrawals", JSON.stringify(updatedWithdrawals));
-    
-    // Update admin stats
-    const currentStats = JSON.parse(localStorage.getItem("adminStats") || "{}");
-    const newStats = {
-      ...currentStats,
-      totalWithdrawals: (currentStats.totalWithdrawals || 0) + withdrawal.amount,
-      pendingWithdrawals: Math.max(0, (currentStats.pendingWithdrawals || 0) - 1)
-    };
-    localStorage.setItem("adminStats", JSON.stringify(newStats));
-    
-    // Dispatch event for stats update
-    window.dispatchEvent(new CustomEvent("withdrawalStatusChange"));
-    
-    setTxHash("");
-    
-    toast({
-      title: "Withdrawal Approved",
-      description: `Withdrawal #${withdrawalId} has been approved.`,
-    });
+  };
+
+  const handleApprove = async (withdrawalId: string) => {
+    try {
+      if (!txHash.trim()) {
+        toast({
+          title: "Error",
+          description: "Please provide a transaction hash.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Find the withdrawal to approve
+      const withdrawal = withdrawals.find(w => w.id === withdrawalId);
+      if (!withdrawal) return;
+
+      // Update withdrawal request status
+      const { error: withdrawalError } = await supabase
+        .from('withdrawal_requests')
+        .update({ 
+          status: 'approved',
+          tx_hash: txHash
+        })
+        .eq('id', withdrawalId);
+
+      if (withdrawalError) throw withdrawalError;
+
+      // Create a transaction record for the withdrawal
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: withdrawal.userId,
+          type: 'withdrawal',
+          amount: -withdrawal.amount, // Negative as it's money leaving
+          status: 'completed',
+          trc20_address: withdrawal.trc20Address,
+          tx_hash: txHash,
+          description: 'Withdrawal approved by admin'
+        });
+
+      if (transactionError) throw transactionError;
+
+      // Update user total_withdrawn amount
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          total_withdrawn: supabase.rpc('increment', { row_id: withdrawal.userId, amount: withdrawal.amount }),
+        })
+        .eq('id', withdrawal.userId);
+
+      if (profileError) throw profileError;
+      
+      // Update local state
+      setWithdrawals(withdrawals.filter(w => w.id !== withdrawalId));
+      setTxHash("");
+      
+      toast({
+        title: "Withdrawal Approved",
+        description: `Withdrawal has been approved with transaction hash.`,
+      });
+    } catch (error) {
+      console.error("Error approving withdrawal:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve withdrawal",
+        variant: "destructive"
+      });
+    }
   };
 
   const openRejectDialog = (withdrawalId: string) => {
@@ -119,56 +164,86 @@ export function WithdrawalApprovals() {
     setRejectDialogOpen(true);
   };
 
-  const handleReject = () => {
-    if (!selectedWithdrawal) return;
-    
-    if (!rejectionReason.trim()) {
+  const handleReject = async () => {
+    try {
+      if (!selectedWithdrawal) return;
+      
+      if (!rejectionReason.trim()) {
+        toast({
+          title: "Error",
+          description: "Please provide a reason for rejection.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Find the withdrawal to reject
+      const withdrawal = withdrawals.find(w => w.id === selectedWithdrawal);
+      if (!withdrawal) return;
+
+      // Update withdrawal request status
+      const { error: withdrawalError } = await supabase
+        .from('withdrawal_requests')
+        .update({ 
+          status: 'rejected',
+          rejection_reason: rejectionReason
+        })
+        .eq('id', selectedWithdrawal);
+
+      if (withdrawalError) throw withdrawalError;
+
+      // Update user balance by adding the funds back
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          balance: supabase.rpc('increment', { row_id: withdrawal.userId, amount: withdrawal.amount }),
+        })
+        .eq('id', withdrawal.userId);
+
+      if (profileError) throw profileError;
+
+      // Create a transaction record for the rejected withdrawal
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: withdrawal.userId,
+          type: 'withdrawal',
+          amount: withdrawal.amount, // Positive as money is returning to balance
+          status: 'rejected',
+          trc20_address: withdrawal.trc20Address,
+          description: 'Withdrawal rejected by admin',
+          rejection_reason: rejectionReason
+        });
+
+      if (transactionError) throw transactionError;
+      
+      // Update local state
+      setWithdrawals(withdrawals.filter(w => w.id !== selectedWithdrawal));
+      setRejectDialogOpen(false);
+      setSelectedWithdrawal(null);
+      setRejectionReason("");
+      
+      toast({
+        title: "Withdrawal Rejected",
+        description: `Withdrawal has been rejected and funds returned to user's balance.`,
+      });
+    } catch (error) {
+      console.error("Error rejecting withdrawal:", error);
       toast({
         title: "Error",
-        description: "Please provide a reason for rejection.",
+        description: "Failed to reject withdrawal",
         variant: "destructive"
       });
-      return;
     }
-    
-    // Update withdrawal status
-    const updatedWithdrawals: WithdrawalRequest[] = withdrawals.map(w => 
-      w.id === selectedWithdrawal 
-        ? { ...w, status: "rejected" as const, rejectionReason } 
-        : w
-    );
-    
-    setWithdrawals(updatedWithdrawals);
-    localStorage.setItem("pendingWithdrawals", JSON.stringify(updatedWithdrawals));
-    
-    // Update admin stats
-    const currentStats = JSON.parse(localStorage.getItem("adminStats") || "{}");
-    const newStats = {
-      ...currentStats,
-      pendingWithdrawals: Math.max(0, (currentStats.pendingWithdrawals || 0) - 1)
-    };
-    localStorage.setItem("adminStats", JSON.stringify(newStats));
-    
-    // Dispatch event for stats update
-    window.dispatchEvent(new CustomEvent("withdrawalStatusChange"));
-    
-    setRejectDialogOpen(false);
-    setSelectedWithdrawal(null);
-    setRejectionReason("");
-    
-    toast({
-      title: "Withdrawal Rejected",
-      description: `Withdrawal has been rejected with reason provided.`,
-    });
   };
-
-  const pendingWithdrawals = withdrawals.filter(withdrawal => withdrawal.status === "pending");
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium">Pending Withdrawals ({pendingWithdrawals.length})</h3>
+      <h3 className="text-lg font-medium">Pending Withdrawals ({withdrawals.length})</h3>
       
-      {pendingWithdrawals.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-8">Loading withdrawals...</div>
+      ) : withdrawals.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           No pending withdrawals to approve
         </div>
@@ -186,7 +261,7 @@ export function WithdrawalApprovals() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pendingWithdrawals.map((withdrawal) => (
+              {withdrawals.map((withdrawal) => (
                 <TableRow key={withdrawal.id}>
                   <TableCell>{withdrawal.userId}</TableCell>
                   <TableCell>${withdrawal.amount.toFixed(2)}</TableCell>

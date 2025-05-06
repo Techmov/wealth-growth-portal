@@ -1,7 +1,6 @@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import * as authService from "@/services/authService";
-import { useNavigate } from "react-router-dom"; 
+import * as authService from "@/services/authService"; 
 
 export const useAuthActions = ({
   user,
@@ -62,36 +61,12 @@ export const useAuthActions = ({
     }
   };
 
-  // Signup function
+  // Wrapper for signup to match the expected signature
   const signup = async (name: string, email: string, password: string, referralCode?: string) => {
     try {
       setIsLoading(true);
-      
-      // Create user with Supabase auth
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            referred_by: referralCode || null,
-          },
-        },
-      });
-
-      if (error) {
-        console.error("Signup error:", error);
-        
-        if (error.message?.includes("User already registered")) {
-          toast.error("Email already in use. Please log in instead.");
-        } else {
-          toast.error(error.message || "Failed to create account");
-        }
-        
-        throw error;
-      }
-      
-      toast.success("Account created! Please check your email to confirm registration.");
+      await authService.signup({ name, email, password, referralCode });
+      return { user: null, session: null };
     } catch (error: any) {
       console.error("Signup error:", error);
       throw error;
@@ -286,7 +261,7 @@ export const useAuthActions = ({
 
   return {
     login,
-    signup: authService.signup,
+    signup,
     logout,
     updateUser,
     updateTrc20Address,

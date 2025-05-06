@@ -20,6 +20,19 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
 
   useEffect(() => {
     fetchPlans();
+    
+    // Set up real-time subscription for products
+    const channel = supabase
+      .channel('products-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'products' },
+        () => fetchPlans()
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchPlans = async () => {

@@ -1,26 +1,10 @@
 
-// Re-export auth types from types/auth
-export * from './auth';
+import { Database } from "@/integrations/supabase/types";
 
-// Transaction types
-export type TransactionType = 'deposit' | 'withdrawal' | 'investment' | 'return' | 'referral';
-export type TransactionStatus = 'pending' | 'completed' | 'failed' | 'rejected';
+// Profile type from Supabase
+export type Profile = Database['public']['Tables']['profiles']['Row'];
 
-export interface Transaction {
-  id: string;
-  userId: string;
-  type: TransactionType;
-  amount: number;
-  status: TransactionStatus;
-  date: Date;
-  description?: string;
-  trc20Address?: string;
-  txHash?: string;
-  depositScreenshot?: string;
-  rejectionReason?: string;
-}
-
-// Investment types
+// Products type from Supabase
 export interface Product {
   id: string;
   name: string;
@@ -29,8 +13,10 @@ export interface Product {
   duration: number;
   growthRate: number;
   risk: 'low' | 'medium' | 'high';
+  active: boolean;
 }
 
+// Investment type from Supabase
 export interface Investment {
   id: string;
   userId: string;
@@ -44,7 +30,22 @@ export interface Investment {
   status: 'active' | 'completed' | 'cancelled';
 }
 
-// Withdrawal request type
+// Transaction type from Supabase
+export interface Transaction {
+  id: string;
+  userId: string;
+  type: 'deposit' | 'withdrawal' | 'investment' | 'return' | 'referral';
+  amount: number;
+  status: 'pending' | 'completed' | 'failed' | 'rejected';
+  date: Date;
+  description?: string;
+  trc20Address?: string;
+  txHash?: string;
+  depositScreenshot?: string;
+  rejectionReason?: string;
+}
+
+// WithdrawalRequest type from Supabase
 export interface WithdrawalRequest {
   id: string;
   userId: string;
@@ -56,27 +57,26 @@ export interface WithdrawalRequest {
   rejectionReason?: string;
 }
 
-// Downline type for referrals
-export interface Downline {
-  id: string;
-  username: string;
-  totalInvested: number;
-  bonusGenerated: number;
-  date: Date;
-}
-
-// Admin stats type
-export interface AdminStats {
+// Helper types for UI components
+export type AdminStats = {
   totalDeposits: number;
   totalWithdrawals: number;
   totalReferralBonus: number;
   pendingDeposits: number;
   pendingWithdrawals: number;
   totalUsers: number;
-}
+};
 
-// Update UserProfile type to match User type
-export interface UserProfile {
+export type Downline = {
+  id: string;
+  username: string;
+  totalInvested: number;
+  bonusGenerated: number;
+  date: Date;
+};
+
+// User type for auth context
+export type User = {
   id: string;
   name: string;
   email: string;
@@ -87,7 +87,10 @@ export interface UserProfile {
   referralBonus: number;
   trc20Address: string;
   withdrawalPassword: string;
-  role: 'user' | 'admin'; // Updated to match User type
+  role: 'user' | 'admin';
   createdAt: Date;
-  username?: string;
-}
+  username: string;
+};
+
+// Authentication types
+export type UserProfile = User;

@@ -1,1 +1,4 @@
+
 project_id = "myjrgdcdbkunhcsutxvl"
+[functions.increment]
+verify_jwt = false

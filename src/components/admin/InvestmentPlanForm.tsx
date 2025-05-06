@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface InvestmentPlanFormProps {
   product?: Product;
@@ -76,7 +78,7 @@ export function InvestmentPlanForm({ product, onSuccess, onCancel }: InvestmentP
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium">Name</label>
+            <Label htmlFor="name">Name</Label>
             <Input
               id="name"
               value={name}
@@ -87,7 +89,7 @@ export function InvestmentPlanForm({ product, onSuccess, onCancel }: InvestmentP
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">Description</label>
+            <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
               value={description}
@@ -99,7 +101,7 @@ export function InvestmentPlanForm({ product, onSuccess, onCancel }: InvestmentP
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label htmlFor="amount" className="text-sm font-medium">Amount ($)</label>
+              <Label htmlFor="amount">Amount ($)</Label>
               <Input
                 id="amount"
                 type="number"
@@ -113,7 +115,7 @@ export function InvestmentPlanForm({ product, onSuccess, onCancel }: InvestmentP
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="duration" className="text-sm font-medium">Duration (days)</label>
+              <Label htmlFor="duration">Duration (days)</Label>
               <Input
                 id="duration"
                 type="number"
@@ -128,7 +130,7 @@ export function InvestmentPlanForm({ product, onSuccess, onCancel }: InvestmentP
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label htmlFor="growthRate" className="text-sm font-medium">Growth Rate (%)</label>
+              <Label htmlFor="growthRate">Growth Rate (%)</Label>
               <Input
                 id="growthRate"
                 type="number"
@@ -142,7 +144,7 @@ export function InvestmentPlanForm({ product, onSuccess, onCancel }: InvestmentP
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="risk" className="text-sm font-medium">Risk Level</label>
+              <Label htmlFor="risk">Risk Level</Label>
               <Select value={risk} onValueChange={(value) => setRisk(value as "low" | "medium" | "high")}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select risk level" />
@@ -157,14 +159,12 @@ export function InvestmentPlanForm({ product, onSuccess, onCancel }: InvestmentP
           </div>
           
           <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="active"
+            <Checkbox 
+              id="active" 
               checked={active}
-              onChange={(e) => setActive(e.target.checked)}
-              className="rounded border-gray-300 text-primary focus:ring-primary"
+              onCheckedChange={(checked) => setActive(checked === true)}
             />
-            <label htmlFor="active" className="text-sm font-medium">Active (visible to users)</label>
+            <Label htmlFor="active">Active (visible to users)</Label>
           </div>
         </CardContent>
         

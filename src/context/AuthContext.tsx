@@ -1,76 +1,72 @@
 
-import { createContext, useContext, ReactNode } from "react";
-import { Session } from "@supabase/supabase-js";
-import { AuthContextType } from "@/types/auth";
+import { createContext, useContext, useEffect, ReactNode } from "react";
 import { useAuthController } from "@/hooks/useAuthController";
-import { useAuthInitialization } from "@/hooks/useAuthInitialization";
+import { UserProfile } from "@/types";
+import { Session } from "@supabase/supabase-js";
 
-// Create the auth context
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Auth provider props
-interface AuthProviderProps {
-  children: ReactNode;
+// Define the type for the authentication context
+interface AuthContextType {
+  user: UserProfile | null;
+  session: Session | null;
+  isLoading: boolean;
+  isAdmin: boolean;
+  login: (email: string, password: string) => Promise<any>;
+  signup: (name: string, email: string, password: string, referralCode?: string) => Promise<any>;
+  logout: () => Promise<void>;
+  updateUser: (userData: any) => Promise<void>;
+  updateTrc20Address: (address: string, withdrawalPassword?: string) => Promise<void>;
+  requestWithdrawal: (amount: number, trc20Address: string, withdrawalPassword?: string) => Promise<any>;
+  deposit: (amount: number, txHash: string) => Promise<void>;
+  loginSuccess: boolean;
+  resetLoginSuccess: () => void;
 }
 
-// Export the auth provider component
-export function AuthProvider({ children }: AuthProviderProps) {
-  // Use the auth controller hook for shared state and methods
+// Create the authentication context
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Define the authentication provider component
+export function AuthProvider({ children }: { children: ReactNode }) {
   const {
     user,
-    profile,
     session,
-    setSession,
     isLoading,
-    setIsLoading,
     isAdmin,
-    loginSuccess,
-    resetLoginSuccess,
-    fetchProfile,
     login,
     signup,
     logout,
     updateUser,
     updateTrc20Address,
     requestWithdrawal,
-    deposit
+    deposit,
+    loginSuccess,
+    resetLoginSuccess
   } = useAuthController();
 
-  // Initialize auth state and set up listeners
-  useAuthInitialization({
-    setSession,
-    setIsLoading,
-    fetchProfile
-  });
-
-  // Prepare the context value
-  const contextValue: AuthContextType = {
-    user,
-    profile,
-    session,
-    isLoading,
-    isAdmin,
-    loginSuccess,
-    resetLoginSuccess,
-    login,
-    signup,
-    logout,
-    updateUser,
-    updateTrc20Address,
-    requestWithdrawal,
-    fetchProfile,
-    deposit
-  };
-
-  // Provide the auth context to children
+  // Make the authentication details available to all child components
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        isLoading,
+        isAdmin,
+        login,
+        signup,
+        logout,
+        updateUser,
+        updateTrc20Address,
+        requestWithdrawal,
+        deposit,
+        loginSuccess,
+        resetLoginSuccess
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
-// Hook for accessing auth context
+// Define the hook to use the authentication context
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
