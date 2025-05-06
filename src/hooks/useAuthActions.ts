@@ -218,14 +218,14 @@ export const useAuthActions = ({
     }
   };
 
-  // Request withdrawal function
-  const requestWithdrawal = async (amount: number, withdrawalPassword: string) => {
+  // Request withdrawal function - updated to match the expected parameters
+  const requestWithdrawal = async (amount: number, trc20Address: string, withdrawalPassword?: string) => {
     if (!user) {
       toast.error("User not authenticated");
       return Promise.reject(new Error("User not authenticated"));
     }
 
-    if (!user.trc20Address) {
+    if (!trc20Address) {
       toast.error("Please set your TRC20 address first");
       return Promise.reject(new Error("TRC20 address not set"));
     }
@@ -240,7 +240,8 @@ export const useAuthActions = ({
       return Promise.reject(new Error("Insufficient balance"));
     }
 
-    if (withdrawalPassword !== user.withdrawalPassword) {
+    // Only check withdrawal password if it's set and required
+    if (user.withdrawalPassword && withdrawalPassword !== user.withdrawalPassword) {
       toast.error("Incorrect withdrawal password");
       return Promise.reject(new Error("Invalid withdrawal password"));
     }
@@ -252,7 +253,7 @@ export const useAuthActions = ({
         .insert({
           user_id: user.id,
           amount,
-          trc20_address: user.trc20Address,
+          trc20_address: trc20Address,
           status: 'pending'
         })
         .select('id')

@@ -1,105 +1,68 @@
-
-import React from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import { InvestmentProvider } from "./context/InvestmentContext";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-
+import { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
+} from "react-router-dom";
+import { Auth } from "@supabase/ui";
+import { supabase } from "./integrations/supabase/client";
 import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import SignupPage from "./pages/SignupPage";
 import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 import Dashboard from "./pages/Dashboard";
 import InvestmentsPage from "./pages/InvestmentsPage";
 import TransactionsPage from "./pages/TransactionsPage";
-import ReferralsPage from "./pages/ReferralsPage";
 import ProfilePage from "./pages/ProfilePage";
-import DepositPage from "./pages/DepositPage";
 import WithdrawalPage from "./pages/WithdrawalPage";
+import DepositPage from "./pages/DepositPage";
+import ReferralsPage from "./pages/ReferralsPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import NotFound from "./pages/NotFound";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
 
-// Create a new QueryClient instance
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+function App() {
+  const [session, setSession] = useState(null);
 
-const App = () => {
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+  }, []);
+
+  function ProtectedRoute({ children }: { children: JSX.Element }) {
+    if (!session) {
+      return <Navigate to="/login" replace />;
+    }
+
+    return children;
+  }
+
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <TooltipProvider>
-            <AuthProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Index />} />
-                
-                {/* Auth Routes - Redirect to dashboard if already logged in */}
-                <Route element={<ProtectedRoute requireAuth={false} />}>
-                  <Route path="/signup" element={<SignupPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                </Route>
-                
-                {/* Protected User Routes - Wrap these in InvestmentProvider */}
-                <Route element={<ProtectedRoute requireAuth={true} />}>
-                  <Route path="/dashboard" element={
-                    <InvestmentProvider>
-                      <Dashboard />
-                    </InvestmentProvider>
-                  } />
-                  <Route path="/investments" element={
-                    <InvestmentProvider>
-                      <InvestmentsPage />
-                    </InvestmentProvider>
-                  } />
-                  <Route path="/transactions" element={
-                    <InvestmentProvider>
-                      <TransactionsPage />
-                    </InvestmentProvider>
-                  } />
-                  <Route path="/deposit" element={
-                    <InvestmentProvider>
-                      <DepositPage />
-                    </InvestmentProvider>
-                  } />
-                  <Route path="/withdraw" element={
-                    <InvestmentProvider>
-                      <WithdrawalPage />
-                    </InvestmentProvider>
-                  } />
-                  <Route path="/referrals" element={
-                    <InvestmentProvider>
-                      <ReferralsPage />
-                    </InvestmentProvider>
-                  } />
-                  <Route path="/profile" element={<ProfilePage />} />
-                </Route>
-                
-                {/* Admin Routes */}
-                <Route element={<ProtectedRoute requireAuth={true} requireAdmin={true} />}>
-                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                </Route>
-                
-                {/* Catch all */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </AuthProvider>
-          </TooltipProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/investments" element={<InvestmentsPage />} />
+          <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/withdrawal" element={<WithdrawalPage />} />
+          <Route path="/deposit" element={<DepositPage />} />
+          <Route path="/referrals" element={<ReferralsPage />} />
+          <Route path="/change-password" element={<ChangePasswordPage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
   );
-};
+}
 
 export default App;

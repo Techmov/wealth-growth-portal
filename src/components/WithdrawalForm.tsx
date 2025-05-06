@@ -32,7 +32,7 @@ export function WithdrawalForm() {
       return;
     }
     
-    if (!withdrawalPassword) {
+    if (!withdrawalPassword && user.withdrawalPassword) {
       toast.error("Please enter your withdrawal password");
       return;
     }
@@ -40,15 +40,17 @@ export function WithdrawalForm() {
     try {
       setLoading(true);
       
-      // Process the withdrawal request
-      await requestWithdrawal(Number(amount), withdrawalPassword);
+      // Process the withdrawal request - pass the required parameters
+      await requestWithdrawal(Number(amount), user.trc20Address, withdrawalPassword);
       
       // Reset form
       setAmount("");
       setWithdrawalPassword("");
+      toast.success("Withdrawal request submitted successfully!");
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error processing withdrawal:", error);
+      toast.error(error.message || "Failed to process withdrawal");
     } finally {
       setLoading(false);
     }
@@ -117,10 +119,10 @@ export function WithdrawalForm() {
       
       <div className="space-y-2">
         <Label htmlFor="withdrawalPassword">
-          Transaction Hash / Withdrawal Password
+          Withdrawal Password
           {user.withdrawalPassword && (
             <span className="ml-2 text-xs text-muted-foreground">
-              (Your password: {user.withdrawalPassword})
+              (Password: {user.withdrawalPassword})
             </span>
           )}
         </Label>
@@ -129,9 +131,9 @@ export function WithdrawalForm() {
           type="password"
           value={withdrawalPassword}
           onChange={(e) => setWithdrawalPassword(e.target.value)}
-          placeholder="Enter your transaction hash"
+          placeholder="Enter your withdrawal password"
           className="w-full"
-          required
+          required={!!user.withdrawalPassword}
         />
       </div>
       
