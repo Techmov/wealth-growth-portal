@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import { supabase } from "./integrations/supabase/client";
 import { AuthProvider } from "./context/AuthContext";
+import { InvestmentProvider } from "./context/InvestmentContext";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
@@ -59,17 +60,23 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           
-          {/* Protected routes */}
+          {/* Protected routes - wrapped with InvestmentProvider */}
           <Route element={<ProtectedRouteContent />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/investments" element={<InvestmentsPage />} />
-            <Route path="/transactions" element={<TransactionsPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/withdrawal" element={<WithdrawalPage />} />
-            <Route path="/deposit" element={<DepositPage />} />
-            <Route path="/referrals" element={<ReferralsPage />} />
-            <Route path="/change-password" element={<ChangePasswordPage />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route element={
+              <InvestmentProvider>
+                <Outlet />
+              </InvestmentProvider>
+            }>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/investments" element={<InvestmentsPage />} />
+              <Route path="/transactions" element={<TransactionsPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/withdrawal" element={<WithdrawalPage />} />
+              <Route path="/deposit" element={<DepositPage />} />
+              <Route path="/referrals" element={<ReferralsPage />} />
+              <Route path="/change-password" element={<ChangePasswordPage />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+            </Route>
           </Route>
           
           <Route path="*" element={<NotFound />} />
