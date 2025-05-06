@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -45,7 +46,8 @@ const LoginPage = () => {
       await login(email, password);
       // Navigation is handled by auth state change listener
     } catch (error: any) {
-      setError(error.message || "Failed to login");
+      console.error("Login error:", error);
+      setError(error.message || "Failed to login. Please check your credentials.");
     } finally {
       setIsSubmitting(false);
     }
@@ -114,7 +116,14 @@ const LoginPage = () => {
                 
                 <div className="pt-2">
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? "Logging in..." : "Login"}
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 size={16} className="mr-2 animate-spin" />
+                        Logging in...
+                      </>
+                    ) : (
+                      "Login"
+                    )}
                   </Button>
                 </div>
               </form>

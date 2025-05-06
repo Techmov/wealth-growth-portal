@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
 
 const SignupPage = () => {
   const [name, setName] = useState("");
@@ -76,8 +76,6 @@ const SignupPage = () => {
       // Navigation is handled by auth state change listener
     } catch (error: any) {
       console.error("Signup error:", error);
-      
-      // Error is now handled in the AuthContext with better error messages
       setError(error.message || "Failed to create account. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -194,7 +192,14 @@ const SignupPage = () => {
                 </div>
                 
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating Account..." : "Create Account"}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      Creating Account...
+                    </>
+                  ) : (
+                    "Create Account"
+                  )}
                 </Button>
               </form>
             </CardContent>
