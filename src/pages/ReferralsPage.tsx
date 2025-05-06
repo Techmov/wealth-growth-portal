@@ -1,17 +1,15 @@
-
 import { useState, useEffect } from "react";
 import { UserLayout } from "@/components/UserLayout";
 import { Heading } from "@/components/ui/heading";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DownlinesList } from "@/components/DownlinesList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Copy, Users } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Profile, Downline } from "@/types/supabase";
+import { Downline } from "@/types/supabase";
 import { 
   Pagination, 
   PaginationContent, 
@@ -24,7 +22,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 const ReferralsPage = () => {
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const isMobile = useIsMobile();
   
   const [copyText, setCopyText] = useState("Copy");
@@ -36,14 +34,14 @@ const ReferralsPage = () => {
 
   const pageSize = 10;
   
-  const referralLink = profile ? `${window.location.origin}/signup?ref=${profile.referral_code}` : "";
+  const referralLink = user ? `${window.location.origin}/signup?ref=${user.referralCode}` : "";
 
   // Function to handle copying referral link
   const handleCopyLink = () => {
     navigator.clipboard.writeText(referralLink);
     setCopyText("Copied!");
     toast({
-      title: "Copied to clipboard",
+      title: "Success",
       description: "Referral link copied to clipboard"
     });
     setTimeout(() => setCopyText("Copy"), 2000);
@@ -51,7 +49,7 @@ const ReferralsPage = () => {
 
   // Function to fetch downlines with pagination
   const fetchDownlines = async (page: number) => {
-    if (!profile) return;
+    if (!user) return;
     
     try {
       setIsLoading(true);
@@ -60,7 +58,7 @@ const ReferralsPage = () => {
       const { count, error: countError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('referred_by', profile.referral_code);
+        .eq('referred_by', user.referralCode);
       
       if (countError) {
         console.error("Error fetching referral count:", countError);
@@ -79,7 +77,7 @@ const ReferralsPage = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('referred_by', profile.referral_code)
+        .eq('referred_by', user.referralCode)
         .range(from, to)
         .order('created_at', { ascending: false });
       
@@ -108,39 +106,39 @@ const ReferralsPage = () => {
 
   // Initialize and set up real-time subscription
   useEffect(() => {
+    if (!user) return;
+    
     // Initial fetch
     fetchDownlines(currentPage);
     
     // Set up real-time subscription for new referrals
-    if (profile) {
-      const channel = supabase
-        .channel('referrals-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'profiles',
-            filter: `referred_by=eq.${profile.referral_code}`
-          },
-          (payload) => {
-            console.log('Profile change received:', payload);
-            // Refresh data when changes occur
-            fetchDownlines(currentPage);
-          }
-        )
-        .subscribe();
-        
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [profile, currentPage]);
+    const channel = supabase
+      .channel('referrals-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `referred_by=eq.${user.referralCode}`
+        },
+        () => {
+          fetchDownlines(currentPage);
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, currentPage]);
 
   // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
+
+  if (!user) return null;
 
   return (
     <UserLayout>
@@ -165,7 +163,7 @@ const ReferralsPage = () => {
                   <div className="text-sm font-medium">Your Referral Code</div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-lg py-2 px-3">
-                      {profile?.referral_code || "Loading..."}
+                      {user.referralCode || "Loading..."}
                     </Badge>
                   </div>
                 </div>
@@ -192,7 +190,7 @@ const ReferralsPage = () => {
                     </div>
                     <div className="bg-muted p-4 rounded-md">
                       <div className="text-sm text-muted-foreground">Total Bonus</div>
-                      <div className="text-2xl font-bold">${profile?.referral_bonus?.toFixed(2) || "0.00"}</div>
+                      <div className="text-2xl font-bold">${user.referralBonus.toFixed(2)}</div>
                     </div>
                   </div>
                 </div>

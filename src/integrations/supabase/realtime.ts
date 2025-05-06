@@ -1,17 +1,18 @@
 
 import { supabase } from "./client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 // Enable Postgres replication for a table
-export const enableRealtimeForTable = async (table: string) => {
+export const enableRealtimeForTable = async (tableName: "profiles" | "investments" | "products" | "transactions" | "withdrawal_requests") => {
   try {
     // Execute a query to enable replication for the table
     const { data, error } = await supabase
-      .from(table)
+      .from(tableName)
       .select()
       .limit(0);
 
     if (error) {
-      console.error(`Error enabling realtime for ${table}:`, error);
+      console.error(`Error enabling realtime for ${tableName}:`, error);
       return false;
     }
 
@@ -24,10 +25,10 @@ export const enableRealtimeForTable = async (table: string) => {
 
 // Setup a realtime listener for a table
 export const setupRealtimeListener = (
-  table: string, 
+  tableName: "profiles" | "investments" | "products" | "transactions" | "withdrawal_requests",
   event: 'INSERT' | 'UPDATE' | 'DELETE' | '*', 
   callback: (payload: any) => void
-) => {
+): RealtimeChannel => {
   const channel = supabase
     .channel('table-changes')
     .on(
@@ -35,7 +36,7 @@ export const setupRealtimeListener = (
       {
         event: event,
         schema: 'public',
-        table: table,
+        table: tableName,
       },
       callback
     )
@@ -45,6 +46,6 @@ export const setupRealtimeListener = (
 };
 
 // Remove a realtime listener
-export const removeRealtimeListener = (channel: any) => {
+export const removeRealtimeListener = (channel: RealtimeChannel) => {
   supabase.removeChannel(channel);
 };

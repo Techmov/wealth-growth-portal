@@ -1,40 +1,44 @@
 
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { UserLayout } from "@/components/UserLayout";
+import { Heading } from "@/components/ui/heading";
 import { DepositForm } from "@/components/DepositForm";
 import { useAuth } from "@/context/AuthContext";
-import { Navigate } from "react-router-dom";
+import { ArrowUp } from "lucide-react";
 
 const DepositPage = () => {
   const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate("/login");
+    }
+  }, [user, isLoading, navigate]);
 
   if (isLoading) {
     return <div>Loading...</div>;
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return null;
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1 container max-w-4xl py-8">
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">Deposit Funds</h1>
-            <p className="text-muted-foreground mt-2">
-              Deposit USDT (TRC20) to your account
-            </p>
-          </div>
-          
-          <div className="bg-card rounded-lg border p-6">
-            <DepositForm />
-          </div>
+    <UserLayout>
+      <div className="container py-8 max-w-4xl">
+        <Heading
+          title="Deposit Funds"
+          description="Deposit USDT (TRC20) to your account"
+          icon={<ArrowUp className="h-6 w-6" />}
+        />
+        
+        <div className="bg-card rounded-lg border p-6 mt-6">
+          <DepositForm />
         </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </UserLayout>
   );
 };
 

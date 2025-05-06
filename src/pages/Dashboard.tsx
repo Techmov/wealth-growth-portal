@@ -1,48 +1,150 @@
-import { useEffect } from "react";
+
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { UserLayout } from "@/components/UserLayout";
+import { Heading } from "@/components/ui/heading";
 import { StatCard } from "@/components/StatCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useInvestment } from "@/context/InvestmentContext";
 import { TransactionsList } from "@/components/TransactionsList";
-import { ArrowUp, DollarSign, WalletIcon, TrendingUp, Users, UserCircle } from "lucide-react";
+import { ArrowUp, DollarSign, WalletIcon, TrendingUp, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Transaction, Investment } from "@/types";
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { userInvestments, transactions } = useInvestment();
+  const { transactions: contextTransactions } = useInvestment();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
 
   useEffect(() => {
     if (!user) {
       navigate("/login");
+      return;
     }
+
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch user's transactions
+        const { data: transactionData, error: transactionError } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
+          .limit(5);
+
+        if (transactionError) {
+          console.error("Error fetching transactions:", transactionError);
+        } else {
+          // Format transactions
+          const formattedTransactions: Transaction[] = transactionData.map(tx => ({
+            id: tx.id,
+            userId: tx.user_id,
+            type: tx.type as 'deposit' | 'withdrawal' | 'investment' | 'return' | 'referral',
+            amount: tx.amount,
+            status: tx.status as 'pending' | 'completed' | 'failed' | 'rejected',
+            date: new Date(tx.date || Date.now()),
+            description: tx.description,
+            trc20Address: tx.trc20_address,
+            txHash: tx.tx_hash,
+            depositScreenshot: tx.deposit_screenshot,
+            rejectionReason: tx.rejection_reason
+          }));
+          setTransactions(formattedTransactions);
+        }
+
+        // Fetch user's active investments
+        const { data: investmentData, error: investmentError } = await supabase
+          .from('investments')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'active');
+
+        if (investmentError) {
+          console.error("Error fetching investments:", investmentError);
+        } else {
+          // Format investments
+          const formattedInvestments: Investment[] = investmentData.map(inv => ({
+            id: inv.id,
+            userId: inv.user_id,
+            productId: inv.product_id,
+            amount: inv.amount,
+            startDate: new Date(inv.start_date || Date.now()),
+            endDate: new Date(inv.end_date),
+            startingValue: inv.starting_value,
+            currentValue: inv.current_value,
+            finalValue: inv.final_value,
+            status: inv.status as 'active' | 'completed' | 'cancelled'
+          }));
+          setInvestments(formattedInvestments);
+        }
+      } catch (error) {
+        console.error("Unexpected error fetching dashboard data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+
+    // Set up real-time subscription for updates
+    const transactionChannel = supabase
+      .channel('dashboard-transactions')
+      .on('postgres_changes', 
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+      
+    const investmentChannel = supabase
+      .channel('dashboard-investments')
+      .on('postgres_changes', 
+        {
+          event: '*',
+          schema: 'public',
+          table: 'investments',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(transactionChannel);
+      supabase.removeChannel(investmentChannel);
+    };
   }, [user, navigate]);
 
-  if (!user) {
-    return null;
-  }
-
-  const recentTransactions = transactions.slice(0, 5);
+  if (!user) return null;
 
   // Calculate total active investment value
-  const totalActiveInvestment = userInvestments
+  const totalActiveInvestment = investments
     .filter(inv => inv.status === 'active')
     .reduce((sum, inv) => sum + inv.currentValue, 0);
   
   // Calculate total projected final value
-  const totalProjectedValue = userInvestments
+  const totalProjectedValue = investments
     .filter(inv => inv.status === 'active')
     .reduce((sum, inv) => sum + inv.finalValue, 0);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      
-      <main className="flex-grow container py-8">
+    <UserLayout>
+      <div className="container py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Welcome, {user.name}</h1>
           <p className="text-muted-foreground">
@@ -139,9 +241,13 @@ const Dashboard = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              {userInvestments.length > 0 ? (
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : investments.length > 0 ? (
                 <div className="space-y-4">
-                  {userInvestments
+                  {investments
                     .filter(inv => inv.status === 'active')
                     .map((investment) => (
                       <div key={investment.id} className="p-4 border rounded-lg">
@@ -211,9 +317,13 @@ const Dashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {recentTransactions.length > 0 ? (
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : transactions.length > 0 ? (
                 <>
-                  <TransactionsList transactions={recentTransactions} />
+                  <TransactionsList transactions={transactions} />
                   <div className="mt-4 text-center">
                     <Button variant="ghost" size="sm" onClick={() => navigate("/transactions")}>
                       View All Transactions
@@ -229,10 +339,8 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
-      </main>
-      
-      <Footer />
-    </div>
+      </div>
+    </UserLayout>
   );
 };
 
