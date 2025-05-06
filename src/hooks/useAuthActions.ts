@@ -1,7 +1,7 @@
 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { authService } from "@/services/authService";
+import * as authService from "@/services/authService";
 
 export const useAuthActions = ({
   user,
