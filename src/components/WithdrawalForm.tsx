@@ -1,157 +1,142 @@
 
-import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
+import { useState, FormEvent } from "react";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { BindTrc20AddressForm } from "./BindTrc20AddressForm";
+import { ArrowDown } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export function WithdrawalForm() {
   const { user, requestWithdrawal } = useAuth();
+  
   const [amount, setAmount] = useState("");
   const [withdrawalPassword, setWithdrawalPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  if (!user) {
+    return null;
+  }
+
+  const handleWithdraw = async (e: FormEvent) => {
     e.preventDefault();
     
-    if (!user?.trc20Address) {
-      toast.error("Please bind your TRC20 address first");
-      return;
-    }
-    
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+    const withdrawalAmount = parseFloat(amount);
+    if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
       toast.error("Please enter a valid amount");
       return;
     }
     
-    if (Number(amount) > (user?.balance || 0)) {
-      toast.error("Withdrawal amount exceeds your available balance");
+    if (withdrawalAmount > user.balance) {
+      toast.error("Insufficient balance");
       return;
     }
     
-    if (!withdrawalPassword && user.withdrawalPassword) {
-      toast.error("Please enter your withdrawal password");
+    if (!user.trc20Address) {
+      toast.error("Please set your TRC20 withdrawal address in your profile first");
       return;
     }
+    
+    setIsProcessing(true);
     
     try {
-      setLoading(true);
-      
-      // Process the withdrawal request - pass the required parameters
-      await requestWithdrawal(Number(amount), user.trc20Address, withdrawalPassword);
-      
-      // Reset form
+      await requestWithdrawal(withdrawalAmount, user.trc20Address, withdrawalPassword || undefined);
       setAmount("");
       setWithdrawalPassword("");
-      toast.success("Withdrawal request submitted successfully!");
-      
+      toast.success("Withdrawal request submitted successfully");
     } catch (error: any) {
-      console.error("Error processing withdrawal:", error);
-      toast.error(error.message || "Failed to process withdrawal");
+      toast.error(error.message || "Failed to process withdrawal request");
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
     }
   };
 
-  if (!user?.trc20Address || !user?.withdrawalPassword) {
-    return (
-      <div className="space-y-6">
-        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-          <h3 className="font-medium text-yellow-800 dark:text-yellow-300">
-            TRC20 Address Required
-          </h3>
-          <p className="text-sm mt-1 text-yellow-700 dark:text-yellow-400">
-            Please bind your TRC20 address and set a withdrawal password before making a withdrawal.
-          </p>
-        </div>
-        
-        <BindTrc20AddressForm />
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="trc20Address">Your TRC20 Address</Label>
-        <Input
-          id="trc20Address"
-          value={user.trc20Address}
-          readOnly
-          className="w-full bg-muted"
-        />
-        <div className="flex justify-end">
-          <Button 
-            type="button" 
-            variant="link" 
-            size="sm" 
-            className="px-0 h-auto"
-            onClick={() => toast.info("Contact support to change your TRC20 address")}
-          >
-            Need to change?
-          </Button>
+    <Card className="p-6">
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold">Request Withdrawal</h3>
+          <p className="text-sm text-muted-foreground">Withdraw funds to your TRC20 wallet</p>
         </div>
-      </div>
-      
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="amount">Withdrawal Amount (USDT)</Label>
-          <span className="text-sm text-muted-foreground">
-            Available: {user?.balance.toFixed(2)} USDT
-          </span>
+
+        {!user.trc20Address && (
+          <Alert variant="warning" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+            <AlertDescription>
+              Please set your TRC20 address in your profile before requesting a withdrawal.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="flex items-center justify-between px-3 py-2 bg-muted rounded-md">
+          <div className="text-sm">Available Balance</div>
+          <div className="font-semibold">${user.balance.toFixed(2)}</div>
         </div>
-        <Input
-          id="amount"
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-          min="0"
-          step="0.01"
-          max={user?.balance}
-          className="w-full"
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="withdrawalPassword">
-          Withdrawal Password
+
+        <form onSubmit={handleWithdraw} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="amount">Withdrawal Amount</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <Input
+                id="amount"
+                type="number"
+                min="10"
+                step="10"
+                placeholder="100"
+                className="pl-8"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Minimum withdrawal amount: $10</p>
+          </div>
+
           {user.withdrawalPassword && (
-            <span className="ml-2 text-xs text-muted-foreground">
-              (Password: {user.withdrawalPassword})
-            </span>
+            <div className="space-y-2">
+              <Label htmlFor="withdrawalPassword">Withdrawal Password</Label>
+              <Input
+                id="withdrawalPassword"
+                type="password"
+                placeholder="Enter your withdrawal password"
+                value={withdrawalPassword}
+                onChange={(e) => setWithdrawalPassword(e.target.value)}
+                required
+              />
+            </div>
           )}
-        </Label>
-        <Input
-          id="withdrawalPassword"
-          type="password"
-          value={withdrawalPassword}
-          onChange={(e) => setWithdrawalPassword(e.target.value)}
-          placeholder="Enter your withdrawal password"
-          className="w-full"
-          required={!!user.withdrawalPassword}
-        />
+
+          <div className="pt-2">
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isProcessing || !user.trc20Address}
+            >
+              {isProcessing ? "Processing..." : "Request Withdrawal"}
+            </Button>
+          </div>
+        </form>
+        
+        <div className="space-y-2 pt-4 border-t border-border">
+          <p className="text-sm font-medium">Withdrawal Information</p>
+          <ul className="text-sm text-muted-foreground space-y-1">
+            <li className="flex items-center gap-2">
+              <div className="w-1 h-1 rounded-full bg-muted-foreground"></div>
+              <span>Withdrawals are processed manually within 24 hours</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="w-1 h-1 rounded-full bg-muted-foreground"></div>
+              <span>You will receive funds to your registered TRC20 address</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="w-1 h-1 rounded-full bg-muted-foreground"></div>
+              <span>Contact support if you don't receive funds after 48 hours</span>
+            </li>
+          </ul>
+        </div>
       </div>
-      
-      <div className="pt-2">
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Requesting Withdrawal...
-            </>
-          ) : (
-            "Request Withdrawal"
-          )}
-        </Button>
-        <p className="text-xs text-center mt-2 text-muted-foreground">
-          Withdrawal requests are processed manually within 24-48 hours
-        </p>
-      </div>
-    </form>
+    </Card>
   );
 }

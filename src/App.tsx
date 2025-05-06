@@ -17,8 +17,6 @@ import Dashboard from "./pages/Dashboard";
 import InvestmentsPage from "./pages/InvestmentsPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import ProfilePage from "./pages/ProfilePage";
-import WithdrawalPage from "./pages/WithdrawalPage";
-import DepositPage from "./pages/DepositPage";
 import ReferralsPage from "./pages/ReferralsPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -106,11 +104,13 @@ function App() {
               <Route path="/investments" element={<InvestmentsPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/withdrawal" element={<WithdrawalPage />} />
-              <Route path="/withdraw" element={<WithdrawalPage />} />
-              <Route path="/deposit" element={<DepositPage />} />
               <Route path="/referrals" element={<ReferralsPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
+              
+              {/* Redirect old deposit/withdraw routes to the transactions page */}
+              <Route path="/deposit" element={<Navigate to="/transactions" replace />} />
+              <Route path="/withdraw" element={<Navigate to="/transactions" replace />} />
+              <Route path="/withdrawal" element={<Navigate to="/transactions" replace />} />
             </Route>
             
             {/* Admin routes */}

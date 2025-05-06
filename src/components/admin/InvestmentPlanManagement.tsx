@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InvestmentPlanForm } from "./InvestmentPlanForm";
 import { Edit, Plus, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface InvestmentPlanManagementProps {
   onStatusChange?: () => void;
@@ -17,6 +27,7 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<Product | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPlans();
@@ -38,6 +49,8 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
   const fetchPlans = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching investment plans...");
+      
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -48,6 +61,7 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
       }
 
       if (data) {
+        console.log(`Found ${data.length} investment plans`);
         const formattedPlans: Product[] = data.map(plan => ({
           id: plan.id,
           name: plan.name,
@@ -61,6 +75,7 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
         setPlans(formattedPlans);
       }
     } catch (error: any) {
+      console.error("Error fetching plans:", error);
       toast.error(error.message || "Failed to load investment plans");
     } finally {
       setIsLoading(false);
@@ -72,25 +87,35 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this investment plan? This action cannot be undone.")) {
-      return;
-    }
+  const openDeleteConfirm = (id: string) => {
+    setPlanToDelete(id);
+  };
 
+  const handleDelete = async () => {
+    if (!planToDelete) return;
+    
     try {
+      console.log(`Deleting investment plan: ${planToDelete}`);
+      
       const { error } = await supabase
         .from('products')
         .delete()
-        .eq('id', id);
+        .eq('id', planToDelete);
 
       if (error) {
         throw error;
       }
 
-      setPlans(plans.filter(plan => plan.id !== id));
+      setPlans(plans.filter(plan => plan.id !== planToDelete));
       toast.success("Investment plan deleted successfully");
-      if (onStatusChange) onStatusChange();
+      
+      if (onStatusChange) {
+        onStatusChange();
+      }
+      
+      setPlanToDelete(null);
     } catch (error: any) {
+      console.error("Error deleting plan:", error);
       toast.error(error.message || "Failed to delete investment plan");
     }
   };
@@ -133,17 +158,25 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Investment Plans</h2>
+        <h2 className="text-lg font-semibold">Investment Plans</h2>
         <Button onClick={() => setIsFormOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add New Plan
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="py-10 text-center">Loading investment plans...</div>
+        <div className="flex justify-center items-center py-12">
+          <div className="flex flex-col items-center gap-2">
+            <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
+            <p className="text-sm text-muted-foreground">Loading investment plans...</p>
+          </div>
+        </div>
       ) : plans.length === 0 ? (
-        <div className="py-10 text-center text-muted-foreground">
-          No investment plans found. Create your first plan to get started.
+        <div className="border rounded-md flex flex-col items-center justify-center py-12 text-muted-foreground">
+          <p>No investment plans found. Create your first plan to get started.</p>
+          <Button onClick={() => setIsFormOpen(true)} className="mt-4">
+            <Plus className="mr-2 h-4 w-4" /> Add New Plan
+          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -153,10 +186,15 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{plan.name}</CardTitle>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(plan)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(plan)} title="Edit plan">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(plan.id)}>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => openDeleteConfirm(plan.id)} 
+                      title="Delete plan"
+                    >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
@@ -197,6 +235,21 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!planToDelete} onOpenChange={(open) => !open && setPlanToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this plan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This plan will be permanently deleted from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

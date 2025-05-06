@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Product } from "@/types";
@@ -29,11 +29,13 @@ export function InvestmentPlanForm({ product, onSuccess, onCancel }: InvestmentP
 
   const isEditing = !!product;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
+      console.log(`${isEditing ? 'Updating' : 'Creating'} investment plan: ${name}`);
+      
       const productData = {
         name,
         description,

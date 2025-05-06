@@ -1,296 +1,169 @@
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
+import { useState, useRef, FormEvent } from "react";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, Copy, CheckCircle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { CreditCard, Info, ArrowUp, Copy, Check } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useInvestment } from "@/context/InvestmentContext";
 
 export function DepositForm() {
-  const { user } = useAuth();
+  const { user, deposit } = useAuth();
+  const { platformTrc20Address } = useInvestment();
+  
   const [amount, setAmount] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showWaitingDialog, setShowWaitingDialog] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
-  const [depositSuccess, setDepositSuccess] = useState(false);
+  const [txHash, setTxHash] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const addressRef = useRef<HTMLDivElement>(null);
 
-  // Company TRC20 address
-  const companyTrc20Address = "TMRKGbNjvhHnvK9p3LRtvACs7t6ttn3adN";
+  if (!user || !platformTrc20Address) {
+    return null;
+  }
 
-  // Format time in MM:SS
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Handle copy to clipboard
-  const handleCopyAddress = () => {
-    navigator.clipboard.writeText(companyTrc20Address);
-    toast.success("Address copied to clipboard");
-  };
-
-  // Timer effect for waiting window
-  useEffect(() => {
-    let timer;
-    if (showWaitingDialog && timeLeft > 0 && !depositSuccess) {
-      timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          const newTime = prev - 1;
-          setProgress(100 - ((newTime / 600) * 100));
-          return newTime;
-        });
-      }, 1000);
-    }
-
-    return () => {
-      clearInterval(timer);
-    };
-  }, [showWaitingDialog, timeLeft, depositSuccess]);
-
-  // Effect to check if time has run out
-  useEffect(() => {
-    if (timeLeft === 0 && !depositSuccess) {
-      toast.error("Deposit confirmation time expired. Please try again or contact support.");
-      setShowWaitingDialog(false);
-      setTimeLeft(600); // Reset timer
-    }
-  }, [timeLeft, depositSuccess]);
-
-  // Create a pending deposit transaction record
-  const createPendingDeposit = async (depositAmount: number) => {
-    try {
-      if (!user) return;
-      
-      // Create a pending deposit transaction
-      const { error } = await supabase.from('transactions').insert({
-        user_id: user.id,
-        type: 'deposit',
-        amount: parseFloat(depositAmount.toString()),
-        status: 'pending', // Important: Set as pending, not completed
-        description: `Pending deposit of ${depositAmount} USDT`,
-        date: new Date().toISOString()
-      });
-
-      if (error) {
-        console.error("Error creating pending transaction:", error);
-        toast.error("Failed to record deposit transaction");
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Error creating pending deposit:", error);
-      return false;
-    }
-  };
-
-  // Mock successful deposit (for demo purposes)
-  const mockDepositConfirmation = async (depositAmount: number) => {
-    // Simulate random success between 30s and 2 minutes
-    const randomTime = Math.floor(Math.random() * 90) + 30;
-    
-    setTimeout(async () => {
-      if (showWaitingDialog && !depositSuccess) {
-        try {
-          // Update the pending transaction to completed
-          const { data: pendingTransactions, error: fetchError } = await supabase
-            .from('transactions')
-            .select('id')
-            .eq('user_id', user?.id)
-            .eq('type', 'deposit')
-            .eq('status', 'pending')
-            .order('date', { ascending: false })
-            .limit(1);
-            
-          if (fetchError) {
-            console.error("Error fetching pending transaction:", fetchError);
-          } else if (pendingTransactions && pendingTransactions.length > 0) {
-            // Update the transaction to completed
-            const { error: updateError } = await supabase
-              .from('transactions')
-              .update({
-                status: 'completed',
-                description: `Deposit of ${depositAmount} USDT`
-              })
-              .eq('id', pendingTransactions[0].id);
-              
-            if (updateError) {
-              console.error("Error updating transaction:", updateError);
-            }
-          }
-
-          // Update user balance
-          if (user) {
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({ 
-                balance: user.balance + parseFloat(depositAmount.toString())
-              })
-              .eq('id', user.id);
-
-            if (updateError) {
-              console.error("Error updating balance:", updateError);
-            }
-          }
-
-          setDepositSuccess(true);
-          toast.success("Your deposit has been confirmed!");
-          
-          // Close dialog after 3 seconds of showing success
-          setTimeout(() => {
-            setShowWaitingDialog(false);
-            setAmount("");
-            setTimeLeft(600);
-            setProgress(0);
-            setDepositSuccess(false);
-          }, 3000);
-        } catch (error) {
-          console.error("Error during deposit confirmation:", error);
-        }
-      }
-    }, randomTime * 1000);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleDeposit = async (e: FormEvent) => {
     e.preventDefault();
     
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+    const depositAmount = parseFloat(amount);
+    if (isNaN(depositAmount) || depositAmount <= 0) {
       toast.error("Please enter a valid amount");
       return;
     }
     
+    if (!txHash.trim()) {
+      toast.error("Please enter your transaction hash");
+      return;
+    }
+    
+    setIsProcessing(true);
+    
     try {
-      setLoading(true);
-      
-      // First create the pending transaction
-      const success = await createPendingDeposit(Number(amount));
-      
-      if (success) {
-        // Show waiting dialog
-        setShowWaitingDialog(true);
-        
-        // Start mock confirmation process (would be replaced by real admin confirmation)
-        mockDepositConfirmation(Number(amount));
-      }
-      
-    } catch (error) {
-      console.error("Error processing deposit:", error);
-      toast.error("Failed to process deposit");
+      await deposit(depositAmount, txHash);
+      setAmount("");
+      setTxHash("");
+      toast.success("Deposit request submitted successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to process deposit");
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (navigator.clipboard && platformTrc20Address) {
+      navigator.clipboard.writeText(platformTrc20Address);
+      setCopied(true);
+      toast.success("Address copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="p-6 bg-primary/5 border-primary/20">
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Company USDT Deposit Address (TRC20)</h3>
-          <div className="p-3 bg-muted rounded-md flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <code className="text-sm font-mono break-all select-all">{companyTrc20Address}</code>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleCopyAddress}
-                className="ml-2"
+    <Card className="p-6">
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold">Make a Deposit</h3>
+          <p className="text-sm text-muted-foreground">Add funds to your investment account</p>
+        </div>
+
+        <Alert className="bg-blue-50 text-blue-800 border-blue-200">
+          <AlertDescription className="space-y-3">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 mt-0.5" />
+              <span>
+                Send USDT (TRC20) to our address below, then enter the transaction details.
+              </span>
+            </div>
+            <div className="mt-2 p-3 bg-blue-100 rounded-md relative">
+              <div ref={addressRef} className="font-mono text-sm break-all">
+                {platformTrc20Address}
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                onClick={copyToClipboard}
+                title="Copy address"
               >
-                <Copy className="h-4 w-4" />
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
               </Button>
             </div>
-          </div>
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-            <p className="font-medium mb-2">Important Deposit Instructions:</p>
-            <ol className="list-decimal pl-5 space-y-1">
-              <li>Send only USDT (TRC20) to this address</li>
-              <li>After sending, enter the amount below and click Submit</li>
-              <li>Wait for admin confirmation (up to 10 minutes)</li>
-            </ol>
-          </div>
-        </div>
-      </Card>
+          </AlertDescription>
+        </Alert>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="amount">Deposit Amount (USDT)</Label>
-          <Input
-            id="amount"
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            min="10"
-            step="0.01"
-            className="w-full"
-            required
-          />
-          <p className="text-xs text-muted-foreground">Minimum deposit: 10 USDT</p>
-        </div>
-        
-        <div className="pt-2">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              "Submit Deposit"
-            )}
-          </Button>
-        </div>
-      </form>
-
-      {/* Waiting confirmation dialog */}
-      <Dialog open={showWaitingDialog} onOpenChange={setShowWaitingDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {!depositSuccess ? "Awaiting Deposit Confirmation" : "Deposit Confirmed!"}
-            </DialogTitle>
-          </DialogHeader>
+        <form onSubmit={handleDeposit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="amount">Amount Sent (USDT)</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <Input
+                id="amount"
+                type="number"
+                min="10"
+                step="10"
+                placeholder="100"
+                className="pl-8"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Minimum deposit amount: $10
+            </p>
+          </div>
           
-          <div className="py-6">
-            {!depositSuccess ? (
-              <>
-                <div className="flex flex-col items-center justify-center space-y-6">
-                  <div className="w-full space-y-2">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Waiting for admin confirmation</span>
-                      <span className="font-mono">{formatTime(timeLeft)}</span>
-                    </div>
-                    <Progress value={progress} className="h-2" />
-                  </div>
-
-                  <div className="flex items-center justify-center h-20 w-20">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                  </div>
-                  
-                  <div className="text-center text-sm text-muted-foreground">
-                    <p>Please wait while an admin confirms your deposit.</p>
-                    <p className="mt-1">This may take up to 10 minutes.</p>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center space-y-4">
-                <CheckCircle className="h-16 w-16 text-green-500" />
-                <p className="text-lg font-medium">Your deposit of ${amount} USDT has been confirmed!</p>
-                <p className="text-center text-sm text-muted-foreground">
-                  The funds have been added to your account.
-                </p>
-              </div>
-            )}
+          <div className="space-y-2">
+            <Label htmlFor="txHash">Transaction Hash</Label>
+            <Input
+              id="txHash"
+              placeholder="Enter your transaction hash"
+              className="font-mono text-sm"
+              value={txHash}
+              onChange={(e) => setTxHash(e.target.value)}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              This helps us verify your deposit on the blockchain
+            </p>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+          
+          <div className="pt-2">
+            <Button 
+              type="submit" 
+              className="w-full"
+              disabled={isProcessing}
+            >
+              {isProcessing ? "Processing..." : "Submit Deposit"}
+            </Button>
+          </div>
+        </form>
+        
+        <div className="space-y-2 pt-4 border-t border-border">
+          <p className="text-sm font-medium">Deposit Information</p>
+          <ul className="text-sm text-muted-foreground space-y-1">
+            <li className="flex items-center gap-2">
+              <div className="w-1 h-1 rounded-full bg-muted-foreground"></div>
+              <span>Deposits are confirmed manually within 24 hours</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="w-1 h-1 rounded-full bg-muted-foreground"></div>
+              <span>Only send USDT using the TRC20 network</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="w-1 h-1 rounded-full bg-muted-foreground"></div>
+              <span>Contact support if your deposit isn't credited after 24 hours</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </Card>
   );
 }

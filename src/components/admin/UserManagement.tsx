@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -24,8 +24,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import { Search, User as UserIcon } from "lucide-react";
 
-export function UserManagement() {
+export function UserManagement({ onUserDeleted }: { onUserDeleted?: () => void }) {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
@@ -51,6 +52,7 @@ export function UserManagement() {
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching all users...");
       
       const { data, error } = await supabase
         .from('profiles')
@@ -61,16 +63,17 @@ export function UserManagement() {
       }
 
       if (data) {
+        console.log(`Found ${data.length} users`);
         const formattedUsers: User[] = data.map(profile => ({
           id: profile.id,
-          name: profile.name,
-          email: profile.email,
-          username: profile.username,
-          balance: profile.balance,
-          totalInvested: profile.total_invested,
-          totalWithdrawn: profile.total_withdrawn,
-          referralBonus: profile.referral_bonus,
-          referralCode: profile.referral_code,
+          name: profile.name || '',
+          email: profile.email || '',
+          username: profile.username || '',
+          balance: profile.balance || 0,
+          totalInvested: profile.total_invested || 0,
+          totalWithdrawn: profile.total_withdrawn || 0,
+          referralBonus: profile.referral_bonus || 0,
+          referralCode: profile.referral_code || '',
           trc20Address: profile.trc20_address || '',
           withdrawalPassword: profile.withdrawal_password || '',
           role: profile.role === 'admin' ? 'admin' : 'user',
@@ -81,11 +84,7 @@ export function UserManagement() {
       }
     } catch (error) {
       console.error("Error fetching users:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load users",
-        variant: "destructive"
-      });
+      toast.error("Failed to load users");
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +92,8 @@ export function UserManagement() {
 
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDeleteUser = (userId: string) => {
@@ -116,42 +116,46 @@ export function UserManagement() {
       // Remove user from local state
       setUsers(users.filter(user => user.id !== userToDelete));
       
-      toast({
-        title: "User Deleted",
-        description: "The user has been successfully deleted.",
-      });
+      toast.success("User has been successfully deleted");
+      
+      if (onUserDeleted) {
+        onUserDeleted();
+      }
       
       setUserToDelete(null);
     } catch (error) {
       console.error("Error deleting user:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete user",
-        variant: "destructive"
-      });
+      toast.error("Failed to delete user");
     }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between">
+      <div className="flex items-center gap-3 w-full max-w-sm">
+        <Search className="h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search users..."
+          placeholder="Search users by name, email, or username..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
+          className="flex-1"
         />
       </div>
       
-      <div className="border rounded-md">
+      <div className="border rounded-md overflow-hidden">
         {isLoading ? (
-          <div className="text-center py-8">Loading users...</div>
+          <div className="flex justify-center items-center py-12">
+            <div className="flex flex-col items-center gap-2">
+              <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
+              <p className="text-sm text-muted-foreground">Loading users...</p>
+            </div>
+          </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Username</TableHead>
                 <TableHead>Balance</TableHead>
                 <TableHead>Total Invested</TableHead>
                 <TableHead>Total Withdrawn</TableHead>
@@ -163,13 +167,19 @@ export function UserManagement() {
             <TableBody>
               {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-4">No users found</TableCell>
+                  <TableCell colSpan={9} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-2">
+                      <UserIcon className="h-8 w-8 text-muted-foreground opacity-40" />
+                      <p className="text-muted-foreground">No users found</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : (
                 filteredUsers.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell>{user.name}</TableCell>
+                    <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.username}</TableCell>
                     <TableCell>${user.balance.toFixed(2)}</TableCell>
                     <TableCell>${user.totalInvested.toFixed(2)}</TableCell>
                     <TableCell>${user.totalWithdrawn.toFixed(2)}</TableCell>

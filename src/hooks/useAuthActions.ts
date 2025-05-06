@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService"; 
@@ -75,13 +76,17 @@ export const useAuthActions = ({
     }
   };
 
-  // Fixed logout function - use async/await correctly and clear state
+  // Fixed logout function with proper async handling and forced navigation
   const logout = async () => {
     try {
       setIsLoading(true);
+      console.log("Logging out user");
+      
+      // First clear session state to prevent any UI flickers
+      setSession(null);
       
       // Call Supabase auth signOut and await its completion
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
       
       if (error) {
         console.error("Logout error:", error);
@@ -89,13 +94,12 @@ export const useAuthActions = ({
         throw error;
       }
       
-      // Clear session state after successful logout
-      setSession(null);
-      
       toast.success("Logged out successfully");
       
       // Force reload to ensure clean state
-      window.location.href = '/';
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
       
     } catch (error: any) {
       console.error("Logout error:", error);

@@ -13,15 +13,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { Check, X, Eye } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { 
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import { incrementValue } from "@/utils/supabaseUtils";
 
-export function DepositApprovals() {
+interface DepositApprovalsProps {
+  onStatusChange?: () => void;
+}
+
+export function DepositApprovals({ onStatusChange }: DepositApprovalsProps) {
   const [deposits, setDeposits] = useState<Transaction[]>([]);
   const [viewingScreenshot, setViewingScreenshot] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,6 +51,7 @@ export function DepositApprovals() {
   const fetchPendingDeposits = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching pending deposits...");
       
       const { data, error } = await supabase
         .from('transactions')
@@ -58,6 +64,7 @@ export function DepositApprovals() {
         throw error;
       }
 
+      console.log(`Found ${data?.length || 0} pending deposits`);
       if (data) {
         const formattedDeposits: Transaction[] = data.map(tx => ({
           id: tx.id,
@@ -77,11 +84,7 @@ export function DepositApprovals() {
       }
     } catch (error) {
       console.error("Error fetching pending deposits:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load pending deposits",
-        variant: "destructive"
-      });
+      toast.error("Failed to load pending deposits");
     } finally {
       setIsLoading(false);
     }
@@ -101,30 +104,26 @@ export function DepositApprovals() {
 
       if (transactionError) throw transactionError;
 
-      // Update user balance
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          balance: supabase.rpc('increment', { row_id: deposit.userId, amount: deposit.amount }),
-        })
-        .eq('id', deposit.userId);
-
-      if (profileError) throw profileError;
+      // Increment user balance
+      try {
+        await incrementValue('profiles', 'balance', deposit.userId, deposit.amount);
+      } catch (incrementError) {
+        console.error("Error incrementing balance:", incrementError);
+        toast.error("Error adding funds to user balance");
+        return;
+      }
       
       // Update local state
       setDeposits(deposits.filter(d => d.id !== depositId));
       
-      toast({
-        title: "Deposit Approved",
-        description: `Deposit has been approved and funds added to user's balance.`,
-      });
+      toast.success("Deposit approved successfully");
+      
+      if (onStatusChange) {
+        onStatusChange();
+      }
     } catch (error) {
       console.error("Error approving deposit:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve deposit",
-        variant: "destructive"
-      });
+      toast.error("Failed to approve deposit");
     }
   };
 
@@ -144,17 +143,14 @@ export function DepositApprovals() {
       // Update local state
       setDeposits(deposits.filter(d => d.id !== depositId));
       
-      toast({
-        title: "Deposit Rejected",
-        description: `Deposit has been rejected.`,
-      });
+      toast.success("Deposit rejected successfully");
+      
+      if (onStatusChange) {
+        onStatusChange();
+      }
     } catch (error) {
       console.error("Error rejecting deposit:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reject deposit",
-        variant: "destructive"
-      });
+      toast.error("Failed to reject deposit");
     }
   };
 
@@ -163,13 +159,21 @@ export function DepositApprovals() {
       <h3 className="text-lg font-medium">Pending Deposits ({deposits.length})</h3>
       
       {isLoading ? (
-        <div className="text-center py-8">Loading deposits...</div>
+        <div className="flex justify-center items-center py-12">
+          <div className="flex flex-col items-center gap-2">
+            <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
+            <p className="text-sm text-muted-foreground">Loading deposits...</p>
+          </div>
+        </div>
       ) : deposits.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          No pending deposits to approve
+        <div className="border rounded-md flex flex-col items-center justify-center py-12 text-muted-foreground">
+          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+            <Check className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p>No pending deposits to approve</p>
         </div>
       ) : (
-        <div className="border rounded-md">
+        <div className="border rounded-md overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -185,10 +189,10 @@ export function DepositApprovals() {
             <TableBody>
               {deposits.map((deposit) => (
                 <TableRow key={deposit.id}>
-                  <TableCell>{deposit.userId}</TableCell>
-                  <TableCell>${deposit.amount.toFixed(2)}</TableCell>
-                  <TableCell className="font-mono text-xs">{deposit.trc20Address}</TableCell>
-                  <TableCell className="font-mono text-xs">{deposit.txHash}</TableCell>
+                  <TableCell className="font-mono text-xs">{deposit.userId}</TableCell>
+                  <TableCell className="font-medium">${deposit.amount.toFixed(2)}</TableCell>
+                  <TableCell className="font-mono text-xs max-w-[160px] truncate">{deposit.trc20Address}</TableCell>
+                  <TableCell className="font-mono text-xs max-w-[160px] truncate">{deposit.txHash}</TableCell>
                   <TableCell>{formatDistanceToNow(new Date(deposit.date), { addSuffix: true })}</TableCell>
                   <TableCell>
                     {deposit.depositScreenshot && (
@@ -207,7 +211,7 @@ export function DepositApprovals() {
                         variant="outline" 
                         size="sm" 
                         onClick={() => handleApprove(deposit.id)}
-                        className="text-green-500"
+                        className="text-green-500 hover:text-green-700 hover:bg-green-50"
                       >
                         <Check className="h-4 w-4 mr-1" /> Approve
                       </Button>
@@ -215,7 +219,7 @@ export function DepositApprovals() {
                         variant="outline" 
                         size="sm"
                         onClick={() => handleReject(deposit.id)}
-                        className="text-red-500"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
                       >
                         <X className="h-4 w-4 mr-1" /> Reject
                       </Button>
