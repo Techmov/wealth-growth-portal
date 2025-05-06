@@ -1,13 +1,13 @@
-
 import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
 import { Profile } from "@/types/supabase";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
+import { User as AppUser } from "@/types";
 
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   profile: Profile | null;
   isLoading: boolean;
   session: Session | null;
@@ -15,6 +15,7 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string, referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (userData: Partial<Profile>) => Promise<void>;
+  updateUser: (userData: Partial<AppUser>) => Promise<void>;
   updateTrc20Address: (address: string) => Promise<void>;
   deposit: (amount: number, txHash: string, screenshot?: File) => Promise<void>;
   requestWithdrawal: (amount: number) => Promise<void>;
@@ -24,7 +25,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +49,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (data) {
         setProfile(data);
         setIsAdmin(data.role === 'admin');
+        
+        // Create an AppUser from the profile data
+        const appUser: AppUser = {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          balance: data.balance || 0,
+          totalInvested: data.total_invested || 0,
+          totalWithdrawn: data.total_withdrawn || 0,
+          referralBonus: data.referral_bonus || 0,
+          referralCode: data.referral_code,
+          referredBy: data.referred_by,
+          trc20Address: data.trc20_address,
+          withdrawalPassword: data.withdrawal_password,
+          createdAt: new Date(data.created_at || Date.now()),
+          role: data.role,
+          username: data.username
+        };
+        
+        setUser(appUser);
       }
     } catch (error) {
       console.error("Unexpected error fetching profile:", error);
@@ -61,16 +82,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       setSession(initialSession);
-      setUser(initialSession?.user ?? null);
       
       if (initialSession?.user) {
         // Use setTimeout to avoid potential deadlocks with Supabase auth
         setTimeout(() => {
           fetchProfile(initialSession.user.id);
         }, 0);
+      } else {
+        setUser(null);
+        setProfile(null);
+        setIsAdmin(false);
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     });
     
     // Set up auth state change listener
@@ -78,7 +101,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       (event, currentSession) => {
         console.log("Auth state changed:", event);
         setSession(currentSession);
-        setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
           // Use setTimeout to avoid potential deadlocks with Supabase auth
@@ -86,6 +108,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             fetchProfile(currentSession.user.id);
           }, 0);
         } else {
+          setUser(null);
           setProfile(null);
           setIsAdmin(false);
         }
@@ -98,6 +121,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       subscription.unsubscribe();
     };
   }, [fetchProfile]);
+
+  // Function to update user data in application state
+  const updateUser = async (userData: Partial<AppUser>) => {
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    
+    // Update local state
+    setUser({...user, ...userData});
+    return Promise.resolve();
+  };
 
   // Login function using Supabase auth
   const login = async (email: string, password: string) => {
@@ -396,6 +430,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         signup,
         logout,
         updateProfile,
+        updateUser,
         updateTrc20Address,
         deposit,
         requestWithdrawal,
