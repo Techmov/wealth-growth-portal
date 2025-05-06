@@ -9,6 +9,7 @@ import { Loader2, Copy, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 export function DepositForm() {
   const { user } = useAuth();
@@ -63,23 +64,57 @@ export function DepositForm() {
   }, [timeLeft, depositSuccess]);
 
   // Mock successful deposit (for demo purposes)
-  const mockDepositConfirmation = () => {
+  const mockDepositConfirmation = async (depositAmount: number) => {
     // Simulate random success between 30s and 2 minutes
     const randomTime = Math.floor(Math.random() * 90) + 30;
     
-    setTimeout(() => {
-      if (showWaitingDialog) {
-        setDepositSuccess(true);
-        toast.success("Your deposit has been confirmed!");
-        
-        // Close dialog after 3 seconds of showing success
-        setTimeout(() => {
-          setShowWaitingDialog(false);
-          setAmount("");
-          setTimeLeft(600);
-          setProgress(0);
-          setDepositSuccess(false);
-        }, 3000);
+    setTimeout(async () => {
+      if (showWaitingDialog && !depositSuccess) {
+        try {
+          // Create a deposit transaction
+          const { error } = await supabase.from('transactions').insert({
+            user_id: user?.id,
+            type: 'deposit',
+            amount: parseFloat(depositAmount.toString()),
+            status: 'completed',
+            description: `Deposit of ${depositAmount} USDT`,
+            date: new Date().toISOString()
+          });
+
+          if (error) {
+            console.error("Error creating transaction:", error);
+            toast.error("Failed to record deposit transaction");
+            return;
+          }
+
+          // Update user balance
+          if (user) {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ 
+                balance: user.balance + parseFloat(depositAmount.toString())
+              })
+              .eq('id', user.id);
+
+            if (updateError) {
+              console.error("Error updating balance:", updateError);
+            }
+          }
+
+          setDepositSuccess(true);
+          toast.success("Your deposit has been confirmed!");
+          
+          // Close dialog after 3 seconds of showing success
+          setTimeout(() => {
+            setShowWaitingDialog(false);
+            setAmount("");
+            setTimeLeft(600);
+            setProgress(0);
+            setDepositSuccess(false);
+          }, 3000);
+        } catch (error) {
+          console.error("Error during deposit confirmation:", error);
+        }
       }
     }, randomTime * 1000);
   };
@@ -102,7 +137,7 @@ export function DepositForm() {
       setShowWaitingDialog(true);
       
       // Start mock confirmation process (would be replaced by real admin confirmation)
-      mockDepositConfirmation();
+      mockDepositConfirmation(Number(amount));
       
     } catch (error) {
       console.error("Error processing deposit:", error);

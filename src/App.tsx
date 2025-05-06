@@ -36,6 +36,21 @@ function ProtectedRouteContent() {
   return <Outlet />;
 }
 
+// AdminRoute component to check if user is an admin
+function AdminRouteContent() {
+  const { session, isAdmin } = useAuth();
+  
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <Outlet />;
+}
+
 function App() {
   const [initializing, setInitializing] = useState(true);
 
@@ -72,10 +87,19 @@ function App() {
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/withdrawal" element={<WithdrawalPage />} />
+              <Route path="/withdraw" element={<WithdrawalPage />} /> {/* Added this alias */}
               <Route path="/deposit" element={<DepositPage />} />
               <Route path="/referrals" element={<ReferralsPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
-              <Route path="/admin" element={<AdminDashboard />} />
+            </Route>
+            
+            {/* Admin routes */}
+            <Route element={<AdminRouteContent />}>
+              <Route path="/admin" element={
+                <InvestmentProvider>
+                  <AdminDashboard />
+                </InvestmentProvider>
+              } />
             </Route>
           </Route>
           

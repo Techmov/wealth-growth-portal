@@ -12,6 +12,7 @@ import { DepositApprovals } from "@/components/admin/DepositApprovals";
 import { WithdrawalApprovals } from "@/components/admin/WithdrawalApprovals";
 import { DollarSign, LogOut, Users, Download, Upload, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AdminComponentProps {
   onUserDeleted?: () => void;
@@ -34,72 +35,132 @@ const AdminDashboard = () => {
     totalUsers: 0,
   });
   
-  const updateStats = () => {
-    // Calculate stats based on users
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    
-    // Get pending deposits
-    const deposits = JSON.parse(localStorage.getItem("pendingDeposits") || "[]");
-    const pendingDeposits = deposits.filter(d => d.status === "pending").length;
-    
-    // Get pending withdrawals
-    const withdrawals = JSON.parse(localStorage.getItem("pendingWithdrawals") || "[]");
-    const pendingWithdrawals = withdrawals.filter(w => w.status === "pending").length;
-    
-    // Calculate totals from users and transactions
-    let totalDeposits = 0;
-    let totalWithdrawals = 0;
-    let totalReferralBonus = 0;
-    
-    users.forEach(user => {
-      totalDeposits += user.totalInvested || 0;
-      totalWithdrawals += user.totalWithdrawn || 0;
-      totalReferralBonus += user.referralBonus || 0;
-    });
-    
-    const newStats = {
-      totalDeposits,
-      totalWithdrawals,
-      totalReferralBonus,
-      pendingDeposits,
-      pendingWithdrawals,
-      totalUsers: users.length,
-    };
-    
-    setStats(newStats);
+  const updateStats = async () => {
+    try {
+      if (!user) return;
+
+      // Fetch statistics from Supabase
+      // Get total deposits
+      const { data: depositsData, error: depositsError } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('type', 'deposit')
+        .eq('status', 'completed');
+
+      if (depositsError) {
+        console.error("Error fetching deposits:", depositsError);
+      } else {
+        const totalDeposits = depositsData.reduce((sum, tx) => sum + tx.amount, 0);
+        stats.totalDeposits = totalDeposits;
+      }
+
+      // Get total withdrawals
+      const { data: withdrawalsData, error: withdrawalsError } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('type', 'withdrawal')
+        .eq('status', 'completed');
+
+      if (withdrawalsError) {
+        console.error("Error fetching withdrawals:", withdrawalsError);
+      } else {
+        const totalWithdrawals = withdrawalsData.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+        stats.totalWithdrawals = totalWithdrawals;
+      }
+
+      // Get pending deposits
+      const { data: pendingDepositsData, error: pendingDepositsError } = await supabase
+        .from('transactions')
+        .select('count')
+        .eq('type', 'deposit')
+        .eq('status', 'pending')
+        .single();
+
+      if (!pendingDepositsError && pendingDepositsData) {
+        stats.pendingDeposits = pendingDepositsData.count;
+      }
+
+      // Get pending withdrawals
+      const { data: pendingWithdrawalsData, error: pendingWithdrawalsError } = await supabase
+        .from('withdrawal_requests')
+        .select('count')
+        .eq('status', 'pending')
+        .single();
+
+      if (!pendingWithdrawalsError && pendingWithdrawalsData) {
+        stats.pendingWithdrawals = pendingWithdrawalsData.count;
+      }
+
+      // Get total referral bonuses
+      const { data: referralData, error: referralError } = await supabase
+        .from('profiles')
+        .select('sum(referral_bonus)');
+
+      if (!referralError && referralData && referralData[0]?.sum) {
+        stats.totalReferralBonus = referralData[0].sum;
+      }
+
+      // Get total users count
+      const { data: usersData, error: usersError } = await supabase
+        .from('profiles')
+        .select('count');
+
+      if (!usersError && usersData && usersData[0]?.count) {
+        stats.totalUsers = usersData[0].count;
+      }
+
+      // Update the state with new stats
+      setStats({...stats});
+    } catch (error) {
+      console.error("Error updating admin stats:", error);
+    }
   };
   
   useEffect(() => {
-    updateStats();
-    
-    // Listen for events that should trigger stats update
-    const handleUserDeleted = () => updateStats();
-    const handleDepositStatusChange = () => updateStats();
-    const handleWithdrawalStatusChange = () => updateStats();
-    const handleUserSignup = () => updateStats();
-    const handleReferralBonusAdded = () => updateStats();
-    
-    window.addEventListener("userDeleted", handleUserDeleted);
-    window.addEventListener("depositStatusChange", handleDepositStatusChange);
-    window.addEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
-    window.addEventListener("userSignup", handleUserSignup);
-    window.addEventListener("referralBonusAdded", handleReferralBonusAdded);
-    
-    return () => {
-      window.removeEventListener("userDeleted", handleUserDeleted);
-      window.removeEventListener("depositStatusChange", handleDepositStatusChange);
-      window.removeEventListener("withdrawalStatusChange", handleWithdrawalStatusChange);
-      window.removeEventListener("userSignup", handleUserSignup);
-      window.removeEventListener("referralBonusAdded", handleReferralBonusAdded);
-    };
-  }, []);
+    // Only run this for admin users
+    if (user && isAdmin) {
+      updateStats();
+      
+      // Set up real-time subscriptions for relevant tables
+      const transactionsChannel = supabase
+        .channel('admin-transactions-changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'transactions' },
+          () => updateStats()
+        )
+        .subscribe();
+        
+      const withdrawalsChannel = supabase
+        .channel('admin-withdrawals-changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'withdrawal_requests' },
+          () => updateStats()
+        )
+        .subscribe();
+        
+      const profilesChannel = supabase
+        .channel('admin-profiles-changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'profiles' },
+          () => updateStats()
+        )
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(transactionsChannel);
+        supabase.removeChannel(withdrawalsChannel);
+        supabase.removeChannel(profilesChannel);
+      };
+    }
+  }, [user, isAdmin]);
 
   if (isLoading) {
     return <div>Loading...</div>;
   }
 
+  // Check if user is admin
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
@@ -167,15 +228,15 @@ const AdminDashboard = () => {
           </TabsList>
           
           <TabsContent value="users">
-            {withAdminProps(UserManagement, { onUserDeleted: updateStats })}
+            {withAdminProps(UserManagement, { onUserDeleted: () => updateStats() })}
           </TabsContent>
           
           <TabsContent value="deposits">
-            {withAdminProps(DepositApprovals, { onStatusChange: updateStats })}
+            {withAdminProps(DepositApprovals, { onStatusChange: () => updateStats() })}
           </TabsContent>
           
           <TabsContent value="withdrawals">
-            {withAdminProps(WithdrawalApprovals, { onStatusChange: updateStats })}
+            {withAdminProps(WithdrawalApprovals, { onStatusChange: () => updateStats() })}
           </TabsContent>
         </Tabs>
       </main>
