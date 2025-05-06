@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { User, LoginCredentials, SignupCredentials } from "@/types/auth";
+import { User } from "@/types/auth";
+import { LoginCredentials, SignupCredentials } from "@/types/auth";
 
 // Sign up with email and password
 export const signup = async (credentials: SignupCredentials) => {
@@ -20,11 +21,14 @@ export const signup = async (credentials: SignupCredentials) => {
     });
 
     if (error) {
+      console.error("Signup error:", error);
       return Promise.reject(error);
     }
 
+    // If successful, return the data
     return Promise.resolve(data);
   } catch (error) {
+    console.error("Unexpected signup error:", error);
     return Promise.reject(error);
   }
 };

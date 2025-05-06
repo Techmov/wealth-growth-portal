@@ -72,11 +72,21 @@ const SignupPage = () => {
     try {
       setIsSubmitting(true);
       await signup(name, email, password, referralCode);
-      toast.success("Account created successfully");
-      // Navigation is handled by auth state change listener
+      toast.success("Account created successfully! Please check your email for verification.");
+      // Show a toast message informing the user about the verification email
+      toast.info("Please verify your email before logging in.");
     } catch (error: any) {
       console.error("Signup error:", error);
-      setError(error.message || "Failed to create account. Please try again.");
+      if (error.message?.includes("Database error saving new user")) {
+        setError("We're experiencing technical difficulties with user registration. Please try again later or contact support.");
+        toast.error("Registration system is currently unavailable. Please try again later.");
+      } else if (error.message?.includes("User already registered")) {
+        setError("Email already in use. Please log in instead.");
+        toast.error("Account already exists with this email.");
+      } else {
+        setError(error.message || "Failed to create account. Please try again.");
+        toast.error("Signup failed. Please check your information and try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
