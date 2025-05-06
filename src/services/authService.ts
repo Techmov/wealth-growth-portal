@@ -154,7 +154,7 @@ export const deposit = async (userId: string, amount: number, txHash: string) =>
   }
 };
 
-// Add withdrawal request function
+// Fix the withdrawal request function to include trc20Address parameter
 export const requestWithdrawal = async (userId: string, amount: number, trc20Address: string) => {
   try {
     // Create a withdrawal request record
