@@ -1,8 +1,9 @@
 
-import { Product as BaseProduct } from '@/types';
+// Extend the Product interface to include the active property
+import { Product } from '@/types';
 
 declare module '@/types' {
-  interface Product extends BaseProduct {
+  interface Product {
     active: boolean;
   }
 }

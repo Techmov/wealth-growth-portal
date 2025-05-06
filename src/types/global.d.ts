@@ -104,4 +104,5 @@ declare module 'lucide-react' {
   export const Eye: React.FC<IconProps>;
   export const TrendingUp: React.FC<IconProps>;
   export const Lock: React.FC<IconProps>;
+  export const EyeOff: React.FC<IconProps>;
 }
