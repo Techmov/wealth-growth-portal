@@ -12,6 +12,12 @@ export const useAuthState = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+
+  // Reset login success flag after redirection
+  const resetLoginSuccess = useCallback(() => {
+    setLoginSuccess(false);
+  }, []);
 
   // Function to fetch user profile from Supabase
   const fetchProfile = useCallback(async (userId: string) => {
@@ -60,6 +66,9 @@ export const useAuthState = () => {
     setIsLoading,
     isAdmin,
     setIsAdmin,
+    loginSuccess,
+    setLoginSuccess,
+    resetLoginSuccess,
     fetchProfile
   };
 };
