@@ -1,7 +1,9 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { useAuth } from "./AuthContext";
-import { Investment, Product, Transaction, WithdrawalRequest, Downline, User } from "@/types";
+import { Investment, Product, Transaction, WithdrawalRequest, Downline } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 
 type InvestmentContextType = {
   products: Product[];
@@ -16,248 +18,221 @@ type InvestmentContextType = {
 
 const InvestmentContext = createContext<InvestmentContextType | undefined>(undefined);
 
-// Mock products data with fixed investment amounts
-const mockProducts: Product[] = [
-  {
-    id: "prod_1",
-    name: "Starter Plan",
-    description: "Low risk investment that doubles over 30 days. Perfect for beginners.",
-    amount: 50,
-    duration: 30,
-    growthRate: 3.33, // ~100% over 30 days
-    risk: "low"
-  },
-  {
-    id: "prod_2",
-    name: "Basic Plan",
-    description: "Low risk investment that doubles over 30 days.",
-    amount: 100,
-    duration: 30,
-    growthRate: 3.33, // ~100% over 30 days
-    risk: "low"
-  },
-  {
-    id: "prod_3",
-    name: "Standard Plan",
-    description: "Low risk investment with consistent returns over 30 days.",
-    amount: 250,
-    duration: 30,
-    growthRate: 3.33, // ~100% over 30 days
-    risk: "low"
-  },
-  {
-    id: "prod_4",
-    name: "Premium Plan",
-    description: "Medium risk investment with higher potential returns over 30 days.",
-    amount: 500,
-    duration: 30,
-    growthRate: 3.33, // ~100% over 30 days
-    risk: "medium"
-  },
-  {
-    id: "prod_5",
-    name: "Gold Plan",
-    description: "Medium risk investment with higher returns that doubles over 20 days.",
-    amount: 1000,
-    duration: 20,
-    growthRate: 5, // 100% over 20 days
-    risk: "medium"
-  },
-  {
-    id: "prod_6",
-    name: "Elite Plan",
-    description: "Higher risk with maximum returns over 20 days.",
-    amount: 2000,
-    duration: 20,
-    growthRate: 5, // 100% over 20 days
-    risk: "high"
-  }
-];
-
-// Platform TRC20 address
+// Platform TRC20 address - this would typically come from an environment variable or database
 const platformTrc20Address = "TRX3DcAfsJPKdHnNdXeZXCqnDmHqNnUUhH";
-
-// Get persistent storage for data
-const getStoredData = (key: string, defaultValue: any) => {
-  const stored = localStorage.getItem(key);
-  return stored ? JSON.parse(stored) : defaultValue;
-};
-
-// Save data to persistent storage
-const saveStoredData = (key: string, data: any) => {
-  localStorage.setItem(key, JSON.stringify(data));
-};
 
 export function InvestmentProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [products] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [userInvestments, setUserInvestments] = useState<Investment[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
 
+  // Fetch products from Supabase
   useEffect(() => {
-    if (user) {
-      // Load data from localStorage
-      const allInvestments = getStoredData("investments", []);
-      const allTransactions = getStoredData("transactions", []);
-      const allWithdrawalRequests = getStoredData("withdrawalRequests", []);
-      
-      // Filter investments for current user
-      const filteredInvestments = allInvestments.filter(inv => inv.userId === user.id);
-      setUserInvestments(filteredInvestments);
-      
-      // Filter transactions for current user
-      const filteredTransactions = allTransactions.filter(tx => tx.userId === user.id);
-      setTransactions(filteredTransactions);
-      
-      // Filter withdrawal requests for current user
-      const filteredWithdrawalRequests = allWithdrawalRequests.filter(wr => wr.userId === user.id);
-      setWithdrawalRequests(filteredWithdrawalRequests);
-    } else {
+    const fetchProducts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('active', true);
+
+        if (error) {
+          console.error("Error fetching products:", error);
+          return;
+        }
+
+        if (data) {
+          // Map Supabase data to our Product type
+          const mappedProducts: Product[] = data.map(prod => ({
+            id: prod.id,
+            name: prod.name,
+            description: prod.description,
+            amount: prod.amount,
+            duration: prod.duration,
+            growthRate: prod.growth_rate,
+            risk: prod.risk as 'low' | 'medium' | 'high'
+          }));
+          
+          setProducts(mappedProducts);
+        }
+      } catch (error) {
+        console.error("Unexpected error fetching products:", error);
+      }
+    };
+
+    fetchProducts();
+
+    // Set up real-time subscription to products table
+    const productsChannel = supabase
+      .channel('products-changes')
+      .on('postgres_changes', 
+        {
+          event: '*', 
+          schema: 'public',
+          table: 'products'
+        },
+        () => {
+          fetchProducts();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(productsChannel);
+    };
+  }, []);
+
+  // Fetch user investments, transactions, and withdrawal requests from Supabase
+  useEffect(() => {
+    if (!user) {
       setUserInvestments([]);
       setTransactions([]);
       setWithdrawalRequests([]);
+      return;
     }
-  }, [user]);
+    
+    const fetchUserData = async () => {
+      try {
+        // Fetch user's investments
+        const { data: investmentsData, error: investmentsError } = await supabase
+          .from('investments')
+          .select('*')
+          .eq('user_id', user.id);
 
-  // Listen for new deposit transactions
-  useEffect(() => {
-    const handleNewTransaction = (event: CustomEvent) => {
-      if (user && event.detail.userId === user.id) {
-        const { userId, type, amount, txHash } = event.detail;
-        
-        // Create transaction
-        const newTransaction: Transaction = {
-          id: `tx_${Date.now()}`,
-          userId,
-          type,
-          amount,
-          status: 'completed', // In a real app, this would be 'pending' until approved
-          date: new Date(),
-          txHash,
-          description: `${type.charAt(0).toUpperCase() + type.slice(1)} via TRC20`
-        };
-
-        // Update stored data
-        const allTransactions = getStoredData("transactions", []);
-        allTransactions.push(newTransaction);
-        saveStoredData("transactions", allTransactions);
-        
-        // Update state
-        setTransactions(prevTransactions => [...prevTransactions, newTransaction]);
-        
-        // Check if this deposit should trigger a referral bonus
-        if (type === 'deposit' && user.referredBy) {
-          // Calculate referral bonus (10% of deposit amount)
-          const bonusAmount = amount * 0.1;
+        if (investmentsError) {
+          console.error("Error fetching investments:", investmentsError);
+        } else if (investmentsData) {
+          // Map Supabase data to our Investment type
+          const mappedInvestments: Investment[] = investmentsData.map(inv => ({
+            id: inv.id,
+            userId: inv.user_id,
+            productId: inv.product_id,
+            amount: inv.amount,
+            startDate: new Date(inv.start_date),
+            endDate: new Date(inv.end_date),
+            startingValue: inv.starting_value,
+            currentValue: inv.current_value,
+            finalValue: inv.final_value,
+            status: inv.status as 'active' | 'completed' | 'cancelled'
+          }));
           
-          // Find the referring user
-          const allUsers = getStoredData("users", []);
-          const referrer = allUsers.find(u => u.referralCode === user.referredBy);
-          
-          if (referrer) {
-            // Create referral bonus transaction for referrer
-            const referralTransaction: Transaction = {
-              id: `tx_${Date.now() + 1}`,
-              userId: referrer.id,
-              type: 'referral',
-              amount: bonusAmount,
-              status: 'completed',
-              date: new Date(),
-              description: `Referral bonus (10%) from ${user.name}'s deposit`
-            };
-            
-            // Update referrer's balance and referral bonus
-            referrer.balance += bonusAmount;
-            referrer.referralBonus += bonusAmount;
-            
-            // Save updated referrer data
-            const updatedUsers = allUsers.map(u => 
-              u.id === referrer.id ? referrer : u
-            );
-            saveStoredData("users", updatedUsers);
-            
-            // Save referral transaction
-            allTransactions.push(referralTransaction);
-            saveStoredData("transactions", allTransactions);
-            
-            // Dispatch an event to inform the UI about the referral bonus
-            window.dispatchEvent(new CustomEvent('referralBonusAdded', {
-              detail: {
-                userId: referrer.id,
-                amount: bonusAmount
-              }
-            }));
-          }
+          setUserInvestments(mappedInvestments);
         }
+
+        // Fetch user's transactions
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false });
+
+        if (transactionsError) {
+          console.error("Error fetching transactions:", transactionsError);
+        } else if (transactionsData) {
+          // Map Supabase data to our Transaction type
+          const mappedTransactions: Transaction[] = transactionsData.map(tx => ({
+            id: tx.id,
+            userId: tx.user_id,
+            type: tx.type as 'deposit' | 'withdrawal' | 'investment' | 'return' | 'referral',
+            amount: tx.amount,
+            status: tx.status as 'pending' | 'completed' | 'failed' | 'rejected',
+            date: new Date(tx.date || Date.now()),
+            description: tx.description,
+            trc20Address: tx.trc20_address,
+            txHash: tx.tx_hash,
+            depositScreenshot: tx.deposit_screenshot,
+            rejectionReason: tx.rejection_reason
+          }));
+          
+          setTransactions(mappedTransactions);
+        }
+
+        // Fetch user's withdrawal requests
+        const { data: withdrawalData, error: withdrawalError } = await supabase
+          .from('withdrawal_requests')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false });
+
+        if (withdrawalError) {
+          console.error("Error fetching withdrawal requests:", withdrawalError);
+        } else if (withdrawalData) {
+          // Map Supabase data to our WithdrawalRequest type
+          const mappedWithdrawals: WithdrawalRequest[] = withdrawalData.map(wr => ({
+            id: wr.id,
+            userId: wr.user_id,
+            amount: wr.amount,
+            status: wr.status as 'pending' | 'approved' | 'rejected',
+            date: new Date(wr.date || Date.now()),
+            trc20Address: wr.trc20_address,
+            txHash: wr.tx_hash,
+            rejectionReason: wr.rejection_reason
+          }));
+          
+          setWithdrawalRequests(mappedWithdrawals);
+        }
+      } catch (error) {
+        console.error("Unexpected error fetching user data:", error);
       }
     };
 
-    window.addEventListener('newTransaction', handleNewTransaction as EventListener);
+    fetchUserData();
+
+    // Set up real-time subscription to user's data
+    const userInvestmentsChannel = supabase
+      .channel('user-investments')
+      .on('postgres_changes', 
+        {
+          event: '*', 
+          schema: 'public',
+          table: 'investments',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchUserData();
+        }
+      )
+      .subscribe();
+    
+    const userTransactionsChannel = supabase
+      .channel('user-transactions')
+      .on('postgres_changes', 
+        {
+          event: '*', 
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchUserData();
+        }
+      )
+      .subscribe();
+      
+    const withdrawalRequestsChannel = supabase
+      .channel('withdrawal-requests')
+      .on('postgres_changes', 
+        {
+          event: '*', 
+          schema: 'public',
+          table: 'withdrawal_requests',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchUserData();
+        }
+      )
+      .subscribe();
     
     return () => {
-      window.removeEventListener('newTransaction', handleNewTransaction as EventListener);
+      supabase.removeChannel(userInvestmentsChannel);
+      supabase.removeChannel(userTransactionsChannel);
+      supabase.removeChannel(withdrawalRequestsChannel);
     };
   }, [user]);
 
-  // Listen for new withdrawal requests
-  useEffect(() => {
-    const handleNewWithdrawalRequest = (event: CustomEvent) => {
-      if (user && event.detail.userId === user.id) {
-        const { userId, amount, trc20Address } = event.detail;
-        
-        // Create withdrawal request
-        const newWithdrawalRequest: WithdrawalRequest = {
-          id: `wr_${Date.now()}`,
-          userId,
-          amount,
-          status: 'pending',
-          date: new Date(),
-          trc20Address
-        };
-
-        // Create transaction for the withdrawal request
-        const newTransaction: Transaction = {
-          id: `tx_${Date.now()}`,
-          userId,
-          type: 'withdrawal',
-          amount: -amount, // Negative as money is leaving balance
-          status: 'pending',
-          date: new Date(),
-          description: `Withdrawal request to ${trc20Address.substring(0, 8)}...`,
-          trc20Address
-        };
-
-        // Update stored data
-        const allWithdrawalRequests = getStoredData("withdrawalRequests", []);
-        allWithdrawalRequests.push(newWithdrawalRequest);
-        saveStoredData("withdrawalRequests", allWithdrawalRequests);
-        
-        const allTransactions = getStoredData("transactions", []);
-        allTransactions.push(newTransaction);
-        saveStoredData("transactions", allTransactions);
-        
-        // Update state
-        setWithdrawalRequests(prevRequests => [...prevRequests, newWithdrawalRequest]);
-        setTransactions(prevTransactions => [...prevTransactions, newTransaction]);
-        
-        // Update pending withdrawals for admin
-        const pendingWithdrawals = getStoredData("pendingWithdrawals", []);
-        pendingWithdrawals.push(newWithdrawalRequest);
-        saveStoredData("pendingWithdrawals", pendingWithdrawals);
-        
-        // Dispatch event to update admin dashboard
-        window.dispatchEvent(new CustomEvent('withdrawalStatusChange'));
-      }
-    };
-
-    window.addEventListener('newWithdrawalRequest', handleNewWithdrawalRequest as EventListener);
-    
-    return () => {
-      window.removeEventListener('newWithdrawalRequest', handleNewWithdrawalRequest as EventListener);
-    };
-  }, [user]);
-
+  // Invest in a product
   const invest = async (productId: string) => {
     if (!user) {
       toast.error("You must be logged in to invest");
@@ -265,102 +240,56 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      // Find the product
       const product = products.find(p => p.id === productId);
       if (!product) {
         throw new Error("Product not found");
       }
 
-      // Fixed amount from the product
+      // Fixed investment amount from the product
       const amount = product.amount;
 
+      // Check if user has enough balance
       if (amount > user.balance) {
         throw new Error("Insufficient balance");
       }
 
-      // Calculate end date and final value
+      // Calculate investment details
       const startDate = new Date();
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + product.duration);
-      const finalValue = amount * 2; // Double the investment
+      const finalValue = amount * 2; // Double the investment amount
 
-      // Create investment
-      const newInvestment: Investment = {
-        id: `inv_${Date.now()}`,
-        userId: user.id,
-        productId,
-        amount,
-        startDate,
-        endDate,
-        startingValue: amount,
-        currentValue: amount,
-        finalValue,
-        status: 'active'
-      };
-
-      // Create transaction
-      const newTransaction: Transaction = {
-        id: `tx_${Date.now()}`,
-        userId: user.id,
-        type: 'investment',
-        amount: -amount, // Negative as money is leaving balance
-        status: 'completed',
-        date: new Date(),
-        description: `Investment in ${product.name}`
-      };
-
-      // Update stored data
-      const allInvestments = getStoredData("investments", []);
-      allInvestments.push(newInvestment);
-      saveStoredData("investments", allInvestments);
-      
-      const allTransactions = getStoredData("transactions", []);
-      allTransactions.push(newTransaction);
-      saveStoredData("transactions", allTransactions);
-      
-      // Update state
-      setUserInvestments([...userInvestments, newInvestment]);
-      setTransactions([...transactions, newTransaction]);
-
-      // Update user balance 
-      const allUsers = getStoredData("users", []);
-      const updatedUsers = allUsers.map(u => {
-        if (u.id === user.id) {
-          return {
-            ...u,
-            balance: u.balance - amount,
-            totalInvested: u.totalInvested + amount
-          };
+      // Begin a Supabase transaction using RPC
+      const { data: investmentData, error: investmentError } = await supabase.rpc(
+        'create_investment',
+        {
+          p_user_id: user.id,
+          p_product_id: productId,
+          p_amount: amount,
+          p_end_date: endDate.toISOString(),
+          p_starting_value: amount,
+          p_current_value: amount,
+          p_final_value: finalValue
         }
-        return u;
-      });
-      
-      saveStoredData("users", updatedUsers);
-      
-      // Update user in local storage for current session
-      const updatedUser = {
-        ...user,
-        balance: user.balance - amount,
-        totalInvested: user.totalInvested + amount
-      };
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      
+      );
+
+      if (investmentError) {
+        console.error("Investment error:", investmentError);
+        throw new Error(investmentError.message || "Investment failed");
+      }
+
       toast.success(`Successfully invested $${amount} in ${product.name}`);
-      
-      // Dispatch event to update UI
-      window.dispatchEvent(new CustomEvent('investmentAdded', {
-        detail: {
-          userId: user.id,
-          amount
-        }
-      }));
-      
-      // Simulate page reload to reflect updated user data
-      window.location.reload();
+
+      // Refresh user data to reflect the new balance and investments
+      // This is handled by the realtime subscription
     } catch (error: any) {
       toast.error(error.message || "Investment failed");
+      throw error;
     }
   };
 
+  // Handle referral bonuses
   const getReferralBonus = async (referralCode: string) => {
     if (!user) {
       toast.error("You must be logged in to claim referral bonus");
@@ -368,13 +297,13 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // In a real app, we'd verify this code against a database
+      // In a real app, we'd verify this code against the database
       if (referralCode && referralCode !== user.referralCode) {
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // This function now just notifies user that bonuses are automatically added
-        toast.info("Referral bonuses are now automatically added to your account when a referred user makes a deposit.");
+        toast.info("Referral bonuses are automatically added to your account when a referred user makes a deposit.");
       } else {
         toast.error("Invalid referral code");
       }
@@ -383,42 +312,13 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Get user's downlines (referred users)
   const getUserDownlines = () => {
     if (!user) return [];
 
-    // Get all users from storage
-    const allUsers = getStoredData("users", []);
-    const allTransactions = getStoredData("transactions", []);
-    
-    // Filter users referred by the current user
-    const referredUsers = allUsers.filter((u: User) => u.referredBy === user.referralCode);
-    
-    // Map them to downline format
-    const downlines: Downline[] = referredUsers.map((referredUser: User) => {
-      // Calculate total invested by this user
-      const totalInvested = referredUser.totalInvested || 0;
-      
-      // Find referral transactions for this referred user
-      const referralTransactions = allTransactions.filter(
-        (tx: Transaction) => 
-          tx.userId === user.id && 
-          tx.type === 'referral' &&
-          tx.description?.includes(referredUser.name || referredUser.email)
-      );
-      
-      // Calculate total bonus generated from this user
-      const bonusGenerated = referralTransactions.reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
-      
-      return {
-        id: referredUser.id,
-        username: referredUser.name || referredUser.email.split('@')[0],
-        totalInvested,
-        bonusGenerated,
-        date: referredUser.createdAt ? new Date(referredUser.createdAt) : new Date()
-      };
-    });
-    
-    return downlines;
+    // This would need to be implemented with actual data from Supabase
+    // For now, we'll return an empty array as a placeholder
+    return [];
   };
 
   return (
