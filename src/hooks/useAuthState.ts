@@ -16,6 +16,7 @@ export const useAuthState = () => {
   // Function to fetch user profile from Supabase
   const fetchProfile = useCallback(async (userId: string) => {
     try {
+      console.log("useAuthState: Fetching profile for user:", userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -23,25 +24,27 @@ export const useAuthState = () => {
         .maybeSingle();
         
       if (error) {
-        console.error("Error fetching profile:", error);
+        console.error("useAuthState: Error fetching profile:", error);
+        setIsLoading(false);
         return;
       }
       
       if (data) {
+        console.log("useAuthState: Profile data retrieved:", data);
         setProfile(data);
         setIsAdmin(data.role === 'admin');
         
         // Create an AppUser from the profile data
         const appUser = mapProfileToUser(data);
+        console.log("useAuthState: Setting user data:", appUser);
         setUser(appUser);
       } else {
-        // If no profile found but user exists, we might need to create one
-        console.log("No profile found for user", userId);
+        console.log("useAuthState: No profile found for user", userId);
       }
       
       setIsLoading(false);
     } catch (error) {
-      console.error("Unexpected error fetching profile:", error);
+      console.error("useAuthState: Unexpected error fetching profile:", error);
       setIsLoading(false);
     }
   }, []);

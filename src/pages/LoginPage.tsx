@@ -24,8 +24,8 @@ const LoginPage = () => {
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (user) {
-      console.log("User exists in state, redirecting to dashboard");
-      navigate("/dashboard");
+      console.log("LoginPage: User exists in state, redirecting to dashboard");
+      navigate("/dashboard", { replace: true });
     }
   }, [user, navigate]);
 
@@ -44,19 +44,20 @@ const LoginPage = () => {
     
     try {
       setIsSubmitting(true);
-      console.log("Attempting login...");
-      const result = await login(email, password);
+      console.log("LoginPage: Attempting login with email:", email);
       
-      console.log("Login result:", result);
+      const result = await login(email, password);
+      console.log("LoginPage: Login result:", result);
       
       if (result.success) {
         toast.success("Login successful!");
-        console.log("Login successful, navigating to dashboard");
-        // Force navigation to dashboard
+        console.log("LoginPage: Login successful, navigating to dashboard");
+        
+        // Force navigation to dashboard with replace to prevent back navigation to login
         navigate("/dashboard", { replace: true });
       }
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("LoginPage: Login error:", error);
       setError(error.message || "Failed to login. Please check your credentials.");
     } finally {
       setIsSubmitting(false);

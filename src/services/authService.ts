@@ -1,6 +1,5 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@/types/auth";
 import { LoginCredentials, SignupCredentials } from "@/types/auth";
 
 // Sign up with email and password
@@ -38,17 +37,21 @@ export const login = async (credentials: LoginCredentials) => {
   const { email, password } = credentials;
   
   try {
+    console.log("authService: Login attempt with email:", email);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      console.error("authService: Login error:", error);
       return Promise.reject(error);
     }
 
+    console.log("authService: Login successful, returning session");
     return Promise.resolve(data);
   } catch (error) {
+    console.error("authService: Unexpected login error:", error);
     return Promise.reject(error);
   }
 };
