@@ -63,6 +63,34 @@ export function DepositForm() {
     }
   }, [timeLeft, depositSuccess]);
 
+  // Create a pending deposit transaction record
+  const createPendingDeposit = async (depositAmount: number) => {
+    try {
+      if (!user) return;
+      
+      // Create a pending deposit transaction
+      const { error } = await supabase.from('transactions').insert({
+        user_id: user.id,
+        type: 'deposit',
+        amount: parseFloat(depositAmount.toString()),
+        status: 'pending', // Important: Set as pending, not completed
+        description: `Pending deposit of ${depositAmount} USDT`,
+        date: new Date().toISOString()
+      });
+
+      if (error) {
+        console.error("Error creating pending transaction:", error);
+        toast.error("Failed to record deposit transaction");
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error creating pending deposit:", error);
+      return false;
+    }
+  };
+
   // Mock successful deposit (for demo purposes)
   const mockDepositConfirmation = async (depositAmount: number) => {
     // Simulate random success between 30s and 2 minutes
@@ -71,20 +99,31 @@ export function DepositForm() {
     setTimeout(async () => {
       if (showWaitingDialog && !depositSuccess) {
         try {
-          // Create a deposit transaction
-          const { error } = await supabase.from('transactions').insert({
-            user_id: user?.id,
-            type: 'deposit',
-            amount: parseFloat(depositAmount.toString()),
-            status: 'completed',
-            description: `Deposit of ${depositAmount} USDT`,
-            date: new Date().toISOString()
-          });
-
-          if (error) {
-            console.error("Error creating transaction:", error);
-            toast.error("Failed to record deposit transaction");
-            return;
+          // Update the pending transaction to completed
+          const { data: pendingTransactions, error: fetchError } = await supabase
+            .from('transactions')
+            .select('id')
+            .eq('user_id', user?.id)
+            .eq('type', 'deposit')
+            .eq('status', 'pending')
+            .order('date', { ascending: false })
+            .limit(1);
+            
+          if (fetchError) {
+            console.error("Error fetching pending transaction:", fetchError);
+          } else if (pendingTransactions && pendingTransactions.length > 0) {
+            // Update the transaction to completed
+            const { error: updateError } = await supabase
+              .from('transactions')
+              .update({
+                status: 'completed',
+                description: `Deposit of ${depositAmount} USDT`
+              })
+              .eq('id', pendingTransactions[0].id);
+              
+            if (updateError) {
+              console.error("Error updating transaction:", updateError);
+            }
           }
 
           // Update user balance
@@ -130,14 +169,16 @@ export function DepositForm() {
     try {
       setLoading(true);
       
-      // In a real app, you would create a deposit record here
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // First create the pending transaction
+      const success = await createPendingDeposit(Number(amount));
       
-      // Show waiting dialog
-      setShowWaitingDialog(true);
-      
-      // Start mock confirmation process (would be replaced by real admin confirmation)
-      mockDepositConfirmation(Number(amount));
+      if (success) {
+        // Show waiting dialog
+        setShowWaitingDialog(true);
+        
+        // Start mock confirmation process (would be replaced by real admin confirmation)
+        mockDepositConfirmation(Number(amount));
+      }
       
     } catch (error) {
       console.error("Error processing deposit:", error);

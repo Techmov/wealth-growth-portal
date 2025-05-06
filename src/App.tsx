@@ -100,6 +100,12 @@ function App() {
                   <AdminDashboard />
                 </InvestmentProvider>
               } />
+              {/* Add specific admin route for dashboard to fix 404 error */}
+              <Route path="/admin/dashboard" element={
+                <InvestmentProvider>
+                  <AdminDashboard />
+                </InvestmentProvider>
+              } />
             </Route>
           </Route>
           

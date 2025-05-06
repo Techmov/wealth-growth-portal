@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { UserProfile } from "@/types";
+import { UserProfile } from "@/types/index";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useAuthState = () => {
