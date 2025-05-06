@@ -31,7 +31,7 @@ export const ProtectedRoute = ({
     console.log("ProtectedRoute: Still loading, showing loading indicator");
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -49,7 +49,7 @@ export const ProtectedRoute = ({
   }
 
   // If user is logged in but this is a login/signup page, redirect to dashboard
-  if (user && (location.pathname === "/login" || location.pathname === "/signup")) {
+  if (!requireAuth && user) {
     console.log("User is authenticated and on auth page - redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }

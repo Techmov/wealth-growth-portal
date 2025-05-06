@@ -1,110 +1,71 @@
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
-/**
- * Hook for initializing authentication state and setting up listeners
- */
 export const useAuthInitialization = ({
   setSession,
-  setUser,
-  setProfile,
-  setIsAdmin,
   setIsLoading,
   fetchProfile
-}: {
-  setSession: (session: any) => void;
-  setUser: (user: any) => void;
-  setProfile: (profile: any) => void;
-  setIsAdmin: (isAdmin: boolean) => void;
-  setIsLoading: (isLoading: boolean) => void;
-  fetchProfile: (userId: string) => Promise<void>;
 }) => {
-  // Effect to initialize auth state
-  useEffect(() => {
-    let isMounted = true;
-    setIsLoading(true);
-    
-    // Set up the auth state change listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        console.log("Auth state changed:", event);
-        
-        if (!isMounted) return;
-        
-        // Set the new session
-        setSession(currentSession);
-        
-        // Handle changes to auth state
-        if (event === "SIGNED_IN" && currentSession) {
-          console.log("User signed in, fetching profile...");
-          try {
-            await fetchProfile(currentSession.user.id);
-          } catch (error) {
-            console.error("Failed to fetch profile on sign in:", error);
-            // Clear user data if profile fetch fails
-            setUser(null);
-            setProfile(null);
-            setIsAdmin(false);
-          } finally {
-            if (isMounted) {
-              setIsLoading(false);
-            }
-          }
-        } else if (event === "SIGNED_OUT") {
-          console.log("User signed out, clearing user data");
-          // Clear user data on sign out
-          setUser(null);
-          setProfile(null);
-          setIsAdmin(false);
-          setIsLoading(false); // Ensure we're not stuck in loading state
-        }
-      }
-    );
-    
-    // Get the initial session after setting up the listener
-    const getInitialSession = async () => {
-      try {
-        if (!isMounted) return;
-        
-        // Get current session from Supabase
-        const { data } = await supabase.auth.getSession();
-        const initialSession = data?.session;
-
-        if (initialSession && isMounted) {
-          setSession(initialSession);
+  const initializeAuth = useCallback(async () => {
+    try {
+      console.log("Initializing auth state...");
+      
+      // First set up the auth listener BEFORE checking the session
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, currentSession) => {
+          console.log("Auth state changed:", event);
+          setSession(currentSession);
           
-          try {
-            // Fetch the user profile
-            await fetchProfile(initialSession.user.id);
-          } catch (error) {
-            console.error("Error getting initial profile:", error);
-            // Clear user data if profile fetch fails
-            setUser(null);
-            setProfile(null);
-            setIsAdmin(false);
-          } finally {
-            if (isMounted) {
-              setIsLoading(false);
-            }
+          // Only fetch profile if we have a user and it's a SIGNED_IN event
+          if (currentSession?.user && event === 'SIGNED_IN') {
+            console.log("User signed in, fetching profile...");
+            // Use setTimeout to prevent Supabase auth deadlock
+            setTimeout(() => {
+              fetchProfile(currentSession.user.id).catch(err => {
+                console.error("Error fetching profile on auth change:", err);
+                setIsLoading(false);
+              });
+            }, 0);
+          } else if (!currentSession) {
+            // If there's no session, ensure we're not in loading state
+            setIsLoading(false);
           }
-        } else if (isMounted) {
-          setIsLoading(false);
         }
-      } catch (error) {
-        console.error("Error getting initial session:", error);
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
+      );
 
-    getInitialSession();
-    
-    // Clean up subscription and prevent state updates after unmounting
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [setSession, setUser, setProfile, setIsAdmin, setIsLoading, fetchProfile]);
+      // Then check for existing session
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log("Existing session check:", session ? "Found session" : "No session");
+      
+      setSession(session);
+      
+      if (session?.user) {
+        try {
+          await fetchProfile(session.user.id);
+        } catch (error) {
+          console.error("Error fetching profile during initialization:", error);
+        } finally {
+          // Always ensure loading state is concluded
+          setIsLoading(false);
+        }
+      } else {
+        // No session, so we're not loading anymore
+        setIsLoading(false);
+      }
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    } catch (error) {
+      console.error("Error during auth initialization:", error);
+      // Make sure to set loading to false on error too
+      setIsLoading(false);
+    }
+  }, [setSession, setIsLoading, fetchProfile]);
+
+  // Call the initialization function
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 };

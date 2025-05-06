@@ -27,11 +27,11 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>
-          <TooltipProvider>
+        <TooltipProvider>
+          <AuthProvider>
             <Toaster />
             <Sonner />
-            {/* Move InvestmentProvider inside AuthProvider */}
+            {/* Routes must be inside the AuthProvider */}
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
@@ -85,8 +85,8 @@ const App = () => {
               {/* Catch all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </TooltipProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </TooltipProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );

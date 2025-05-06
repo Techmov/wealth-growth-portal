@@ -48,14 +48,16 @@ export const useAuthState = () => {
         setUser(appUser);
       } else {
         console.log("useAuthState: No profile found for user", userId);
+        setIsLoading(false);
         throw new Error("No profile found for user");
       }
-      
-      setIsLoading(false);
     } catch (error) {
       console.error("useAuthState: Unexpected error fetching profile:", error);
       setIsLoading(false);
       throw error;
+    } finally {
+      // Always ensure loading state is concluded
+      setIsLoading(false);
     }
   }, []);
 
