@@ -9,7 +9,249 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      investments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          current_value: number
+          end_date: string
+          final_value: number
+          id: string
+          product_id: string
+          start_date: string | null
+          starting_value: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          current_value: number
+          end_date: string
+          final_value: number
+          id?: string
+          product_id: string
+          start_date?: string | null
+          starting_value: number
+          status: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          current_value?: number
+          end_date?: string
+          final_value?: number
+          id?: string
+          product_id?: string
+          start_date?: string | null
+          starting_value?: number
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          active: boolean
+          amount: number
+          created_at: string | null
+          description: string
+          duration: number
+          growth_rate: number
+          id: string
+          name: string
+          risk: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          created_at?: string | null
+          description: string
+          duration: number
+          growth_rate: number
+          id?: string
+          name: string
+          risk: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          created_at?: string | null
+          description?: string
+          duration?: number
+          growth_rate?: number
+          id?: string
+          name?: string
+          risk?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          balance: number
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          referral_bonus: number
+          referral_code: string
+          referred_by: string | null
+          role: string
+          total_invested: number
+          total_withdrawn: number
+          trc20_address: string | null
+          username: string
+          withdrawal_password: string | null
+        }
+        Insert: {
+          balance?: number
+          created_at?: string | null
+          email: string
+          id: string
+          name: string
+          referral_bonus?: number
+          referral_code: string
+          referred_by?: string | null
+          role?: string
+          total_invested?: number
+          total_withdrawn?: number
+          trc20_address?: string | null
+          username: string
+          withdrawal_password?: string | null
+        }
+        Update: {
+          balance?: number
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          referral_bonus?: number
+          referral_code?: string
+          referred_by?: string | null
+          role?: string
+          total_invested?: number
+          total_withdrawn?: number
+          trc20_address?: string | null
+          username?: string
+          withdrawal_password?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          date: string | null
+          deposit_screenshot: string | null
+          description: string | null
+          id: string
+          rejection_reason: string | null
+          status: string
+          trc20_address: string | null
+          tx_hash: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          date?: string | null
+          deposit_screenshot?: string | null
+          description?: string | null
+          id?: string
+          rejection_reason?: string | null
+          status: string
+          trc20_address?: string | null
+          tx_hash?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          date?: string | null
+          deposit_screenshot?: string | null
+          description?: string | null
+          id?: string
+          rejection_reason?: string | null
+          status?: string
+          trc20_address?: string | null
+          tx_hash?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawal_requests: {
+        Row: {
+          amount: number
+          date: string | null
+          id: string
+          rejection_reason: string | null
+          status: string
+          trc20_address: string
+          tx_hash: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          date?: string | null
+          id?: string
+          rejection_reason?: string | null
+          status: string
+          trc20_address: string
+          tx_hash?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          date?: string | null
+          id?: string
+          rejection_reason?: string | null
+          status?: string
+          trc20_address?: string
+          tx_hash?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
