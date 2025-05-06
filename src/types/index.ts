@@ -49,9 +49,10 @@ export interface WithdrawalRequest {
   id: string;
   userId: string;
   amount: number;
-  status: 'pending' | 'completed' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected';
   date: Date;
   trc20Address: string;
+  txHash?: string;
   rejectionReason?: string;
 }
 

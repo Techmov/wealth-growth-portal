@@ -157,21 +157,30 @@ export const useAuthActions = ({
   };
 
   // Update TRC20 address function
-  const updateTrc20Address = async (address: string) => {
+  const updateTrc20Address = async (address: string, withdrawalPassword?: string) => {
     if (!user) {
       throw new Error("User not authenticated");
     }
     
     try {
+      // Prepare update data
+      const updateData: any = { trc20_address: address };
+      
+      // Add withdrawal password if provided
+      if (withdrawalPassword) {
+        updateData.withdrawal_password = withdrawalPassword;
+      }
+      
       await supabase
         .from('profiles')
-        .update({ trc20_address: address })
+        .update(updateData)
         .eq('id', user.id);
       
       // Refresh profile data
       await fetchProfile(user.id);
       return Promise.resolve();
     } catch (error) {
+      console.error("Error updating TRC20 address:", error);
       return Promise.reject(error);
     }
   };
@@ -210,28 +219,56 @@ export const useAuthActions = ({
   };
 
   // Request withdrawal function
-  const requestWithdrawal = async (amount: number) => {
+  const requestWithdrawal = async (amount: number, withdrawalPassword: string) => {
     if (!user) {
       toast.error("User not authenticated");
       return Promise.reject(new Error("User not authenticated"));
     }
 
-    try {
-      // In a real app, this would be a call to the backend
-      // For now, just create a custom event
-      window.dispatchEvent(
-        new CustomEvent("newWithdrawalRequest", {
-          detail: {
-            userId: user.id,
-            amount,
-            trc20Address: user.trc20Address
-          }
-        })
-      );
+    if (!user.trc20Address) {
+      toast.error("Please set your TRC20 address first");
+      return Promise.reject(new Error("TRC20 address not set"));
+    }
 
-      return Promise.resolve();
-    } catch (error) {
+    if (amount <= 0) {
+      toast.error("Withdrawal amount must be greater than zero");
+      return Promise.reject(new Error("Invalid amount"));
+    }
+
+    if (amount > user.balance) {
+      toast.error("Withdrawal amount exceeds your available balance");
+      return Promise.reject(new Error("Insufficient balance"));
+    }
+
+    if (withdrawalPassword !== user.withdrawalPassword) {
+      toast.error("Incorrect withdrawal password");
+      return Promise.reject(new Error("Invalid withdrawal password"));
+    }
+
+    try {
+      // Create a withdrawal request in the database
+      const { data, error } = await supabase
+        .from('withdrawal_requests')
+        .insert({
+          user_id: user.id,
+          amount,
+          trc20_address: user.trc20Address,
+          status: 'pending'
+        })
+        .select('id')
+        .single();
+        
+      if (error) {
+        console.error("Error creating withdrawal request:", error);
+        toast.error("Failed to submit withdrawal request");
+        return Promise.reject(error);
+      }
+      
+      toast.success("Withdrawal request submitted successfully! It will be processed within 24 hours.");
+      return Promise.resolve(data.id);
+    } catch (error: any) {
       console.error("Request withdrawal error:", error);
+      toast.error(error.message || "Failed to submit withdrawal request");
       return Promise.reject(error);
     }
   };

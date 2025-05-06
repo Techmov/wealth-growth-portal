@@ -15,8 +15,8 @@ export interface AuthContextType {
   signup: (name: string, email: string, password: string, referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
-  updateTrc20Address: (address: string) => Promise<void>;
-  requestWithdrawal: (amount: number) => Promise<void>;
+  updateTrc20Address: (address: string, withdrawalPassword?: string) => Promise<void>;
+  requestWithdrawal: (amount: number, withdrawalPassword: string) => Promise<string>;
   fetchProfile: (userId: string) => Promise<void>;
   deposit: (amount: number, txHash: string) => Promise<void>;
 }

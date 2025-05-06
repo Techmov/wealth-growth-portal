@@ -111,10 +111,18 @@ export const updateProfile = async (userId: string, profileData: any) => {
 };
 
 // Updated version of updateTrc20Address with proper user ID handling
-export const updateTrc20Address = async (userId: string, address: string) => {
+export const updateTrc20Address = async (userId: string, address: string, withdrawalPassword?: string) => {
   try {
-    // This now properly passes the user ID
-    await updateProfile(userId, { trc20_address: address });
+    // Create update data object
+    const updateData: any = { trc20_address: address };
+    
+    // Add withdrawal password if provided
+    if (withdrawalPassword) {
+      updateData.withdrawal_password = withdrawalPassword;
+    }
+    
+    // This now properly passes the user ID and includes the withdrawal password
+    await updateProfile(userId, updateData);
     return Promise.resolve();
   } catch (error) {
     return Promise.reject(error);
@@ -141,6 +149,31 @@ export const deposit = async (userId: string, amount: number, txHash: string) =>
     }
     
     return Promise.resolve();
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
+// Add withdrawal request function
+export const requestWithdrawal = async (userId: string, amount: number, trc20Address: string) => {
+  try {
+    // Create a withdrawal request record
+    const { data, error } = await supabase
+      .from('withdrawal_requests')
+      .insert({
+        user_id: userId,
+        amount,
+        status: 'pending',
+        trc20_address: trc20Address
+      })
+      .select('id')
+      .single();
+      
+    if (error) {
+      return Promise.reject(error);
+    }
+    
+    return Promise.resolve(data.id);
   } catch (error) {
     return Promise.reject(error);
   }

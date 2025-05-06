@@ -37,19 +37,11 @@ export function WithdrawalForm() {
       return;
     }
     
-    // Verify the withdrawal password matches the transaction hash
-    if (withdrawalPassword !== user?.withdrawalPassword) {
-      toast.error("Incorrect withdrawal password");
-      return;
-    }
-    
     try {
       setLoading(true);
       
       // Process the withdrawal request
-      await requestWithdrawal(Number(amount));
-      
-      toast.success("Withdrawal request submitted successfully!");
+      await requestWithdrawal(Number(amount), withdrawalPassword);
       
       // Reset form
       setAmount("");
@@ -57,7 +49,6 @@ export function WithdrawalForm() {
       
     } catch (error) {
       console.error("Error processing withdrawal:", error);
-      toast.error("Failed to process withdrawal request");
     } finally {
       setLoading(false);
     }
