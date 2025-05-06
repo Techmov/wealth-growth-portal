@@ -43,10 +43,13 @@ const LoginPage = () => {
     
     try {
       setIsSubmitting(true);
-      await login(email, password);
-      toast.success("Login successful!");
-      // Explicitly navigate to dashboard after successful login
-      navigate("/dashboard");
+      const result = await login(email, password);
+      
+      if (result.success) {
+        toast.success("Login successful!");
+        // Explicitly navigate to dashboard after successful login
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       console.error("Login error:", error);
       setError(error.message || "Failed to login. Please check your credentials.");

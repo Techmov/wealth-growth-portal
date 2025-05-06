@@ -9,7 +9,7 @@ export interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ success: boolean; session?: Session }>;
   signup: (name: string, email: string, password: string, referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
