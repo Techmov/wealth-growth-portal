@@ -2,11 +2,17 @@
 import { useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
+interface AuthInitializationProps {
+  setSession: (session: any) => void;
+  setIsLoading: (loading: boolean) => void;
+  fetchProfile: (userId: string) => Promise<any>;
+}
+
 export const useAuthInitialization = ({
   setSession,
   setIsLoading,
   fetchProfile
-}) => {
+}: AuthInitializationProps) => {
   const initializeAuth = useCallback(async () => {
     try {
       console.log("Initializing auth state...");
@@ -66,6 +72,15 @@ export const useAuthInitialization = ({
 
   // Call the initialization function
   useEffect(() => {
-    initializeAuth();
+    const cleanup = initializeAuth();
+    return () => {
+      cleanup.then(unsubscribe => {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      }).catch(err => {
+        console.error("Error cleaning up auth initialization:", err);
+      });
+    };
   }, [initializeAuth]);
 };

@@ -18,15 +18,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Use the auth controller hook for shared state and methods
   const {
     user,
-    setUser,
     profile,
-    setProfile,
     session,
     setSession,
     isLoading,
     setIsLoading,
     isAdmin,
-    setIsAdmin,
     loginSuccess,
     resetLoginSuccess,
     fetchProfile,
@@ -42,9 +39,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Initialize auth state and set up listeners
   useAuthInitialization({
     setSession,
-    setUser,
-    setProfile,
-    setIsAdmin,
     setIsLoading,
     fetchProfile
   });
