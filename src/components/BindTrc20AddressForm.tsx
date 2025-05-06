@@ -20,7 +20,7 @@ export function BindTrc20AddressForm() {
     return null;
   }
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!trc20Address.trim()) {
