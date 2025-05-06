@@ -21,7 +21,9 @@ export const ProtectedRoute = ({
   console.log("ProtectedRoute - User state:", user ? "Authenticated" : "Not authenticated");
   console.log("ProtectedRoute - Loading state:", isLoading);
 
-  if (isLoading) {
+  // Only show loading indicator for protected routes that require authentication
+  // This prevents unnecessary loading state on auth pages
+  if (isLoading && requireAuth && !location.pathname.includes("login") && !location.pathname.includes("signup")) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin" />
@@ -30,13 +32,13 @@ export const ProtectedRoute = ({
   }
 
   // If authentication is required and user is not logged in
-  if (requireAuth && !user) {
+  if (requireAuth && !user && !isLoading) {
     console.log("Authentication required but user not logged in - redirecting to login");
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
   // If admin privileges are required and user is not an admin
-  if (requireAdmin && !isAdmin) {
+  if (requireAdmin && !isAdmin && !isLoading) {
     console.log("Admin privileges required but user is not admin - redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }

@@ -22,10 +22,15 @@ export const useAuthInitialization = ({
 }) => {
   // Effect to initialize auth state
   useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    
     // Set up the auth state change listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log("Auth state changed:", event);
+        
+        if (!isMounted) return;
         
         // Set the new session
         setSession(currentSession);
@@ -33,8 +38,11 @@ export const useAuthInitialization = ({
         // Handle changes to auth state
         if (event === "SIGNED_IN" && currentSession) {
           console.log("User signed in, fetching profile...");
+          // Use setTimeout to avoid potential auth deadlock issues
           setTimeout(() => {
-            fetchProfile(currentSession.user.id);
+            if (isMounted) {
+              fetchProfile(currentSession.user.id);
+            }
           }, 0);
         } else if (event === "SIGNED_OUT") {
           console.log("User signed out, clearing user data");
@@ -42,6 +50,7 @@ export const useAuthInitialization = ({
           setUser(null);
           setProfile(null);
           setIsAdmin(false);
+          setIsLoading(false); // Ensure we're not stuck in loading state
         }
       }
     );
@@ -49,30 +58,33 @@ export const useAuthInitialization = ({
     // Get the initial session after setting up the listener
     const getInitialSession = async () => {
       try {
-        setIsLoading(true);
+        if (!isMounted) return;
         
         // Get current session from Supabase
         const { data } = await supabase.auth.getSession();
         const initialSession = data?.session;
 
-        if (initialSession) {
+        if (initialSession && isMounted) {
           setSession(initialSession);
           
           // Fetch the user profile
           await fetchProfile(initialSession.user.id);
-        } else {
+        } else if (isMounted) {
           setIsLoading(false);
         }
       } catch (error) {
         console.error("Error getting initial session:", error);
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     getInitialSession();
     
-    // Clean up subscription on unmount
+    // Clean up subscription and prevent state updates after unmounting
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [setSession, setUser, setProfile, setIsAdmin, setIsLoading, fetchProfile]);
