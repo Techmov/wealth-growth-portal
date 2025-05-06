@@ -13,7 +13,7 @@ import { InvestmentProvider } from "./context/InvestmentContext";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/Dashboard"; // This should now work with the default export
 import InvestmentsPage from "./pages/InvestmentsPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import ProfilePage from "./pages/ProfilePage";

@@ -1,3 +1,4 @@
+
 // Re-export auth types from types/auth
 export * from './auth';
 
@@ -74,7 +75,7 @@ export interface AdminStats {
   totalUsers: number;
 }
 
-// Add UserProfile type that was missing
+// Add UserProfile type that was missing 'createdAt' property
 export interface UserProfile {
   id: string;
   name: string;
@@ -87,4 +88,5 @@ export interface UserProfile {
   trc20Address: string;
   withdrawalPassword: string;
   role: string;
+  createdAt: Date; // Added the missing createdAt field
 }

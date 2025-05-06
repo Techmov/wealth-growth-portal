@@ -48,7 +48,8 @@ export const useAuthState = () => {
           referralBonus: data.referral_bonus || 0,
           trc20Address: data.trc20_address || '',
           withdrawalPassword: data.withdrawal_password || '',
-          role: isAdminUser ? 'admin' : 'user'
+          role: isAdminUser ? 'admin' : 'user',
+          createdAt: new Date(data.created_at || Date.now()) // Add createdAt field
         };
         
         setUser(userProfile);

@@ -1,119 +1,95 @@
-import React, { useState, useEffect } from "react";
+
+import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useInvestment } from "@/context/InvestmentContext";
-import { Transaction } from "@/types";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
-import { Loader2 } from "lucide-react";
-import { ResponsivePagination } from "@/components/ResponsivePagination";
+import { UserLayout } from "@/components/UserLayout";
+import { StatCard } from "@/components/StatCard";
+import { TransactionsList } from "@/components/TransactionsList";
+import { InvestmentCard } from "@/components/InvestmentCard";
+import { Loader2, TrendingUp, Wallet, ArrowUpDown, Users } from "lucide-react";
 
-export function TransactionsList() {
+// Export the Dashboard component as default
+export default function Dashboard() {
   const { user } = useAuth();
-  const { transactions } = useInvestment();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const itemsPerPage = 5;
+  const { products, investments, isLoading } = useInvestment();
 
-  useEffect(() => {
-    // Set loading to false when transactions are loaded
-    if (transactions) {
-      setIsLoading(false);
-    }
-  }, [transactions]);
-
-  // Ensure pagination works correctly
-  const totalPages = Math.max(1, Math.ceil(transactions.length / itemsPerPage));
-  if (currentPage > totalPages) {
-    setCurrentPage(totalPages);
-  }
-
-  // Calculate pagination
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, transactions.length);
-  const currentTransactions = transactions.slice(startIndex, endIndex);
-
-  // Function to get appropriate badge color based on transaction status
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return "bg-green-500 hover:bg-green-600";
-      case 'pending':
-        return "bg-yellow-500 hover:bg-yellow-600";
-      case 'failed':
-      case 'rejected':
-        return "bg-red-500 hover:bg-red-600";
-      default:
-        return "bg-gray-500 hover:bg-gray-600";
-    }
-  };
-
-  // Function to format transaction type for display
-  const formatTransactionType = (type: string) => {
-    return type.charAt(0).toUpperCase() + type.slice(1);
-  };
-
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-medium">Recent Transactions</h3>
-      
-      {isLoading ? (
-        <div className="flex justify-center py-8">
+  if (isLoading) {
+    return (
+      <UserLayout>
+        <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : transactions.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          No transactions found
-        </div>
-      ) : (
-        <>
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {currentTransactions.map((transaction: Transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{formatTransactionType(transaction.type)}</TableCell>
-                    <TableCell className={transaction.amount > 0 ? 'text-green-600' : 'text-red-600'}>
-                      {transaction.amount > 0 ? '+' : ''}{transaction.amount.toFixed(2)} USDT
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusBadgeColor(transaction.status)}>
-                        {transaction.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatDistanceToNow(new Date(transaction.date), { addSuffix: true })}</TableCell>
-                    <TableCell>{transaction.description || '-'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      </UserLayout>
+    );
+  }
+
+  // Calculate statistics for the dashboard
+  const activeInvestments = investments.filter(inv => inv.status === 'active');
+  const totalActiveInvestments = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
+  const totalReturns = activeInvestments.reduce((sum, inv) => sum + (inv.currentValue - inv.startingValue), 0);
+  const returnRate = totalActiveInvestments > 0 
+    ? (totalReturns / totalActiveInvestments) * 100 
+    : 0;
+  
+  return (
+    <UserLayout>
+      <h1 className="text-2xl font-bold mb-8">Dashboard</h1>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard 
+          title="Available Balance" 
+          value={user ? `$${user.balance.toFixed(2)}` : "$0.00"} 
+          icon={Wallet} 
+          description="Current balance" 
+          iconColor="text-blue-500" 
+        />
+        <StatCard 
+          title="Active Investments" 
+          value={user ? `$${totalActiveInvestments.toFixed(2)}` : "$0.00"} 
+          icon={TrendingUp} 
+          description="Across all plans" 
+          iconColor="text-green-500" 
+        />
+        <StatCard 
+          title="Total Returns" 
+          value={user ? `$${totalReturns.toFixed(2)}` : "$0.00"} 
+          icon={ArrowUpDown} 
+          description={`${returnRate.toFixed(2)}% ROI`} 
+          iconColor="text-yellow-500" 
+        />
+        <StatCard 
+          title="Referral Bonus" 
+          value={user ? `$${user.referralBonus.toFixed(2)}` : "$0.00"} 
+          icon={Users} 
+          description="From referrals" 
+          iconColor="text-purple-500" 
+        />
+      </div>
+
+      {/* Investments */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Active Investments</h2>
+        {activeInvestments.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {activeInvestments.map(investment => {
+              const product = products.find(p => p.id === investment.productId);
+              return product ? (
+                <InvestmentCard 
+                  key={investment.id}
+                  investment={investment}
+                  product={product}
+                />
+              ) : null;
+            })}
           </div>
-          
-          {transactions.length > itemsPerPage && (
-            <ResponsivePagination 
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          )}
-        </>
-      )}
-    </div>
+        ) : (
+          <p className="text-muted-foreground">No active investments. Visit the Investments page to get started.</p>
+        )}
+      </div>
+
+      {/* Transactions */}
+      <TransactionsList />
+    </UserLayout>
   );
 }
