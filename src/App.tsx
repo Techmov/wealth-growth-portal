@@ -31,37 +31,60 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <InvestmentProvider>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Index />} />
-                
-                {/* Auth Routes - Redirect to dashboard if already logged in */}
-                <Route element={<ProtectedRoute requireAuth={false} />}>
-                  <Route path="/signup" element={<SignupPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                </Route>
-                
-                {/* Protected User Routes */}
-                <Route element={<ProtectedRoute requireAuth={true} />}>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/investments" element={<InvestmentsPage />} />
-                  <Route path="/transactions" element={<TransactionsPage />} />
-                  <Route path="/deposit" element={<DepositPage />} />
-                  <Route path="/withdraw" element={<WithdrawalPage />} />
-                  <Route path="/referrals" element={<ReferralsPage />} />
-                  <Route path="/profile" element={<ProfilePage />} />
-                </Route>
-                
-                {/* Admin Routes */}
-                <Route element={<ProtectedRoute requireAuth={true} requireAdmin={true} />}>
-                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                </Route>
-                
-                {/* Catch all */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </InvestmentProvider>
+            {/* Move InvestmentProvider inside AuthProvider */}
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Index />} />
+              
+              {/* Auth Routes - Redirect to dashboard if already logged in */}
+              <Route element={<ProtectedRoute requireAuth={false} />}>
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/login" element={<LoginPage />} />
+              </Route>
+              
+              {/* Protected User Routes - Wrap these in InvestmentProvider */}
+              <Route element={<ProtectedRoute requireAuth={true} />}>
+                <Route path="/dashboard" element={
+                  <InvestmentProvider>
+                    <Dashboard />
+                  </InvestmentProvider>
+                } />
+                <Route path="/investments" element={
+                  <InvestmentProvider>
+                    <InvestmentsPage />
+                  </InvestmentProvider>
+                } />
+                <Route path="/transactions" element={
+                  <InvestmentProvider>
+                    <TransactionsPage />
+                  </InvestmentProvider>
+                } />
+                <Route path="/deposit" element={
+                  <InvestmentProvider>
+                    <DepositPage />
+                  </InvestmentProvider>
+                } />
+                <Route path="/withdraw" element={
+                  <InvestmentProvider>
+                    <WithdrawalPage />
+                  </InvestmentProvider>
+                } />
+                <Route path="/referrals" element={
+                  <InvestmentProvider>
+                    <ReferralsPage />
+                  </InvestmentProvider>
+                } />
+                <Route path="/profile" element={<ProfilePage />} />
+              </Route>
+              
+              {/* Admin Routes */}
+              <Route element={<ProtectedRoute requireAuth={true} requireAdmin={true} />}>
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              </Route>
+              
+              {/* Catch all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </TooltipProvider>
         </AuthProvider>
       </BrowserRouter>

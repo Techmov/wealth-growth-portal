@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { toast } from "@/components/ui/sonner";
-import { useAuth } from "./AuthContext";
+import { AuthContext } from "./AuthContext";
 import { Investment, Product, Transaction, WithdrawalRequest, Downline, User } from "@/types";
 
 type InvestmentContextType = {
@@ -89,7 +89,7 @@ const saveStoredData = (key: string, data: any) => {
 };
 
 export function InvestmentProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user } = useContext(AuthContext);
   const [products] = useState<Product[]>(mockProducts);
   const [userInvestments, setUserInvestments] = useState<Investment[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
