@@ -1,14 +1,15 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, User, Menu, X, Home, Users, TrendingUp, UserCircle, Shield } from "lucide-react";
+import { LogIn, User, Menu, X, Home, Users, TrendingUp, UserCircle, Shield, ArrowUp, Wallet } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
 export function Header() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -18,22 +19,45 @@ export function Header() {
     setMobileMenuOpen(false);
   };
 
-  const navItems = [
-    { title: "Dashboard", path: "/dashboard", icon: Home, authRequired: true },
-    { title: "Investments", path: "/investments", icon: TrendingUp, authRequired: true },
-    { title: "Deposit", path: "/deposit", icon: TrendingUp, authRequired: true },
-    { title: "Withdraw", path: "/withdraw", icon: TrendingUp, authRequired: true },
-    { title: "Referrals", path: "/referrals", icon: Users, authRequired: true },
-    { title: "Profile", path: "/profile", icon: UserCircle, authRequired: true },
-  ];
+  // Determine if a nav link is active
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
 
-  // Admin specific navigation item
-  const adminNavItem = { title: "Admin", path: "/admin/dashboard", icon: Shield, authRequired: true, adminOnly: true };
+  // Dynamic navigation items based on authentication state
+  const getNavItems = () => {
+    // Base navigation items always visible
+    const baseItems = user ? [
+      { title: "Dashboard", path: "/dashboard", icon: Home },
+      { title: "Investments", path: "/investments", icon: TrendingUp },
+      { title: "Deposit", path: "/deposit", icon: ArrowUp },
+      { title: "Withdraw", path: "/withdraw", icon: ArrowUp, iconClass: "rotate-180" },
+      { title: "Referrals", path: "/referrals", icon: Users },
+      { title: "Profile", path: "/profile", icon: UserCircle },
+    ] : [
+      { title: "Home", path: "/", icon: Home },
+      { title: "Investment Plans", path: "/investments", icon: TrendingUp },
+    ];
+
+    // Admin nav item - only visible for admins
+    if (user?.role === 'admin') {
+      baseItems.push({ 
+        title: "Admin", 
+        path: "/admin/dashboard", 
+        icon: Shield, 
+        className: "text-primary hover:text-primary/80 font-medium"
+      });
+    }
+
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2" onClick={closeMobileMenu}>
+        <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2" onClick={closeMobileMenu}>
           <div className="text-2xl font-bold bg-gradient-to-r from-wealth-primary to-wealth-accent bg-clip-text text-transparent">
             WealthGrow
           </div>
@@ -41,34 +65,33 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
-          {navItems.map((item) => 
-            (!item.authRequired || user) && (
-              <Link 
-                key={item.path}
-                to={item.path}
-                className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
-              >
-                <item.icon className="h-4 w-4" />
-                {item.title}
-              </Link>
-            )
-          )}
-          
-          {/* Admin Link - Only visible for admins */}
-          {user?.role === 'admin' && (
+          {navItems.map((item) => (
             <Link 
-              to={adminNavItem.path}
-              className="text-primary hover:text-primary/80 transition-colors flex items-center gap-2 font-medium"
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "flex items-center gap-2 transition-colors",
+                isActive(item.path) 
+                  ? "text-foreground font-medium" 
+                  : "text-muted-foreground hover:text-foreground",
+                item.className
+              )}
             >
-              <adminNavItem.icon className="h-4 w-4" />
-              {adminNavItem.title}
+              <item.icon className={cn("h-4 w-4", item.iconClass)} />
+              {item.title}
             </Link>
-          )}
+          ))}
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
           {user ? (
             <div className="flex items-center gap-4">
+              {/* Show balance for authenticated users */}
+              <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-full text-sm">
+                <Wallet className="h-4 w-4 text-wealth-primary" />
+                <span>${user.balance.toFixed(2)}</span>
+              </div>
+              
               <Link to="/profile">
                 <Button variant="outline" size="sm" className="gap-2">
                   <User className="h-4 w-4" />
@@ -95,55 +118,56 @@ export function Header() {
         </div>
 
         {/* Mobile Menu Button */}
-        <button className="md:hidden" onClick={toggleMobileMenu}>
+        <button className="md:hidden" onClick={toggleMobileMenu} aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}>
           {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
-      {/* Mobile Navigation with solid background */}
+      {/* Mobile Navigation */}
       <div
         className={cn(
           "fixed inset-0 top-16 z-50 flex flex-col bg-background md:hidden",
           mobileMenuOpen ? "animate-in slide-in-from-top" : "hidden"
         )}
         style={{ 
-          backgroundColor: 'var(--background)', // Solid background
+          backgroundColor: 'var(--background)',
           boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
         }}
       >
         <div className="container py-4 flex flex-col gap-4">
-          {navItems.map((item) => 
-            (!item.authRequired || user) && (
-              <Link 
-                key={item.path}
-                to={item.path}
-                className="text-lg py-2 border-b border-muted flex items-center gap-2"
-                onClick={closeMobileMenu}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.title}
-              </Link>
-            )
+          {user && (
+            <div className="flex items-center justify-between mb-2 pb-2 border-b">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-wealth-primary" />
+                <span className="font-medium">{user.name}</span>
+              </div>
+              <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-full text-sm">
+                <Wallet className="h-4 w-4 text-wealth-primary" />
+                <span>${user.balance.toFixed(2)}</span>
+              </div>
+            </div>
           )}
-          
-          {/* Mobile Admin Link - Only visible for admins */}
-          {user?.role === 'admin' && (
+
+          {navItems.map((item) => (
             <Link 
-              to={adminNavItem.path}
-              className="text-lg py-2 border-b border-muted flex items-center gap-2 text-primary"
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "text-lg py-2 border-b border-muted flex items-center gap-2",
+                isActive(item.path) ? "text-foreground font-medium" : "text-muted-foreground",
+                item.className
+              )}
               onClick={closeMobileMenu}
             >
-              <adminNavItem.icon className="h-5 w-5" />
-              {adminNavItem.title}
+              <item.icon className={cn("h-5 w-5", item.iconClass)} />
+              {item.title}
             </Link>
-          )}
+          ))}
           
           {user ? (
-            <>
-              <Button className="mt-4" onClick={() => { logout(); closeMobileMenu(); }}>
-                Logout
-              </Button>
-            </>
+            <Button className="mt-4" onClick={() => { logout(); closeMobileMenu(); }}>
+              Logout
+            </Button>
           ) : (
             <div className="flex flex-col gap-3 mt-4">
               <Link to="/login" onClick={closeMobileMenu}>
