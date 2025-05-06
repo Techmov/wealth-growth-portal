@@ -22,31 +22,7 @@ export const useAuthInitialization = ({
 }) => {
   // Effect to initialize auth state
   useEffect(() => {
-    // Get the initial session
-    const getInitialSession = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Get current session from Supabase
-        const { data } = await supabase.auth.getSession();
-        const initialSession = data?.session;
-
-        if (initialSession) {
-          setSession(initialSession);
-          
-          // Fetch the user profile
-          await fetchProfile(initialSession.user.id);
-        }
-      } catch (error) {
-        console.error("Error getting initial session:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    getInitialSession();
-
-    // Set up the auth state change listener
+    // Set up the auth state change listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log("Auth state changed:", event);
@@ -69,6 +45,31 @@ export const useAuthInitialization = ({
         }
       }
     );
+    
+    // Get the initial session after setting up the listener
+    const getInitialSession = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get current session from Supabase
+        const { data } = await supabase.auth.getSession();
+        const initialSession = data?.session;
+
+        if (initialSession) {
+          setSession(initialSession);
+          
+          // Fetch the user profile
+          await fetchProfile(initialSession.user.id);
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Error getting initial session:", error);
+        setIsLoading(false);
+      }
+    };
+
+    getInitialSession();
     
     // Clean up subscription on unmount
     return () => {

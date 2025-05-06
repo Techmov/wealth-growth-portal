@@ -29,12 +29,6 @@ export const ProtectedRoute = ({
     );
   }
 
-  // If user is logged in but this is a login/signup page, redirect to dashboard
-  if (user && (location.pathname === "/login" || location.pathname === "/signup")) {
-    console.log("User is authenticated and on auth page - redirecting to dashboard");
-    return <Navigate to="/dashboard" replace />;
-  }
-
   // If authentication is required and user is not logged in
   if (requireAuth && !user) {
     console.log("Authentication required but user not logged in - redirecting to login");
@@ -44,6 +38,12 @@ export const ProtectedRoute = ({
   // If admin privileges are required and user is not an admin
   if (requireAdmin && !isAdmin) {
     console.log("Admin privileges required but user is not admin - redirecting to dashboard");
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // If user is logged in but this is a login/signup page, redirect to dashboard
+  if (user && (location.pathname === "/login" || location.pathname === "/signup")) {
+    console.log("User is authenticated and on auth page - redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
 

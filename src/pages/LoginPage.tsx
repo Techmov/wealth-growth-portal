@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -17,16 +17,8 @@ const LoginPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
-  
-  // Redirect to dashboard if already authenticated
-  useEffect(() => {
-    if (user) {
-      console.log("LoginPage: User exists in state, redirecting to dashboard");
-      navigate("/dashboard", { replace: true });
-    }
-  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
