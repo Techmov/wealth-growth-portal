@@ -47,6 +47,6 @@ export interface User {
   trc20Address?: string;
   withdrawalPassword?: string;
   createdAt: Date;
-  role: 'user' | 'admin';
+  role?: 'user' | 'admin'; // Make role optional to match the User type from types.ts
   username?: string;
 }
