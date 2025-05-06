@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -7,6 +6,7 @@ import { toast } from "sonner";
 import { mapProfileToUser } from "@/utils/authMappers";
 import { useAuthState } from "@/hooks/useAuthState";
 import { AuthContextType } from "@/types/auth";
+import { useNavigate } from "react-router-dom";
 
 // Create the auth context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -63,15 +63,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Set up the auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log("Auth state changed:", event);
+        
         // Set the new session
         setSession(currentSession);
         
         // Handle changes to auth state
         if (event === "SIGNED_IN" && currentSession) {
+          console.log("User signed in, fetching profile...");
           setTimeout(() => {
             fetchProfile(currentSession.user.id);
           }, 0);
         } else if (event === "SIGNED_OUT") {
+          console.log("User signed out, clearing user data");
           // Clear user data on sign out
           setUser(null);
           setProfile(null);
@@ -96,7 +100,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setSession(session);
         await fetchProfile(session.user.id);
         toast.success("Login successful!");
+        return { success: true, session };
       }
+      return { success: false };
     } catch (error: any) {
       console.error("Login error:", error);
       
