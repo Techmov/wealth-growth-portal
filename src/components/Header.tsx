@@ -6,6 +6,15 @@ import { LogIn, User, Menu, X, Home, Users, TrendingUp, UserCircle, Shield, Arro
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
+// Define a type for navigation items
+interface NavItem {
+  title: string;
+  path: string;
+  icon: React.ComponentType<any>;
+  iconClass?: string;
+  className?: string;
+}
+
 export function Header() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -25,9 +34,9 @@ export function Header() {
   };
 
   // Dynamic navigation items based on authentication state
-  const getNavItems = () => {
+  const getNavItems = (): NavItem[] => {
     // Base navigation items always visible
-    const baseItems = user ? [
+    const baseItems: NavItem[] = user ? [
       { title: "Dashboard", path: "/dashboard", icon: Home },
       { title: "Investments", path: "/investments", icon: TrendingUp },
       { title: "Deposit", path: "/deposit", icon: ArrowUp },
