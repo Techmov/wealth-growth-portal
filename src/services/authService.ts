@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { User, LoginCredentials, SignupCredentials } from "@/types";
+import { User, LoginCredentials, SignupCredentials } from "@/types/auth";
 
 // Sign up with email and password
 export const signup = async (credentials: SignupCredentials) => {
@@ -108,6 +108,31 @@ export const updateTrc20Address = async (userId: string, address: string) => {
   try {
     // This now properly passes the user ID
     await updateProfile(userId, { trc20_address: address });
+    return Promise.resolve();
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
+// Add deposit function for TransactionsPage
+export const deposit = async (userId: string, amount: number, txHash: string) => {
+  try {
+    // Create a deposit transaction record
+    const { error } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: userId,
+        amount,
+        type: 'deposit',
+        status: 'pending',
+        tx_hash: txHash,
+        description: 'Manual deposit request'
+      });
+      
+    if (error) {
+      return Promise.reject(error);
+    }
+    
     return Promise.resolve();
   } catch (error) {
     return Promise.reject(error);

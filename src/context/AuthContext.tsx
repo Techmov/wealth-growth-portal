@@ -187,9 +187,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await authService.updateTrc20Address(user.id, address);
       // Refresh profile data
-      fetchProfile(user.id);
+      await fetchProfile(user.id);
       return Promise.resolve();
     } catch (error) {
+      return Promise.reject(error);
+    }
+  };
+
+  // Add deposit function
+  const deposit = async (amount: number, txHash: string) => {
+    if (!user) {
+      toast.error("User not authenticated");
+      return Promise.reject(new Error("User not authenticated"));
+    }
+
+    try {
+      await authService.deposit(user.id, amount, txHash);
+      toast.success("Deposit request submitted");
+      return Promise.resolve();
+    } catch (error: any) {
+      console.error("Deposit error:", error);
+      toast.error(error.message || "Failed to submit deposit");
       return Promise.reject(error);
     }
   };
@@ -259,7 +277,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     updateUser,
     updateTrc20Address,
     requestWithdrawal,
-    fetchProfile
+    fetchProfile,
+    deposit
   };
 
   // Provide the auth context to children

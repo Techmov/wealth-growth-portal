@@ -16,6 +16,7 @@ export interface AuthContextType {
   updateTrc20Address: (address: string) => Promise<void>;
   requestWithdrawal: (amount: number) => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
+  deposit: (amount: number, txHash: string) => Promise<void>;  // Added deposit function to type
 }
 
 // User credentials for login
@@ -42,7 +43,7 @@ export interface User {
   totalWithdrawn: number;
   referralBonus: number;
   referralCode: string;
-  referredBy: string | null;
+  referredBy?: string | null; // Make this optional to match the User type from types.ts
   trc20Address?: string;
   withdrawalPassword?: string;
   createdAt: Date;
