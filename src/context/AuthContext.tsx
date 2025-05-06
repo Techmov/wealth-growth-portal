@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
 import { Profile } from "@/types/supabase";
 import { useNavigate } from "react-router-dom";
@@ -64,7 +65,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           trc20Address: data.trc20_address,
           withdrawalPassword: data.withdrawal_password,
           createdAt: new Date(data.created_at || Date.now()),
-          role: data.role,
+          role: data.role as 'user' | 'admin', // Fix: Cast the string to the specific type
           username: data.username
         };
         
