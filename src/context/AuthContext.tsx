@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -9,7 +10,7 @@ import { AuthContextType } from "@/types/auth";
 import { useNavigate } from "react-router-dom";
 
 // Create the auth context
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auth provider props
 interface AuthProviderProps {
