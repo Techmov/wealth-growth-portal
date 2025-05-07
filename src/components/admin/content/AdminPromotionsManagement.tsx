@@ -1,9 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Promotion } from "@/types/content";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDates } from "@/utils/dbTypes";
 import { 
   Table, 
   TableBody, 
@@ -64,8 +64,8 @@ export function AdminPromotionsManagement() {
         throw error;
       }
       
-      // Format dates
-      const formattedPromotions = data?.map(promo => formatDates(promo)) || [];
+      // Get the data with the proper type
+      const formattedPromotions = data || [];
       
       setPromotions(formattedPromotions as Promotion[]);
     } catch (error: any) {

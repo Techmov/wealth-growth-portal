@@ -23,17 +23,20 @@ export const db = {
     /**
      * Insert a promotion with proper typing
      */
-    insert: (promotion: Partial<Promotion>) => 
-      supabase.from('promotions').insert(promotion) as unknown as Promise<{
-        data: Promotion[] | null;
-        error: Error | null;
-      }>,
+    insert: (promotion: Partial<Promotion>) => {
+      // Make sure we're sending string dates to Supabase, not Date objects
+      const promotionToInsert = { ...promotion };
+      return supabase.from('promotions').insert(promotionToInsert);
+    },
     
     /**
      * Update a promotion with proper typing
      */
-    update: (promotion: Partial<Promotion>) => 
-      supabase.from('promotions').update(promotion),
+    update: (promotion: Partial<Promotion>) => {
+      // Make sure we're sending string dates to Supabase, not Date objects
+      const promotionToUpdate = { ...promotion };
+      return supabase.from('promotions').update(promotionToUpdate);
+    },
     
     /**
      * Delete a promotion by ID
@@ -58,17 +61,20 @@ export const db = {
     /**
      * Insert an offer with proper typing
      */
-    insert: (offer: Partial<Offer>) => 
-      supabase.from('offers').insert(offer) as unknown as Promise<{
-        data: Offer[] | null;
-        error: Error | null;
-      }>,
+    insert: (offer: Partial<Offer>) => {
+      // Make sure we're sending string dates to Supabase, not Date objects
+      const offerToInsert = { ...offer };
+      return supabase.from('offers').insert(offerToInsert);
+    },
     
     /**
      * Update an offer with proper typing
      */
-    update: (offer: Partial<Offer>) => 
-      supabase.from('offers').update(offer),
+    update: (offer: Partial<Offer>) => {
+      // Make sure we're sending string dates to Supabase, not Date objects
+      const offerToUpdate = { ...offer };
+      return supabase.from('offers').update(offerToUpdate);
+    },
     
     /**
      * Delete an offer by ID
@@ -93,17 +99,20 @@ export const db = {
     /**
      * Insert a feature with proper typing
      */
-    insert: (feature: Partial<Feature>) => 
-      supabase.from('features').insert(feature) as unknown as Promise<{
-        data: Feature[] | null;
-        error: Error | null;
-      }>,
+    insert: (feature: Partial<Feature>) => {
+      // Make sure we're sending string dates to Supabase, not Date objects
+      const featureToInsert = { ...feature };
+      return supabase.from('features').insert(featureToInsert);
+    },
     
     /**
      * Update a feature with proper typing
      */
-    update: (feature: Partial<Feature>) => 
-      supabase.from('features').update(feature),
+    update: (feature: Partial<Feature>) => {
+      // Make sure we're sending string dates to Supabase, not Date objects
+      const featureToUpdate = { ...feature };
+      return supabase.from('features').update(featureToUpdate);
+    },
     
     /**
      * Delete a feature by ID
@@ -114,20 +123,30 @@ export const db = {
 };
 
 /**
- * Helper function to convert database date strings to JavaScript Date objects
+ * Helper function to convert date strings to JavaScript Date objects for display purposes
+ * This won't be used for database operations, only for displaying dates in the UI
  */
-export function formatDates<T>(item: T): T {
+export function formatDatesForDisplay<T>(item: T): T {
   if (!item || typeof item !== 'object') return item;
   
-  const formattedItem = { ...item };
+  const formattedItem = { ...item } as any;
   
   // Look for date fields and convert them
   Object.keys(formattedItem).forEach(key => {
-    const value = (formattedItem as any)[key];
+    const value = formattedItem[key];
     if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
-      (formattedItem as any)[key] = new Date(value);
+      formattedItem[key] = new Date(value);
     }
   });
   
-  return formattedItem;
+  return formattedItem as T;
+}
+
+/**
+ * Helper function that maintains date fields as strings from the database
+ * This is needed because our types now expect string dates (not Date objects)
+ */
+export function formatDates<T>(item: T): T {
+  if (!item || typeof item !== 'object') return item;
+  return { ...item };
 }

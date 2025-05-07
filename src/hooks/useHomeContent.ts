@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Promotion, Offer, Feature } from "@/types/content";
-import { db, formatDates } from "@/utils/dbTypes";
+import { formatDates } from "@/utils/dbTypes";
 
 export const useHomeContent = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -53,10 +53,10 @@ export const useHomeContent = () => {
           throw new Error(`Error fetching features: ${featuresError.message}`);
         }
         
-        // Format dates for all data
-        const formattedOffers = offersData?.map(offer => formatDates(offer)) || [];
-        const formattedPromotions = promotionsData?.map(promo => formatDates(promo)) || [];
-        const formattedFeatures = featuresData?.map(feature => formatDates(feature)) || [];
+        // Format dates for all data if needed
+        const formattedPromotions = promotionsData || [];
+        const formattedOffers = offersData || [];
+        const formattedFeatures = featuresData || [];
         
         setPromotions(formattedPromotions as Promotion[]);
         setOffers(formattedOffers as Offer[]);
