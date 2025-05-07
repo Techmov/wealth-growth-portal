@@ -1,4 +1,3 @@
-
 import { Database } from "@/integrations/supabase/types";
 
 // Profile type from Supabase
@@ -56,12 +55,11 @@ export interface WithdrawalRequest {
   trc20Address: string;
   txHash?: string;
   rejectionReason?: string;
-  withdrawalSource?: 'profit' | 'referral_bonus';
-  feeAmount?: number; // Fee amount
-  // Additional fields for UI display from join queries
   userName?: string;
-  username?: string;
   userEmail?: string;
+  username?: string;
+  withdrawalSource?: 'profit' | 'referral_bonus';
+  feeAmount?: number;
 }
 
 // Helper types for UI components

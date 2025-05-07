@@ -362,6 +362,7 @@ export type Database = {
         Row: {
           amount: number
           date: string | null
+          fee_amount: number | null
           id: string
           rejection_reason: string | null
           status: string
@@ -373,6 +374,7 @@ export type Database = {
         Insert: {
           amount: number
           date?: string | null
+          fee_amount?: number | null
           id?: string
           rejection_reason?: string | null
           status: string
@@ -384,6 +386,7 @@ export type Database = {
         Update: {
           amount?: number
           date?: string | null
+          fee_amount?: number | null
           id?: string
           rejection_reason?: string | null
           status?: string
@@ -558,12 +561,20 @@ export type Database = {
         }[]
       }
       request_withdrawal: {
-        Args: {
-          p_user_id: string
-          p_amount: number
-          p_trc20_address: string
-          p_withdrawal_source: string
-        }
+        Args:
+          | {
+              p_user_id: string
+              p_amount: number
+              p_trc20_address: string
+              p_withdrawal_source: string
+            }
+          | {
+              p_user_id: string
+              p_amount: number
+              p_trc20_address: string
+              p_withdrawal_source?: string
+              p_fee_amount?: number
+            }
         Returns: string
       }
     }

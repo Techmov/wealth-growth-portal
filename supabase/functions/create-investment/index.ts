@@ -46,7 +46,13 @@ export const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    // Cast explicitly to UUID format
+    // Ensure productId is a valid UUID by using a regex check
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(productId)) {
+      throw new Error('Invalid product ID format: must be a valid UUID');
+    }
+
+    // Call the create_investment function with proper parameters
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
       p_product_id: productId,

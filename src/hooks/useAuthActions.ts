@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService"; 
@@ -299,7 +300,7 @@ export const useAuthActions = ({
     try {
       const toastId = toast.loading("Processing withdrawal request...");
       
-      // Use the database function for withdrawal requests with updated parameters
+      // Use the updated database function with the fee parameter
       const { data, error } = await supabase.rpc(
         'request_withdrawal',
         {
@@ -307,7 +308,7 @@ export const useAuthActions = ({
           p_amount: totalAmount, // Total amount including fee
           p_trc20_address: trc20Address,
           p_withdrawal_source: withdrawalSource,
-          p_fee_amount: WITHDRAWAL_FEE // Pass fee amount separately
+          p_fee_amount: WITHDRAWAL_FEE // Pass fee amount as a separate parameter
         }
       );
       
