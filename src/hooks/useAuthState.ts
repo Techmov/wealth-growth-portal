@@ -1,12 +1,12 @@
 
 import { useState, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { UserProfile } from "@/types/index";
+import { User as AppUser } from "@/types/index";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useAuthState = () => {
   // User state
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [profile, setProfile] = useState(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -40,7 +40,7 @@ export const useAuthState = () => {
         const userRole = isAdminUser ? 'admin' : 'user';
         
         // Create a user profile object with all the fields we need
-        const userProfile: UserProfile = {
+        const userProfile: AppUser = {
           id: data.id,
           name: data.name || '',
           email: data.email || '',

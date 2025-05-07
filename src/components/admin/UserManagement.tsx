@@ -54,17 +54,44 @@ export function UserManagement({ onUserDeleted }: { onUserDeleted?: () => void }
       setIsLoading(true);
       console.log("Fetching all users...");
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*');
+      // Try to use admin RPC function first
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_all_users');
       
-      if (error) {
-        throw error;
-      }
+      if (rpcError) {
+        console.warn("Error using RPC, falling back to direct query:", rpcError);
+        
+        // Fallback to direct query
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*');
+        
+        if (error) {
+          throw error;
+        }
 
-      if (data) {
-        console.log(`Found ${data.length} users`);
-        const formattedUsers: User[] = data.map(profile => ({
+        if (data) {
+          console.log(`Found ${data.length} users with direct query`);
+          const formattedUsers: User[] = data.map(profile => ({
+            id: profile.id,
+            name: profile.name || '',
+            email: profile.email || '',
+            username: profile.username || '',
+            balance: profile.balance || 0,
+            totalInvested: profile.total_invested || 0,
+            totalWithdrawn: profile.total_withdrawn || 0,
+            referralBonus: profile.referral_bonus || 0,
+            referralCode: profile.referral_code || '',
+            trc20Address: profile.trc20_address || '',
+            withdrawalPassword: profile.withdrawal_password || '',
+            role: profile.role === 'admin' ? 'admin' : 'user',
+            createdAt: new Date(profile.created_at || Date.now())
+          }));
+          
+          setUsers(formattedUsers);
+        }
+      } else if (rpcData) {
+        console.log(`Found ${rpcData.length} users with RPC`);
+        const formattedUsers: User[] = rpcData.map(profile => ({
           id: profile.id,
           name: profile.name || '',
           email: profile.email || '',
@@ -93,7 +120,7 @@ export function UserManagement({ onUserDeleted }: { onUserDeleted?: () => void }
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.username.toLowerCase().includes(searchTerm.toLowerCase())
+    (user.username && user.username.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleDeleteUser = (userId: string) => {

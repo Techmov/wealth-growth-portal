@@ -12,7 +12,6 @@ export const mapProfileToUser = (profile: Profile): AppUser => {
     totalWithdrawn: profile.total_withdrawn || 0,
     referralBonus: profile.referral_bonus || 0,
     referralCode: profile.referral_code,
-    referredBy: profile.referred_by,
     trc20Address: profile.trc20_address,
     withdrawalPassword: profile.withdrawal_password,
     createdAt: new Date(profile.created_at || Date.now()),

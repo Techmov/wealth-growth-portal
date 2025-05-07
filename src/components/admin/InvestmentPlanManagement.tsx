@@ -51,16 +51,34 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
       setIsLoading(true);
       console.log("Fetching investment plans...");
       
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_admin_plans');
 
       if (error) {
-        throw error;
-      }
-
-      if (data) {
+        // Fallback to direct query if RPC fails
+        const { data: directData, error: directError } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (directError) {
+          throw directError;
+        }
+        
+        if (directData) {
+          console.log(`Found ${directData.length} investment plans`);
+          const formattedPlans: Product[] = directData.map(plan => ({
+            id: plan.id,
+            name: plan.name,
+            description: plan.description,
+            amount: plan.amount,
+            duration: plan.duration,
+            growthRate: plan.growth_rate,
+            risk: plan.risk as 'low' | 'medium' | 'high',
+            active: plan.active
+          }));
+          setPlans(formattedPlans);
+        }
+      } else if (data) {
         console.log(`Found ${data.length} investment plans`);
         const formattedPlans: Product[] = data.map(plan => ({
           id: plan.id,

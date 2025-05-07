@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types";
+import { toast } from "sonner";
 
 export function useProductsData() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -11,17 +12,20 @@ export function useProductsData() {
     const fetchProducts = async () => {
       setIsLoading(true);
       try {
+        console.log("Fetching products data...");
         const { data, error } = await supabase
           .from('products')
           .select('*')
-          .eq('active', true);
+          .order('created_at', { ascending: false });
 
         if (error) {
           console.error("Error fetching products:", error);
+          toast.error("Failed to load investment plans");
           return;
         }
 
         if (data) {
+          console.log(`Fetched ${data.length} products`);
           // Map Supabase data to our Product type
           const mappedProducts: Product[] = data.map(prod => ({
             id: prod.id,
@@ -38,6 +42,7 @@ export function useProductsData() {
         }
       } catch (error) {
         console.error("Unexpected error fetching products:", error);
+        toast.error("Failed to load investment plans");
       } finally {
         setIsLoading(false);
       }
@@ -54,7 +59,8 @@ export function useProductsData() {
           schema: 'public',
           table: 'products'
         },
-        () => {
+        (payload) => {
+          console.log("Product change detected:", payload);
           fetchProducts();
         }
       )
