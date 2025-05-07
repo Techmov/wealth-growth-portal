@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,8 +30,9 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
     
     try {
       setIsInvesting(true);
-      // Make sure we're passing the ID as string, not as UUID object
-      await invest(product.id.toString());
+      // Pass productId consistently as a string
+      console.log("Investing in product:", product.id);
+      await invest(product.id);
       toast.success(`Successfully invested in ${product.name}!`);
     } catch (error: any) {
       console.error("Investment failed:", error);

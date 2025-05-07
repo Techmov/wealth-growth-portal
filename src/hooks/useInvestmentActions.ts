@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
@@ -11,7 +10,9 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // Pass productId directly as a string without any manipulation
+      // Make sure we're passing productId as a string consistently
+      console.log("Investing with product ID:", productId);
+      
       const { data, error } = await supabase.functions.invoke('create-investment', {
         body: { 
           userId: user.id,

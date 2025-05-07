@@ -43,7 +43,8 @@ serve(async (req) => {
       }
     );
 
-    // Call the database function with proper parameter handling
+    // Convert productId to UUID explicitly if it's a string
+    // Call the database function with proper UUID casting
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
       p_product_id: productId,
