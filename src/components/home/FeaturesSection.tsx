@@ -11,6 +11,16 @@ interface FeaturesSectionProps {
   useMockData?: boolean;
 }
 
+// Helper function to safely get icon component
+const getIconComponent = (iconName: string) => {
+  // Check if the icon name exists in Lucide Icons and is a valid component
+  if (iconName && typeof LucideIcons[iconName as keyof typeof LucideIcons] === 'function') {
+    return LucideIcons[iconName as keyof typeof LucideIcons];
+  }
+  // Return Star as fallback icon
+  return Star;
+};
+
 export function FeaturesSection({ features, isLoading, isAuthenticated = false, useMockData = false }: FeaturesSectionProps) {
   if (isLoading) {
     return (
@@ -42,20 +52,21 @@ export function FeaturesSection({ features, isLoading, isAuthenticated = false, 
           </div>
         )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {features.map((feature) => (
-            <div key={feature.id} className="group">
-              <div className="bg-gray-50 hover:bg-wealth-primary/5 border border-gray-200 rounded-lg p-6 text-center transition-all group-hover:border-wealth-primary">
-                <div className="w-16 h-16 bg-wealth-primary/10 text-wealth-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-wealth-primary group-hover:text-white transition-all">
-                  {feature.icon_name && ((LucideIcons as any)[feature.icon_name] ? 
-                    ((LucideIcons as any)[feature.icon_name]({ size: 28 })) : 
-                    <Star size={28} />
-                  )}
+          {features.map((feature) => {
+            const IconComponent = getIconComponent(feature.icon_name);
+            
+            return (
+              <div key={feature.id} className="group">
+                <div className="bg-gray-50 hover:bg-wealth-primary/5 border border-gray-200 rounded-lg p-6 text-center transition-all group-hover:border-wealth-primary">
+                  <div className="w-16 h-16 bg-wealth-primary/10 text-wealth-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-wealth-primary group-hover:text-white transition-all">
+                    <IconComponent size={28} />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                  <p className="text-sm text-gray-500">{feature.description}</p>
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                <p className="text-sm text-gray-500">{feature.description}</p>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );

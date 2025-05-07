@@ -9,8 +9,12 @@ interface FeatureCardProps {
 }
 
 export function FeatureCard({ feature, className = "" }: FeatureCardProps) {
-  // Dynamic icon component selection
-  const IconComponent = (LucideIcons as any)[feature.icon_name] || Star;
+  // Safe icon component selection
+  let IconComponent = Star; // Default fallback
+  
+  if (feature.icon_name && typeof LucideIcons[feature.icon_name as keyof typeof LucideIcons] === 'function') {
+    IconComponent = LucideIcons[feature.icon_name as keyof typeof LucideIcons];
+  }
   
   return (
     <div className={`bg-white/10 backdrop-blur-sm p-6 rounded-lg ${className}`}>
