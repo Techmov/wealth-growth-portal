@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product } from "@/types";
@@ -108,7 +107,7 @@ export function useInvestmentActions(user: User | null) {
     }
   };
 
-  // Handle referral bonuses
+  // Enhanced function to handle referral bonuses
   const getReferralBonus = async (referralCode: string) => {
     if (!user) {
       toast.error("You must be logged in to claim referral bonus");
@@ -131,13 +130,35 @@ export function useInvestmentActions(user: User | null) {
     }
   };
 
-  // Get user's downlines (referred users)
-  const getUserDownlines = () => {
+  // Get user's downlines (referred users) with real data from Supabase
+  const getUserDownlines = async () => {
     if (!user) return [];
 
-    // This would need to be implemented with actual data from Supabase
-    // For now, we'll return an empty array as a placeholder
-    return [];
+    try {
+      // Fetch users who were referred by the current user
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, total_invested, referral_bonus, created_at')
+        .eq('referred_by', user.referralCode)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Error fetching downlines:", error);
+        return [];
+      }
+
+      // Map the database response to our Downline type
+      return data.map(profile => ({
+        id: profile.id,
+        username: profile.username || 'Anonymous',
+        totalInvested: profile.total_invested || 0,
+        bonusGenerated: profile.total_invested ? profile.total_invested * 0.05 : 0, // 5% referral bonus
+        date: new Date(profile.created_at || Date.now())
+      }));
+    } catch (error) {
+      console.error("Unexpected error fetching downlines:", error);
+      return [];
+    }
   };
 
   return {

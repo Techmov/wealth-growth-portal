@@ -1,142 +1,105 @@
+
 import { useState, useEffect } from "react";
 import { UserLayout } from "@/components/UserLayout";
 import { Heading } from "@/components/ui/heading";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Users } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { Copy, Users, Link, BarChart, TrendingUp, Share } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { Downline } from "@/types/supabase";
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious 
-} from "@/components/ui/pagination";
+import { useInvestment } from "@/context/InvestmentContext";
+import { Downline } from "@/types";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { DownlinesList } from "@/components/DownlinesList";
+import { Progress } from "@/components/ui/progress";
+import { StatCard } from "@/components/StatCard";
 
 const ReferralsPage = () => {
-  const { toast } = useToast();
   const { user } = useAuth();
+  const { getUserDownlines } = useInvestment();
   const isMobile = useIsMobile();
   
   const [copyText, setCopyText] = useState("Copy");
   const [downlines, setDownlines] = useState<Downline[]>([]);
-  const [totalReferrals, setTotalReferrals] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  const pageSize = 10;
-  
   const referralLink = user ? `${window.location.origin}/signup?ref=${user.referralCode}` : "";
+  
+  // Calculate statistics
+  const totalReferrals = downlines.length;
+  const totalInvested = downlines.reduce((sum, downline) => sum + downline.totalInvested, 0);
+  const totalBonusEarned = downlines.reduce((sum, downline) => sum + downline.bonusGenerated, 0);
+  const activeReferrals = downlines.filter(d => d.totalInvested > 0).length;
+  const conversionRate = totalReferrals > 0 ? (activeReferrals / totalReferrals) * 100 : 0;
 
   // Function to handle copying referral link
   const handleCopyLink = () => {
     navigator.clipboard.writeText(referralLink);
     setCopyText("Copied!");
-    toast({
-      title: "Success",
-      description: "Referral link copied to clipboard"
-    });
+    toast.success("Referral link copied to clipboard");
     setTimeout(() => setCopyText("Copy"), 2000);
   };
+  
+  // Function to share on social media
+  const handleShare = async (platform: string) => {
+    const message = `Join my investment platform and start earning with my referral link: ${referralLink}`;
+    
+    switch (platform) {
+      case 'twitter':
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`, '_blank');
+        break;
+      case 'facebook':
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}`, '_blank');
+        break;
+      case 'whatsapp':
+        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+        break;
+      case 'telegram':
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('Join my investment platform!')}`, '_blank');
+        break;
+      default:
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: 'Investment Referral',
+              text: message,
+              url: referralLink,
+            });
+            toast.success('Shared successfully');
+          } catch (error) {
+            console.error('Error sharing:', error);
+          }
+        } else {
+          handleCopyLink();
+        }
+    }
+  };
 
-  // Function to fetch downlines with pagination
-  const fetchDownlines = async (page: number) => {
+  // Fetch downlines
+  const fetchDownlines = async () => {
     if (!user) return;
     
     try {
       setIsLoading(true);
-      
-      // First, get total count for pagination
-      const { count, error: countError } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('referred_by', user.referralCode);
-      
-      if (countError) {
-        console.error("Error fetching referral count:", countError);
-        return;
-      }
-      
-      if (count !== null) {
-        setTotalReferrals(count);
-        setTotalPages(Math.ceil(count / pageSize));
-      }
-      
-      // Then fetch the current page of downlines
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('referred_by', user.referralCode)
-        .range(from, to)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error("Error fetching downlines:", error);
-        return;
-      }
-      
-      if (data) {
-        const formattedDownlines: Downline[] = data.map(user => ({
-          id: user.id,
-          username: user.username || 'Anonymous',
-          totalInvested: user.total_invested || 0,
-          bonusGenerated: user.total_invested ? user.total_invested * 0.05 : 0, // Assuming 5% referral bonus
-          date: new Date(user.created_at || Date.now())
-        }));
-        
-        setDownlines(formattedDownlines);
-      }
+      const data = await getUserDownlines();
+      setDownlines(data);
     } catch (error) {
-      console.error("Unexpected error fetching downlines:", error);
+      console.error("Error fetching downlines:", error);
+      toast.error("Failed to load your referrals");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Initialize and set up real-time subscription
   useEffect(() => {
-    if (!user) return;
+    fetchDownlines();
     
-    // Initial fetch
-    fetchDownlines(currentPage);
+    // Set up interval to refresh data periodically
+    const intervalId = setInterval(fetchDownlines, 30000); // Every 30 seconds
     
-    // Set up real-time subscription for new referrals
-    const channel = supabase
-      .channel('referrals-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-          filter: `referred_by=eq.${user.referralCode}`
-        },
-        () => {
-          fetchDownlines(currentPage);
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, currentPage]);
-
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
+    return () => clearInterval(intervalId);
+  }, [user]);
 
   if (!user) return null;
 
@@ -144,10 +107,43 @@ const ReferralsPage = () => {
     <UserLayout>
       <div className="container py-6 space-y-6">
         <Heading
-          title="Referrals"
-          description="Invite friends and earn bonuses when they invest"
+          title="Referrals Program"
+          description="Invite friends and earn 5% commission on their investments"
           icon={<Users className="h-6 w-6" />}
         />
+
+        {/* Dashboard Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Referrals"
+            value={totalReferrals}
+            icon={<UserPlus className="h-5 w-5" />}
+            description="People you've referred"
+          />
+          
+          <StatCard
+            title="Active Referrals"
+            value={activeReferrals}
+            icon={<Users className="h-5 w-5" />}
+            description={`${conversionRate.toFixed(1)}% conversion`}
+          />
+          
+          <StatCard
+            title="Total Invested"
+            value={`$${totalInvested.toFixed(2)}`}
+            icon={<BarChart className="h-5 w-5" />}
+            description="By your referrals"
+          />
+          
+          <StatCard
+            title="Commission Earned"
+            value={`$${totalBonusEarned.toFixed(2)}`}
+            icon={<TrendingUp className="h-5 w-5" />}
+            valueClassName="text-green-600"
+            description="5% of investments"
+            isGrowing={true}
+          />
+        </div>
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
@@ -181,18 +177,39 @@ const ReferralsPage = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-col space-y-2">
-                  <div className="text-sm font-medium">Statistics</div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-muted p-4 rounded-md">
-                      <div className="text-sm text-muted-foreground">Total Referrals</div>
-                      <div className="text-2xl font-bold">{totalReferrals}</div>
-                    </div>
-                    <div className="bg-muted p-4 rounded-md">
-                      <div className="text-sm text-muted-foreground">Total Bonus</div>
-                      <div className="text-2xl font-bold">${user.referralBonus.toFixed(2)}</div>
-                    </div>
+                {/* Social Sharing */}
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Share on Social Media</div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => handleShare('facebook')}>
+                      Facebook
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleShare('twitter')}>
+                      Twitter
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleShare('whatsapp')}>
+                      WhatsApp
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleShare('telegram')}>
+                      Telegram
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleShare('')}>
+                      <Share className="h-4 w-4 mr-2" />
+                      More Options
+                    </Button>
                   </div>
+                </div>
+
+                {/* Referral Program Progress */}
+                <div className="pt-4 border-t">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm font-medium">Referral Performance</span>
+                    <span className="text-sm text-muted-foreground">{conversionRate.toFixed(1)}% conversion rate</span>
+                  </div>
+                  <Progress value={conversionRate} className="h-2" />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {activeReferrals} of {totalReferrals} referrals have made investments
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -201,123 +218,64 @@ const ReferralsPage = () => {
           <Card>
             <CardHeader>
               <CardTitle>How It Works</CardTitle>
-              <CardDescription>Learn about our referral program</CardDescription>
+              <CardDescription>Learn about our referral program benefits</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <h3 className="font-medium">Earn 5% Commission</h3>
-                  <p className="text-sm text-muted-foreground">
-                    You'll earn 5% of the investment amount whenever your referrals make an investment.
-                  </p>
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Link className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Share Your Link</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Copy your unique referral link and share it with friends, family, or on social media.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className="font-medium">Instant Rewards</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Bonuses are credited directly to your account balance and can be withdrawn anytime.
-                  </p>
+                <div className="flex gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <UserPlus className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Friends Sign Up</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      When someone uses your link to register, they are permanently linked as your referral.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className="font-medium">Unlimited Referrals</h3>
-                  <p className="text-sm text-muted-foreground">
-                    There's no limit to how many people you can refer or how much you can earn.
-                  </p>
+                <div className="flex gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <BarChart className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">They Invest</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Every time your referral makes an investment, you earn a commission on that amount.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className="font-medium">Promotional Materials</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Contact support if you need banners or promotional content for your website.
-                  </p>
+                <div className="flex gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Earn 5% Commission</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      You receive 5% of every investment they make, instantly added to your balance.
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Downlines</CardTitle>
-            <CardDescription>
-              People who have registered using your referral link
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center items-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : downlines.length > 0 ? (
-              <>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Username</TableHead>
-                        <TableHead>Joined Date</TableHead>
-                        <TableHead className="text-right">Total Invested</TableHead>
-                        <TableHead className="text-right">Bonus Generated</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {downlines.map((downline) => (
-                        <TableRow key={downline.id}>
-                          <TableCell className="font-medium">{downline.username}</TableCell>
-                          <TableCell>
-                            {downline.date.toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-right">${downline.totalInvested.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">${downline.bonusGenerated.toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="mt-4">
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious 
-                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                          />
-                        </PaginationItem>
-                        
-                        {[...Array(totalPages)].map((_, i) => (
-                          <PaginationItem key={i + 1}>
-                            <PaginationLink
-                              isActive={currentPage === i + 1}
-                              onClick={() => handlePageChange(i + 1)}
-                            >
-                              {i + 1}
-                            </PaginationLink>
-                          </PaginationItem>
-                        ))}
-                        
-                        <PaginationItem>
-                          <PaginationNext 
-                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">You don't have any referrals yet.</p>
-                <p className="mt-2">Share your referral link to start earning bonuses!</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Downlines List with Real-time Updates */}
+        <DownlinesList downlines={downlines} isLoading={isLoading} />
       </div>
     </UserLayout>
   );

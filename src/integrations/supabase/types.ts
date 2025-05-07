@@ -117,6 +117,8 @@ export type Database = {
           referred_by: string | null
           role: string
           total_invested: number
+          total_referred_investments: number | null
+          total_referred_users: number | null
           total_withdrawn: number
           trc20_address: string | null
           username: string
@@ -133,6 +135,8 @@ export type Database = {
           referred_by?: string | null
           role?: string
           total_invested?: number
+          total_referred_investments?: number | null
+          total_referred_users?: number | null
           total_withdrawn?: number
           trc20_address?: string | null
           username: string
@@ -149,6 +153,8 @@ export type Database = {
           referred_by?: string | null
           role?: string
           total_invested?: number
+          total_referred_investments?: number | null
+          total_referred_users?: number | null
           total_withdrawn?: number
           trc20_address?: string | null
           username?: string
@@ -295,6 +301,8 @@ export type Database = {
           referred_by: string | null
           role: string
           total_invested: number
+          total_referred_investments: number | null
+          total_referred_users: number | null
           total_withdrawn: number
           trc20_address: string | null
           username: string
