@@ -31,7 +31,8 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
     
     try {
       setIsInvesting(true);
-      await invest(product.id);
+      // Make sure we're passing the ID as string, not as UUID object
+      await invest(product.id.toString());
       toast.success(`Successfully invested in ${product.name}!`);
     } catch (error: any) {
       console.error("Investment failed:", error);

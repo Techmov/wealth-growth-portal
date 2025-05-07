@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
@@ -31,7 +32,7 @@ export function useInvestmentActions(user: User | null) {
         .from('investments')
         .insert({
           user_id: user.id,
-          product_id: productId,
+          product_id: productId, // Ensure this is a string to match UUID in the database
           amount: product.amount,
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
