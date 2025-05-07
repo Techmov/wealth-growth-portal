@@ -19,6 +19,8 @@ interface WithdrawalsTableProps {
   onReject: (withdrawalId: string) => void;
 }
 
+const WITHDRAWAL_FEE = 3; // $3 withdrawal fee
+
 export function WithdrawalsTable({
   withdrawals,
   onApprove,
@@ -31,8 +33,8 @@ export function WithdrawalsTable({
   };
 
   const getSourceColor = (source?: string) => {
-    if (!source || source === "profit") return "bg-blue-50 text-blue-700";
-    return "bg-green-50 text-green-700";
+    if (!source || source === "profit") return "bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-100";
+    return "bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-100";
   };
 
   return (
@@ -42,6 +44,7 @@ export function WithdrawalsTable({
           <TableHead>User</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Amount</TableHead>
+          <TableHead>Fee</TableHead>
           <TableHead>Source</TableHead>
           <TableHead>TRC20 Address</TableHead>
           <TableHead>Date</TableHead>
@@ -51,7 +54,7 @@ export function WithdrawalsTable({
       <TableBody>
         {withdrawals.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="text-center py-4">
+            <TableCell colSpan={8} className="text-center py-4">
               No pending withdrawals found
             </TableCell>
           </TableRow>
@@ -63,6 +66,7 @@ export function WithdrawalsTable({
               </TableCell>
               <TableCell>{withdrawal.userEmail || "Unknown"}</TableCell>
               <TableCell className="font-medium">${withdrawal.amount.toFixed(2)}</TableCell>
+              <TableCell className="text-muted-foreground">${WITHDRAWAL_FEE.toFixed(2)}</TableCell>
               <TableCell>
                 <Badge variant="outline" className={`${getSourceColor(withdrawal.withdrawalSource)}`}>
                   {formatSource(withdrawal.withdrawalSource)}
@@ -78,7 +82,7 @@ export function WithdrawalsTable({
                     variant="outline" 
                     size="sm" 
                     onClick={() => onApprove(withdrawal)}
-                    className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                    className="text-green-500 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/30"
                   >
                     <Check className="h-4 w-4 mr-1" /> Approve
                   </Button>
@@ -86,7 +90,7 @@ export function WithdrawalsTable({
                     variant="outline" 
                     size="sm"
                     onClick={() => onReject(withdrawal.id)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30"
                   >
                     <X className="h-4 w-4 mr-1" /> Reject
                   </Button>

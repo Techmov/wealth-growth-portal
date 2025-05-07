@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { LoginCredentials, SignupCredentials } from "@/types/auth";
 
+// Withdrawal fee constant
+const WITHDRAWAL_FEE = 3;
+
 // Sign up with email and password
 export const signup = async (credentials: SignupCredentials) => {
   const { email, password, name, referralCode } = credentials;
@@ -153,7 +156,7 @@ export const deposit = async (userId: string, amount: number, txHash: string) =>
   }
 };
 
-// Update the withdrawal request function to include withdrawal source parameter
+// Update the withdrawal request function to include withdrawal source parameter and fee
 export const requestWithdrawal = async (
   userId: string, 
   amount: number, 
@@ -161,14 +164,18 @@ export const requestWithdrawal = async (
   withdrawalSource: 'profit' | 'referral_bonus' = 'profit'
 ) => {
   try {
-    // Use the new database function for withdrawal requests
+    // Calculate total amount with fee
+    const totalAmount = amount + WITHDRAWAL_FEE;
+    
+    // Use the database function for withdrawal requests
     const { data, error } = await supabase.rpc(
       'request_withdrawal',
       {
         p_user_id: userId,
-        p_amount: amount,
+        p_amount: totalAmount,  // Total amount including fee
         p_trc20_address: trc20Address,
-        p_withdrawal_source: withdrawalSource
+        p_withdrawal_source: withdrawalSource,
+        p_fee_amount: WITHDRAWAL_FEE  // Pass fee amount separately
       }
     );
       

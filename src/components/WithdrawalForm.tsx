@@ -8,9 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { ArrowDown, Clock, Loader2 } from "lucide-react";
+import { ArrowDown, Clock, Loader2, Info } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useWithdrawalStats } from "@/hooks/useWithdrawalStats";
+
+// Withdrawal fee constant
+const WITHDRAWAL_FEE = 3;
 
 export function WithdrawalForm() {
   const navigate = useNavigate();
@@ -40,17 +43,20 @@ export function WithdrawalForm() {
       return;
     }
     
-    // Validate source-specific balance
-    if (withdrawalSource === 'profit' && withdrawalAmount > stats.profitAmount) {
-      toast.error("Insufficient profit funds for withdrawal", {
-        description: `Available: $${stats.profitAmount.toFixed(2)}`
+    // Check if amount + fee exceeds available balance
+    const totalWithdrawal = withdrawalAmount + WITHDRAWAL_FEE;
+    
+    // Validate source-specific balance with fee
+    if (withdrawalSource === 'profit' && totalWithdrawal > stats.profitAmount) {
+      toast.error("Insufficient profit funds for withdrawal + fee", {
+        description: `Available: $${stats.profitAmount.toFixed(2)}, Required: $${totalWithdrawal.toFixed(2)}`
       });
       return;
     }
     
-    if (withdrawalSource === 'referral_bonus' && withdrawalAmount > stats.referralBonus) {
-      toast.error("Insufficient referral bonus funds for withdrawal", {
-        description: `Available: $${stats.referralBonus.toFixed(2)}`
+    if (withdrawalSource === 'referral_bonus' && totalWithdrawal > stats.referralBonus) {
+      toast.error("Insufficient referral bonus funds for withdrawal + fee", {
+        description: `Available: $${stats.referralBonus.toFixed(2)}, Required: $${totalWithdrawal.toFixed(2)}`
       });
       return;
     }
@@ -69,6 +75,7 @@ export function WithdrawalForm() {
     setIsProcessing(true);
     
     try {
+      // Pass the withdrawal amount (fee will be added in the backend)
       await requestWithdrawal(withdrawalAmount, user.trc20Address, withdrawalSource, withdrawalPassword || undefined);
       setAmount("");
       setWithdrawalPassword("");
@@ -90,9 +97,13 @@ export function WithdrawalForm() {
     statsLoading || 
     !amount ||
     parseFloat(amount) <= 0 ||
-    (withdrawalSource === 'profit' && parseFloat(amount) > stats.profitAmount) ||
-    (withdrawalSource === 'referral_bonus' && parseFloat(amount) > stats.referralBonus) ||
+    (withdrawalSource === 'profit' && parseFloat(amount) + WITHDRAWAL_FEE > stats.profitAmount) ||
+    (withdrawalSource === 'referral_bonus' && parseFloat(amount) + WITHDRAWAL_FEE > stats.referralBonus) ||
     (user.withdrawalPassword && !withdrawalPassword);
+
+  // Calculate total amount including fee
+  const amountValue = parseFloat(amount);
+  const totalAmount = !isNaN(amountValue) && amountValue > 0 ? amountValue + WITHDRAWAL_FEE : WITHDRAWAL_FEE;
 
   return (
     <Card className="p-6">
@@ -103,13 +114,13 @@ export function WithdrawalForm() {
         </div>
 
         {!user.trc20Address && (
-          <Alert variant="default" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+          <Alert variant="default" className="bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-100 dark:border-yellow-800">
             <AlertDescription className="flex flex-col space-y-2">
               <p>Please set your TRC20 address in your profile before requesting a withdrawal.</p>
               <Button 
                 variant="outline" 
                 size="sm"
-                className="self-start"
+                className="self-start dark:text-yellow-100 dark:hover:bg-yellow-800"
                 onClick={() => navigate("/profile")}
               >
                 Go to Profile Settings
@@ -130,18 +141,18 @@ export function WithdrawalForm() {
             </div>
             
             <div className="grid grid-cols-2 gap-2">
-              <div className={`px-3 py-2 rounded-md transition-colors ${withdrawalSource === 'profit' ? 'bg-blue-100 border border-blue-200' : 'bg-blue-50'}`}>
-                <div className="text-sm text-blue-700">Profit</div>
+              <div className={`px-3 py-2 rounded-md transition-colors ${withdrawalSource === 'profit' ? 'bg-blue-100 border border-blue-200 dark:bg-blue-900 dark:border-blue-800 dark:text-blue-100' : 'bg-blue-50 dark:bg-blue-950 dark:text-blue-200'}`}>
+                <div className={`text-sm ${withdrawalSource === 'profit' ? 'text-blue-700 dark:text-blue-100' : 'text-blue-700 dark:text-blue-300'}`}>Profit</div>
                 <div className="font-semibold">${stats.profitAmount.toFixed(2)}</div>
               </div>
-              <div className={`px-3 py-2 rounded-md transition-colors ${withdrawalSource === 'referral_bonus' ? 'bg-green-100 border border-green-200' : 'bg-green-50'}`}>
-                <div className="text-sm text-green-700">Referral Bonus</div>
+              <div className={`px-3 py-2 rounded-md transition-colors ${withdrawalSource === 'referral_bonus' ? 'bg-green-100 border border-green-200 dark:bg-green-900 dark:border-green-800 dark:text-green-100' : 'bg-green-50 dark:bg-green-950 dark:text-green-200'}`}>
+                <div className={`text-sm ${withdrawalSource === 'referral_bonus' ? 'text-green-700 dark:text-green-100' : 'text-green-700 dark:text-green-300'}`}>Referral Bonus</div>
                 <div className="font-semibold">${stats.referralBonus.toFixed(2)}</div>
               </div>
             </div>
 
-            <div className="px-3 py-2 bg-orange-50 rounded-md flex justify-between">
-              <div className="text-sm text-orange-700">In Escrow (Pending)</div>
+            <div className="px-3 py-2 bg-orange-50 dark:bg-orange-950 dark:text-orange-200 rounded-md flex justify-between">
+              <div className="text-sm text-orange-700 dark:text-orange-300">In Escrow (Pending)</div>
               <div className="font-semibold">${stats.escrowedAmount.toFixed(2)}</div>
             </div>
           </div>
@@ -182,7 +193,31 @@ export function WithdrawalForm() {
                 required
               />
             </div>
-            <p className="text-xs text-muted-foreground">Minimum withdrawal amount: $10</p>
+            <div className="flex justify-between">
+              <p className="text-xs text-muted-foreground">Minimum withdrawal amount: $10</p>
+              <p className="text-xs text-muted-foreground">Fee: $3.00</p>
+            </div>
+            
+            <Alert className="bg-muted/50 mt-2 py-2">
+              <div className="flex items-center gap-2">
+                <Info size={16} className="text-muted-foreground" />
+                <div className="flex justify-between w-full items-center">
+                  <span className="text-xs">You will receive:</span>
+                  <span className="text-xs font-medium">
+                    ${!isNaN(amountValue) && amountValue > 0 ? amountValue.toFixed(2) : '0.00'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <Info size={16} className="text-muted-foreground opacity-0" />
+                <div className="flex justify-between w-full items-center">
+                  <span className="text-xs">Total deducted:</span>
+                  <span className="text-xs font-medium">
+                    ${!isNaN(totalAmount) ? totalAmount.toFixed(2) : '3.00'}
+                  </span>
+                </div>
+              </div>
+            </Alert>
           </div>
 
           {user.withdrawalPassword && (
@@ -224,6 +259,10 @@ export function WithdrawalForm() {
             <li className="flex items-center gap-2">
               <div className="w-1 h-1 rounded-full bg-muted-foreground"></div>
               <span>Withdrawals are processed manually within 24 hours</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="w-1 h-1 rounded-full bg-muted-foreground"></div>
+              <span>A withdrawal fee of $3 is applied to all withdrawals</span>
             </li>
             <li className="flex items-center gap-2">
               <div className="w-1 h-1 rounded-full bg-muted-foreground"></div>

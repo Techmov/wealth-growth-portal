@@ -57,6 +57,7 @@ export interface WithdrawalRequest {
   txHash?: string;
   rejectionReason?: string;
   withdrawalSource?: 'profit' | 'referral_bonus';
+  feeAmount?: number; // Fee amount
   // Additional fields for UI display from join queries
   userName?: string;
   username?: string;

@@ -99,3 +99,21 @@
 .growing-value {
   animation: grow-value 2s ease-in-out infinite;
 }
+
+/* Dark theme text visibility fixes */
+.dark .text-muted-foreground {
+  color: hsla(215, 20.2%, 75.1%, 1);
+}
+
+.dark .bg-card,
+.dark .bg-muted {
+  color-scheme: dark;
+}
+
+/* Text visibility fix for specific components */
+.dark .bg-green-50,
+.dark .bg-blue-50,
+.dark .bg-orange-50,
+.dark .bg-yellow-50 {
+  color-scheme: light;
+}

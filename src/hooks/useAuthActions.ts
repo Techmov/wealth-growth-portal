@@ -2,6 +2,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService"; 
 
+// Withdrawal fee constant
+const WITHDRAWAL_FEE = 3;
+
 export const useAuthActions = ({
   user,
   setIsLoading,
@@ -261,7 +264,7 @@ export const useAuthActions = ({
     }
   };
 
-  // Updated request withdrawal function to work with the new database function and withdrawal source parameter
+  // Updated request withdrawal function to work with fees
   const requestWithdrawal = async (amount: number, trc20Address: string, withdrawalSource: 'profit' | 'referral_bonus', withdrawalPassword?: string) => {
     if (!user) {
       toast.error("User not authenticated");
@@ -284,6 +287,9 @@ export const useAuthActions = ({
       return Promise.reject(new Error("Below minimum withdrawal amount"));
     }
 
+    // Calculate total amount with fee for validation
+    const totalAmount = amount + WITHDRAWAL_FEE;
+
     // Only check withdrawal password if it's set and required
     if (user.withdrawalPassword && withdrawalPassword !== user.withdrawalPassword) {
       toast.error("Incorrect withdrawal password");
@@ -293,14 +299,15 @@ export const useAuthActions = ({
     try {
       const toastId = toast.loading("Processing withdrawal request...");
       
-      // Use the new database function for withdrawal requests
+      // Use the database function for withdrawal requests
       const { data, error } = await supabase.rpc(
         'request_withdrawal',
         {
           p_user_id: user.id,
-          p_amount: amount,
+          p_amount: totalAmount, // Send total amount including fee
           p_trc20_address: trc20Address,
-          p_withdrawal_source: withdrawalSource
+          p_withdrawal_source: withdrawalSource,
+          p_fee_amount: WITHDRAWAL_FEE // Pass fee amount separately
         }
       );
       
@@ -315,7 +322,7 @@ export const useAuthActions = ({
       
       toast.success("Withdrawal request submitted", {
         id: toastId,
-        description: "It will be processed within 24 hours."
+        description: `You will receive $${amount.toFixed(2)} after a $${WITHDRAWAL_FEE.toFixed(2)} fee. It will be processed within 24 hours.`
       });
       
       return Promise.resolve(data);
