@@ -14,7 +14,7 @@ type InvestmentContextType = {
   withdrawalRequests: WithdrawalRequest[];
   platformTrc20Address: string;
   isLoading: boolean;
-  invest: (productId: string) => Promise<void>;
+  invest: (productId: string) => Promise<any>;
   claimProfit: (investmentId: string) => Promise<any>;
   getClaimableProfit: (investmentId: string) => Promise<number>;
   getReferralBonus: (referralCode: string) => Promise<void>;

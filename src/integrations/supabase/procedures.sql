@@ -69,7 +69,7 @@ BEGIN
       last_profit_claim_date
     ) VALUES (
       p_user_id,
-      p_product_id,
+      p_product_id::UUID,
       p_amount,
       p_end_date,
       p_starting_value,

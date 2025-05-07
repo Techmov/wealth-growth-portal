@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
@@ -11,46 +10,24 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // First, get the product details to calculate the initial values
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .select('amount, duration, growth_rate')
-        .eq('id', productId)
-        .single();
-
-      if (productError || !product) {
-        throw new Error(productError?.message || "Product not found");
-      }
-
-      // Calculate end date based on product duration
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + product.duration);
-
-      // Now insert with all required fields
-      const { data, error } = await supabase
-        .from('investments')
-        .insert({
-          user_id: user.id,
-          product_id: productId, // Ensure this is a string to match UUID in the database
-          amount: product.amount,
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
-          starting_value: product.amount,
-          current_value: product.amount,
-          final_value: product.amount * 2, // Assuming 100% return as mentioned in UI
-          status: 'active'
-        })
-        .select()
-        .single();
+      // Call the database function directly
+      const { data, error } = await supabase.rpc('create_investment', {
+        p_user_id: user.id,
+        p_product_id: productId,
+        p_amount: 0, // These will be set in the function
+        p_end_date: new Date(), // These will be set in the function
+        p_starting_value: 0, // These will be set in the function
+        p_current_value: 0, // These will be set in the function
+        p_final_value: 0 // These will be set in the function
+      });
 
       if (error) {
+        console.error("Investment error:", error);
         throw new Error(error.message || "Failed to create investment");
       }
 
       toast.success(`Successfully invested in this product`);
-      // Return void to match the expected return type
-      return;
+      return data;
     } catch (error: any) {
       toast.error(error.message || "Investment failed");
       throw error;
