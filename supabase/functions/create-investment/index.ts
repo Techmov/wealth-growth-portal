@@ -1,89 +1,93 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.23.0";
+// Follow this setup guide to integrate the Deno runtime into your Supabase functions:
+// https://supabase.com/docs/guides/functions/deno-runtime
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// Define CORS headers for browser compatibility
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+export const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get the request body
+    // Get the authorization header from the request
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Missing Authorization header');
+    }
+
+    // Parse the request body
     const { userId, productId } = await req.json();
     
-    // Validate input parameters
+    console.log("Creating investment with parameters:", {
+      userId,
+      productId
+    });
+
     if (!userId || !productId) {
-      console.error("Missing required parameters:", { userId, productId });
-      return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+      throw new Error('Missing required parameters: userId and productId are required');
     }
-    
-    console.log("Creating investment with parameters:", { userId, productId });
-    
+
     // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
+        global: {
+          headers: { Authorization: authHeader },
         },
       }
     );
 
-    // Convert productId to UUID explicitly if it's a string
-    // Call the database function with proper UUID casting
+    // Cast explicitly to UUID format
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
       p_product_id: productId,
-      p_amount: 0, // These will be set in the function
-      p_end_date: new Date(), // These will be set in the function
-      p_starting_value: 0, // These will be set in the function
-      p_current_value: 0, // These will be set in the function
-      p_final_value: 0 // These will be set in the function
+      p_amount: 0, // These values will be calculated in the function
+      p_end_date: new Date(), 
+      p_starting_value: 0,
+      p_current_value: 0,
+      p_final_value: 0
     });
 
     if (error) {
       console.error("Error in create_investment:", error);
-      return new Response(
-        JSON.stringify({ error: error.message }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+      throw error;
     }
 
-    console.log("Investment created successfully:", data);
-
+    // Return the successful response
     return new Response(
       JSON.stringify(data),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json' 
+        },
+        status: 200,
       }
     );
-
-  } catch (err) {
-    console.error("Unexpected error:", err);
+  } catch (error) {
+    console.error("Investment function error:", error.message);
+    
+    // Return the error response
     return new Response(
-      JSON.stringify({ error: 'An unexpected error occurred' }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json' 
+        },
+        status: 400,
       }
     );
   }
-});
+};
+
+Deno.serve(handler);

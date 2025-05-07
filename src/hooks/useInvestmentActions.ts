@@ -107,11 +107,13 @@ export function useInvestmentActions(user: User | null) {
     }
   };
 
-  // Get user's downlines (referred users) with real data from Supabase
+  // Enhanced function to get user's downlines with better error handling and querying
   const getUserDownlines = async (): Promise<Downline[]> => {
     if (!user) return [];
 
     try {
+      console.log("Fetching downlines for user with referral code:", user.referralCode);
+      
       // Fetch users who were referred by the current user
       const { data, error } = await supabase
         .from('profiles')
@@ -123,6 +125,8 @@ export function useInvestmentActions(user: User | null) {
         console.error("Error fetching downlines:", error);
         return [];
       }
+
+      console.log("Fetched downlines data:", data);
 
       // Map the database response to our Downline type
       return data.map(profile => ({

@@ -66,7 +66,7 @@ export function WithdrawalsTable({
               </TableCell>
               <TableCell>{withdrawal.userEmail || "Unknown"}</TableCell>
               <TableCell className="font-medium">${withdrawal.amount.toFixed(2)}</TableCell>
-              <TableCell className="text-muted-foreground">${WITHDRAWAL_FEE.toFixed(2)}</TableCell>
+              <TableCell className="text-muted-foreground">${withdrawal.feeAmount?.toFixed(2) || WITHDRAWAL_FEE.toFixed(2)}</TableCell>
               <TableCell>
                 <Badge variant="outline" className={`${getSourceColor(withdrawal.withdrawalSource)}`}>
                   {formatSource(withdrawal.withdrawalSource)}

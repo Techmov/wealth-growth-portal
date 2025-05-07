@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { LoginCredentials, SignupCredentials } from "@/types/auth";
 
@@ -164,15 +165,12 @@ export const requestWithdrawal = async (
   withdrawalSource: 'profit' | 'referral_bonus' = 'profit'
 ) => {
   try {
-    // Calculate total amount with fee
-    const totalAmount = amount + WITHDRAWAL_FEE;
-    
-    // Use the database function for withdrawal requests
+    // Use the database function for withdrawal requests with updated parameters
     const { data, error } = await supabase.rpc(
       'request_withdrawal',
       {
         p_user_id: userId,
-        p_amount: totalAmount,  // Total amount including fee
+        p_amount: amount + WITHDRAWAL_FEE,  // Total amount including fee
         p_trc20_address: trc20Address,
         p_withdrawal_source: withdrawalSource,
         p_fee_amount: WITHDRAWAL_FEE  // Pass fee amount separately

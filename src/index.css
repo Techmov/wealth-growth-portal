@@ -117,3 +117,19 @@
 .dark .bg-yellow-50 {
   color-scheme: light;
 }
+
+/* Fix for offers, features, and withdrawal text visibility */
+.dark .text-green-600,
+.dark .text-blue-600,
+.dark .text-orange-600,
+.dark .text-yellow-600 {
+  opacity: 0.9;
+  text-shadow: 0px 0px 1px rgba(255, 255, 255, 0.5);
+}
+
+.dark .bg-green-50 *,
+.dark .bg-blue-50 *,
+.dark .bg-orange-50 *,
+.dark .bg-yellow-50 * {
+  color-scheme: light;
+}
