@@ -27,36 +27,7 @@ import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { useAuth } from "./context/AuthContext";
 import { initializeRealtimeSubscriptions } from "./integrations/supabase/realtime";
 import { toast } from "sonner";
-
-// Create separate components for protected routes to avoid hook issues
-const ProtectedRoute = () => {
-  const { session } = useAuth();
-  
-  if (!session) {
-    console.log("ProtectedRoute: No session, redirecting to login");
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <Outlet />;
-};
-
-const AdminRoute = () => {
-  const { session, isAdmin } = useAuth();
-  
-  if (!session) {
-    console.log("AdminRoute: No session, redirecting to login");
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (!isAdmin) {
-    console.log("AdminRoute: Not admin, redirecting to dashboard");
-    toast.error("You don't have permission to access the admin area");
-    return <Navigate to="/dashboard" replace />;
-  }
-  
-  console.log("AdminRoute: User is admin, allowing access");
-  return <Outlet />;
-};
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 // Add component for admin redirection
 const AdminRedirect = () => {
@@ -110,11 +81,16 @@ function App() {
         <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
           
-          {/* Protected routes - wrapped with InvestmentProvider */}
-          <Route element={<ProtectedRoute />}>
+          {/* Public routes - redirect to dashboard if authenticated */}
+          <Route element={<ProtectedRoute requireAuth={false} redirectTo="/dashboard" />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+          </Route>
+          
+          {/* Protected routes - require authentication */}
+          <Route element={<ProtectedRoute requireAuth={true} redirectTo="/login" />}>
+            {/* User routes - wrapped with InvestmentProvider */}
             <Route element={
               <InvestmentProvider>
                 <Outlet />
@@ -134,8 +110,8 @@ function App() {
               <Route path="/withdrawal" element={<Navigate to="/withdraw" replace />} />
             </Route>
             
-            {/* Admin routes */}
-            <Route element={<AdminRoute />}>
+            {/* Admin routes - require admin role */}
+            <Route element={<ProtectedRoute requireAuth={true} requireAdmin={true} redirectTo="/dashboard" />}>
               <Route path="/admin" element={
                 <InvestmentProvider>
                   <AdminDashboard />

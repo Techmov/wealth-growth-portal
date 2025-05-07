@@ -3,7 +3,6 @@ import { createContext, useContext, useEffect, ReactNode, useState } from "react
 import { useAuthController } from "@/hooks/useAuthController";
 import { User } from "@/types";
 import { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
 // Define the type for the authentication context
@@ -44,48 +43,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     deposit,
     loginSuccess,
     resetLoginSuccess,
-    fetchProfile
   } = useAuthController();
 
-  // Effect to monitor and respond to Supabase auth state changes
+  // Effect for debugging auth state
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log("Auth state changed:", event);
-      
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (newSession?.user?.id) {
-          await fetchProfile(newSession.user.id);
-        }
-      }
-      
-      if (event === 'SIGNED_OUT') {
-        console.log("User signed out, clearing data");
-      }
-    });
+    if (session) {
+      console.log("AuthContext: Session active for user:", session.user.email);
+    } else if (!isLoading) {
+      console.log("AuthContext: No active session");
+    }
+  }, [session, isLoading]);
 
-    // Initialize auth state
-    const initializeAuth = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        
-        if (data.session?.user?.id) {
-          await fetchProfile(data.session.user.id);
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-      } finally {
+  // Effect to mark initialization complete
+  useEffect(() => {
+    const markInitialized = () => {
+      // Small delay to ensure all auth state is properly processed
+      const timer = setTimeout(() => {
         setInitialized(true);
-      }
+      }, 500);
+      return () => clearTimeout(timer);
     };
     
-    initializeAuth();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    // Only mark as initialized when loading state has settled
+    if (!isLoading) {
+      markInitialized();
+    }
+  }, [isLoading]);
 
   // Display loading state while initializing
   if (!initialized) {
@@ -93,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-2">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading authentication...</p>
+          <p className="text-sm text-muted-foreground">Initializing authentication...</p>
         </div>
       </div>
     );

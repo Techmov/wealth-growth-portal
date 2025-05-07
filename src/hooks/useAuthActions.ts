@@ -98,9 +98,9 @@ export const useAuthActions = ({
       setIsLoading(true);
       console.log("Logging out user");
       
-      // First clear session and user state to prevent any UI flickers
-      setSession(null);
+      // First clear local state to prevent any UI flickers or redirect loops
       setUser(null);
+      setSession(null);
       
       // Show loading toast while logging out
       const toastId = toast.loading("Logging out...");

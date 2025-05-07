@@ -17,27 +17,31 @@ const LoginPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   
-  const { login, user, isLoading, loginSuccess, resetLoginSuccess } = useAuth();
+  const { login, user, session, isLoading, loginSuccess, resetLoginSuccess } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/dashboard";
 
-  // Effect to handle redirect after successful login
+  // Effect to handle redirect after successful login with a delay to ensure state is properly set
   useEffect(() => {
     if (loginSuccess && !isLoading) {
       console.log("LoginPage: Login success flag detected, navigating to dashboard");
-      resetLoginSuccess();
-      navigate("/dashboard", { replace: true });
+      const redirectTimer = setTimeout(() => {
+        resetLoginSuccess();
+        navigate("/dashboard", { replace: true });
+      }, 200); // Small delay to prevent race conditions
+      
+      return () => clearTimeout(redirectTimer);
     }
   }, [loginSuccess, isLoading, navigate, resetLoginSuccess]);
 
   // Effect to handle already authenticated users
   useEffect(() => {
-    if (user && !isLoading) {
+    if (session && !isLoading) {
       console.log("LoginPage: User already authenticated, redirecting to dashboard");
       navigate("/dashboard", { replace: true });
     }
-  }, [user, isLoading, navigate]);
+  }, [session, isLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

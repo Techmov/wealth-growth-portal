@@ -16,6 +16,7 @@ export const useAuthInitialization = ({
   const initializeAuth = useCallback(async () => {
     try {
       console.log("Initializing auth state...");
+      setIsLoading(true);
       
       // First set up the auth listener BEFORE checking the session
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -24,8 +25,8 @@ export const useAuthInitialization = ({
           setSession(currentSession);
           
           // Only fetch profile if we have a user and it's a SIGNED_IN event
-          if (currentSession?.user && event === 'SIGNED_IN') {
-            console.log("User signed in, fetching profile...");
+          if (currentSession?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+            console.log("User signed in/token refreshed, fetching profile...");
             // Use setTimeout to prevent Supabase auth deadlock
             setTimeout(() => {
               fetchProfile(currentSession.user.id).catch(err => {
@@ -33,7 +34,8 @@ export const useAuthInitialization = ({
                 setIsLoading(false);
               });
             }, 0);
-          } else if (!currentSession) {
+          } else if (!currentSession && event === 'SIGNED_OUT') {
+            console.log("User signed out, clearing loading state");
             // If there's no session, ensure we're not in loading state
             setIsLoading(false);
           }
@@ -53,7 +55,9 @@ export const useAuthInitialization = ({
           console.error("Error fetching profile during initialization:", error);
         } finally {
           // Always ensure loading state is concluded
-          setIsLoading(false);
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 300); // Small delay to prevent race conditions
         }
       } else {
         // No session, so we're not loading anymore

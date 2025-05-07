@@ -36,8 +36,11 @@ export const ProtectedRoute = ({
     );
   }
 
+  // Use session as the single source of truth for authentication
+  const isAuthenticated = !!session;
+
   // If authentication is required and user is not logged in
-  if (requireAuth && !user) {
+  if (requireAuth && !isAuthenticated) {
     console.log("Authentication required but user not logged in - redirecting to login");
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
@@ -49,7 +52,7 @@ export const ProtectedRoute = ({
   }
 
   // If user is logged in but this is a login/signup page, redirect to dashboard
-  if (!requireAuth && user) {
+  if (!requireAuth && isAuthenticated) {
     console.log("User is authenticated and on auth page - redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
