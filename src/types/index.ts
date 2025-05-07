@@ -56,6 +56,7 @@ export interface WithdrawalRequest {
   trc20Address: string;
   txHash?: string;
   rejectionReason?: string;
+  withdrawalSource?: 'profit' | 'referral_bonus';
   // Additional fields for UI display from join queries
   userName?: string;
   username?: string;
@@ -95,4 +96,14 @@ export type User = {
   role?: 'user' | 'admin';
   createdAt: Date;
   username?: string;
+  escrowedAmount?: number;
 };
+
+// New type for withdrawal statistics
+export interface WithdrawalStats {
+  availableWithdrawal: number;
+  profitAmount: number;
+  referralBonus: number;
+  pendingWithdrawals: number;
+  escrowedAmount: number;
+}

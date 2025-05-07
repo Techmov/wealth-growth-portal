@@ -9,6 +9,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { Check, X } from "lucide-react";
 
@@ -23,6 +24,17 @@ export function WithdrawalsTable({
   onApprove,
   onReject
 }: WithdrawalsTableProps) {
+  // Format withdrawal source for display
+  const formatSource = (source?: string) => {
+    if (!source) return "Profit";
+    return source === "profit" ? "Profit" : "Referral Bonus";
+  };
+
+  const getSourceColor = (source?: string) => {
+    if (!source || source === "profit") return "bg-blue-50 text-blue-700";
+    return "bg-green-50 text-green-700";
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -30,6 +42,7 @@ export function WithdrawalsTable({
           <TableHead>User</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Amount</TableHead>
+          <TableHead>Source</TableHead>
           <TableHead>TRC20 Address</TableHead>
           <TableHead>Date</TableHead>
           <TableHead>Actions</TableHead>
@@ -38,7 +51,7 @@ export function WithdrawalsTable({
       <TableBody>
         {withdrawals.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={6} className="text-center py-4">
+            <TableCell colSpan={7} className="text-center py-4">
               No pending withdrawals found
             </TableCell>
           </TableRow>
@@ -50,7 +63,12 @@ export function WithdrawalsTable({
               </TableCell>
               <TableCell>{withdrawal.userEmail || "Unknown"}</TableCell>
               <TableCell className="font-medium">${withdrawal.amount.toFixed(2)}</TableCell>
-              <TableCell className="font-mono text-xs max-w-[160px] truncate">
+              <TableCell>
+                <Badge variant="outline" className={`${getSourceColor(withdrawal.withdrawalSource)}`}>
+                  {formatSource(withdrawal.withdrawalSource)}
+                </Badge>
+              </TableCell>
+              <TableCell className="font-mono text-xs max-w-[120px] truncate">
                 {withdrawal.trc20Address}
               </TableCell>
               <TableCell>{formatDistanceToNow(new Date(withdrawal.date), { addSuffix: true })}</TableCell>

@@ -67,6 +67,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "investments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_withdrawal_stats"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       products: {
@@ -110,6 +117,7 @@ export type Database = {
           balance: number
           created_at: string | null
           email: string
+          escrowed_amount: number | null
           id: string
           name: string
           referral_bonus: number
@@ -128,6 +136,7 @@ export type Database = {
           balance?: number
           created_at?: string | null
           email: string
+          escrowed_amount?: number | null
           id: string
           name: string
           referral_bonus?: number
@@ -146,6 +155,7 @@ export type Database = {
           balance?: number
           created_at?: string | null
           email?: string
+          escrowed_amount?: number | null
           id?: string
           name?: string
           referral_bonus?: number
@@ -167,6 +177,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "user_withdrawal_stats"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -218,6 +235,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_withdrawal_stats"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       withdrawal_requests: {
@@ -230,6 +254,7 @@ export type Database = {
           trc20_address: string
           tx_hash: string | null
           user_id: string
+          withdrawal_source: string | null
         }
         Insert: {
           amount: number
@@ -240,6 +265,7 @@ export type Database = {
           trc20_address: string
           tx_hash?: string | null
           user_id: string
+          withdrawal_source?: string | null
         }
         Update: {
           amount?: number
@@ -250,6 +276,7 @@ export type Database = {
           trc20_address?: string
           tx_hash?: string | null
           user_id?: string
+          withdrawal_source?: string | null
         }
         Relationships: [
           {
@@ -259,13 +286,62 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "withdrawal_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_withdrawal_stats"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      user_withdrawal_stats: {
+        Row: {
+          available_withdrawal: number | null
+          balance: number | null
+          escrowed_amount: number | null
+          pending_withdrawals: number | null
+          profit_amount: number | null
+          referral_bonus: number | null
+          total_invested: number | null
+          total_withdrawn: number | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          available_withdrawal?: never
+          balance?: number | null
+          escrowed_amount?: number | null
+          pending_withdrawals?: never
+          profit_amount?: never
+          referral_bonus?: number | null
+          total_invested?: number | null
+          total_withdrawn?: number | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          available_withdrawal?: never
+          balance?: number | null
+          escrowed_amount?: number | null
+          pending_withdrawals?: never
+          profit_amount?: never
+          referral_bonus?: number | null
+          total_invested?: number | null
+          total_withdrawn?: number | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      calculate_available_withdrawal: {
+        Args: { user_id: string }
+        Returns: number
+      }
       calculate_claimable_profit: {
         Args: { p_investment_id: string }
         Returns: number
@@ -294,6 +370,7 @@ export type Database = {
           balance: number
           created_at: string | null
           email: string
+          escrowed_amount: number | null
           id: string
           name: string
           referral_bonus: number
@@ -353,6 +430,15 @@ export type Database = {
           email: string
           username: string
         }[]
+      }
+      request_withdrawal: {
+        Args: {
+          p_user_id: string
+          p_amount: number
+          p_trc20_address: string
+          p_withdrawal_source: string
+        }
+        Returns: string
       }
     }
     Enums: {

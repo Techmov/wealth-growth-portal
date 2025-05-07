@@ -1,7 +1,8 @@
 
 import { WithdrawalRequest } from "@/types";
 import { formatDistanceToNow } from "date-fns";
-import { Shield } from "lucide-react";
+import { Shield, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface WithdrawalsRequestListProps {
   withdrawalRequests: WithdrawalRequest[];
@@ -43,6 +44,12 @@ export function WithdrawalsRequestList({ withdrawalRequests }: WithdrawalsReques
     }
   };
 
+  // Format withdrawal source for display
+  const formatSource = (source?: string) => {
+    if (!source) return "Profit";
+    return source === "profit" ? "Profit" : "Referral Bonus";
+  };
+
   if (withdrawalRequests.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -65,13 +72,25 @@ export function WithdrawalsRequestList({ withdrawalRequests }: WithdrawalsReques
               <div>
                 <p className="font-medium">
                   Withdrawal Request
+                  <Badge variant="outline" className="ml-2">
+                    {formatSource(request.withdrawalSource)}
+                  </Badge>
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {formatDistanceToNow(new Date(request.date), { addSuffix: true })}
                 </p>
-                <div className="flex items-center mt-1">
-                  <Shield className="h-3 w-3 text-primary/70 mr-1" />
-                  <span className="text-xs text-primary/70">Protected by withdrawal password</span>
+                <div className="flex items-center gap-2 mt-1">
+                  {request.status === "pending" ? (
+                    <div className="flex items-center">
+                      <Clock className="h-3 w-3 text-primary/70 mr-1" />
+                      <span className="text-xs text-primary/70">Processing within 24 hours</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <Shield className="h-3 w-3 text-primary/70 mr-1" />
+                      <span className="text-xs text-primary/70">Protected by withdrawal password</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

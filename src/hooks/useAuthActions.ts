@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService"; 
@@ -207,8 +206,8 @@ export const useAuthActions = ({
     }
   };
 
-  // Request withdrawal function - updated to match the expected parameters
-  const requestWithdrawal = async (amount: number, trc20Address: string, withdrawalPassword?: string) => {
+  // Updated request withdrawal function to work with the new database function
+  const requestWithdrawal = async (amount: number, trc20Address: string, withdrawalSource: 'profit' | 'referral_bonus', withdrawalPassword?: string) => {
     if (!user) {
       toast.error("User not authenticated");
       return Promise.reject(new Error("User not authenticated"));
@@ -224,9 +223,10 @@ export const useAuthActions = ({
       return Promise.reject(new Error("Invalid amount"));
     }
 
-    if (amount > user.balance) {
-      toast.error("Withdrawal amount exceeds your available balance");
-      return Promise.reject(new Error("Insufficient balance"));
+    // Check minimum withdrawal amount
+    if (amount < 10) {
+      toast.error("Minimum withdrawal amount is 10 USDT");
+      return Promise.reject(new Error("Below minimum withdrawal amount"));
     }
 
     // Only check withdrawal password if it's set and required
@@ -236,26 +236,25 @@ export const useAuthActions = ({
     }
 
     try {
-      // Create a withdrawal request in the database
-      const { data, error } = await supabase
-        .from('withdrawal_requests')
-        .insert({
-          user_id: user.id,
-          amount,
-          trc20_address: trc20Address,
-          status: 'pending'
-        })
-        .select('id')
-        .single();
-        
+      // Use the new database function for withdrawal requests
+      const { data, error } = await supabase.rpc(
+        'request_withdrawal',
+        {
+          p_user_id: user.id,
+          p_amount: amount,
+          p_trc20_address: trc20Address,
+          p_withdrawal_source: withdrawalSource
+        }
+      );
+      
       if (error) {
         console.error("Error creating withdrawal request:", error);
-        toast.error("Failed to submit withdrawal request");
+        toast.error(error.message || "Failed to submit withdrawal request");
         return Promise.reject(error);
       }
       
       toast.success("Withdrawal request submitted successfully! It will be processed within 24 hours.");
-      return Promise.resolve(data.id);
+      return Promise.resolve(data);
     } catch (error: any) {
       console.error("Request withdrawal error:", error);
       toast.error(error.message || "Failed to submit withdrawal request");

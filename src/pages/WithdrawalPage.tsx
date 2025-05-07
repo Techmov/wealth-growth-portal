@@ -9,9 +9,11 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { WithdrawalRequest } from "@/types";
 import { ArrowDown } from "lucide-react";
+import { useWithdrawalStats } from "@/hooks/useWithdrawalStats";
 
 const WithdrawalPage = () => {
   const { user, isLoading } = useAuth();
+  const { stats } = useWithdrawalStats(user);
   const navigate = useNavigate();
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(true);
@@ -42,7 +44,8 @@ const WithdrawalPage = () => {
             date: new Date(req.date || Date.now()),
             trc20Address: req.trc20_address,
             txHash: req.tx_hash || undefined,
-            rejectionReason: req.rejection_reason || undefined
+            rejectionReason: req.rejection_reason || undefined,
+            withdrawalSource: req.withdrawal_source as 'profit' | 'referral_bonus' || undefined
           }));
 
           setWithdrawalRequests(formattedRequests);
@@ -100,8 +103,48 @@ const WithdrawalPage = () => {
           icon={<ArrowDown className="h-6 w-6" />}
         />
         
-        <div className="bg-card rounded-lg border p-6 mt-6">
-          <WithdrawalForm />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+          <div className="md:col-span-2">
+            <WithdrawalForm />
+          </div>
+          
+          <div className="bg-card rounded-lg border p-6">
+            <h3 className="text-lg font-semibold mb-4">Withdrawal Summary</h3>
+            
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Available for Withdrawal:</span>
+                <span className="font-bold">${stats.availableWithdrawal.toFixed(2)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm">From Profits:</span>
+                <span>${stats.profitAmount.toFixed(2)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm">From Referrals:</span>
+                <span>${stats.referralBonus.toFixed(2)}</span>
+              </div>
+              
+              <hr className="my-2" />
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Pending Withdrawals:</span>
+                <span>${stats.pendingWithdrawals.toFixed(2)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Escrowed Amount:</span>
+                <span>${stats.escrowedAmount.toFixed(2)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center pt-2 border-t">
+                <span className="text-sm font-medium">Total Withdrawn:</span>
+                <span className="font-bold">${user.totalWithdrawn.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
         </div>
         
         <div className="mt-8 space-y-4">
