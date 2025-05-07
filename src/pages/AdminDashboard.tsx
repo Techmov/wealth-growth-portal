@@ -7,9 +7,10 @@ import { DepositApprovals } from "@/components/admin/deposits/DepositApprovals";
 import { WithdrawalApprovals } from "@/components/admin/withdrawals/WithdrawalApprovals";
 import { InvestmentPlanManagement } from "@/components/admin/investment-plans/InvestmentPlanManagement";
 import { ContentManagement } from "@/components/admin/ContentManagement";
+import { AdminDashboardOverview } from "@/components/admin/dashboard/AdminDashboardOverview";
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [statusChanged, setStatusChanged] = useState(false);
 
   const handleStatusChange = () => {
@@ -23,12 +24,17 @@ const AdminDashboard = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="w-full flex justify-start overflow-x-auto">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="deposits">Deposits</TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
             <TabsTrigger value="plans">Investment Plans</TabsTrigger>
             <TabsTrigger value="content">Content</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="dashboard" className="space-y-4">
+            <AdminDashboardOverview />
+          </TabsContent>
           
           <TabsContent value="users" className="space-y-4">
             <UserManagement />
