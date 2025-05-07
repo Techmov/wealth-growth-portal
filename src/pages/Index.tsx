@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Clock,
   BarChart3,
-  Star
+  Star,
+  Building
 } from "lucide-react";
 import { useState } from "react";
 import { useHomeContent } from "@/hooks/useHomeContent";
@@ -172,7 +173,7 @@ const Index = () => {
                     <div className="space-y-4">
                       <div className="flex items-start gap-4">
                         <div className="w-12 h-12 bg-wealth-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                          <Landmark className="text-wealth-primary" />
+                          <Building className="text-wealth-primary" />
                         </div>
                         <div>
                           <h3 className="text-xl font-bold mb-1">Experienced Team</h3>
