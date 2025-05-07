@@ -5,7 +5,7 @@ import { Heading } from "@/components/ui/heading";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Users, Link, BarChart, TrendingUp, Share, UserPlus } from "lucide-react";
+import { Copy, Users, Link, BarChart, TrendingUp, Share, UserPlus, CheckCircle, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useInvestment } from "@/context/InvestmentContext";
@@ -218,7 +218,7 @@ const ReferralsPage = () => {
           <Card>
             <CardHeader>
               <CardTitle>How It Works</CardTitle>
-              <CardDescription>Learn about our referral program benefits</CardDescription>
+              <CardDescription>Our referral program gives you passive income for every friend who invests</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
@@ -227,9 +227,9 @@ const ReferralsPage = () => {
                     <Link className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-medium">Share Your Link</h3>
+                    <h3 className="font-medium">1. Share Your Unique Link</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Copy your unique referral link and share it with friends, family, or on social media.
+                      Copy your personal referral link and share it with friends, family, or on your social media platforms.
                     </p>
                   </div>
                 </div>
@@ -239,33 +239,33 @@ const ReferralsPage = () => {
                     <UserPlus className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-medium">Friends Sign Up</h3>
+                    <h3 className="font-medium">2. Friends Create Accounts</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      When someone uses your link to register, they are permanently linked as your referral.
+                      When someone uses your link to register, they are permanently recorded as your referral, even if they invest later.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex gap-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <BarChart className="h-5 w-5" />
+                    <DollarSign className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-medium">They Invest</h3>
+                    <h3 className="font-medium">3. Your Referrals Invest</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Every time your referral makes an investment, you earn a commission on that amount.
+                      Every single time your referrals make an investment of any amount, you earn commission – with no limits or caps!
                     </p>
                   </div>
                 </div>
 
                 <div className="flex gap-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <TrendingUp className="h-5 w-5" />
+                    <CheckCircle className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-medium">Earn 5% Commission</h3>
+                    <h3 className="font-medium">4. Earn 5% Commission Instantly</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      You receive 5% of every investment they make, instantly added to your balance.
+                      You automatically receive 5% of every investment amount, instantly deposited to your balance and ready to withdraw anytime.
                     </p>
                   </div>
                 </div>
