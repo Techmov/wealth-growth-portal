@@ -11,95 +11,71 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // Find the product from the database
-      const { data: productData, error: productError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', productId)
-        .single();
+      // Use the server-side procedure to handle investment creation
+      const { data, error } = await supabase.rpc('create_investment', {
+        p_user_id: user.id,
+        p_product_id: productId,
+        p_amount: 0, // Will be determined by the procedure based on product
+        p_end_date: new Date(), // Will be calculated by the procedure
+        p_starting_value: 0, // Will be determined by the procedure
+        p_current_value: 0, // Will be determined by the procedure
+        p_final_value: 0 // Will be determined by the procedure
+      });
 
-      if (productError) {
-        throw new Error("Product not found");
+      if (error) {
+        throw new Error(error.message || "Failed to create investment");
       }
 
-      const product: Product = {
-        id: productData.id,
-        name: productData.name,
-        description: productData.description,
-        amount: productData.amount,
-        duration: productData.duration,
-        growthRate: productData.growth_rate,
-        risk: productData.risk as 'low' | 'medium' | 'high',
-        active: productData.active
-      };
-
-      // Check if user has enough balance
-      if (product.amount > user.balance) {
-        throw new Error("Insufficient balance");
-      }
-
-      // Calculate investment details
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + product.duration);
-      const finalValue = product.amount * 2; // Double the investment amount
-
-      // Create investment record
-      const { data: investmentData, error: investmentError } = await supabase
-        .from('investments')
-        .insert({
-          user_id: user.id,
-          product_id: productId,
-          amount: product.amount,
-          end_date: endDate.toISOString(),
-          starting_value: product.amount,
-          current_value: product.amount,
-          final_value: finalValue,
-          status: 'active'
-        })
-        .select('id')
-        .single();
-
-      if (investmentError) {
-        console.error("Investment error:", investmentError);
-        throw new Error(investmentError.message || "Investment failed");
-      }
-
-      // Create transaction record
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          type: 'investment',
-          amount: -product.amount, // Negative as money is leaving balance
-          status: 'completed',
-          description: `Investment in ${product.name}`
-        });
-
-      if (transactionError) {
-        console.error("Transaction error:", transactionError);
-        // Continue even if transaction record fails
-      }
-
-      // Update user balance
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          balance: user.balance - product.amount,
-          total_invested: user.totalInvested + product.amount
-        })
-        .eq('id', user.id);
-
-      if (profileError) {
-        console.error("Profile update error:", profileError);
-        // Continue even if profile update fails
-      }
-
-      toast.success(`Successfully invested $${product.amount} in ${product.name}`);
-
+      toast.success(`Successfully invested in this product`);
+      return data;
     } catch (error: any) {
       toast.error(error.message || "Investment failed");
       throw error;
+    }
+  };
+
+  // New function to claim profit from an investment
+  const claimProfit = async (investmentId: string) => {
+    if (!user) {
+      toast.error("You must be logged in to claim profit");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('claim_investment_profit', {
+        p_investment_id: investmentId
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to claim profit");
+      }
+
+      toast.success(`Successfully claimed $${data.amount.toFixed(2)} profit`);
+      return data;
+    } catch (error: any) {
+      toast.error(error.message || "Failed to claim profit");
+      throw error;
+    }
+  };
+
+  // Calculate claimable profit amount (for display/preview)
+  const getClaimableProfit = async (investmentId: string) => {
+    if (!user) return 0;
+
+    try {
+      const { data, error } = await supabase.rpc('calculate_claimable_profit', {
+        p_investment_id: investmentId
+      });
+
+      if (error) {
+        console.error("Error calculating claimable profit:", error);
+        return 0;
+      }
+
+      return data || 0;
+    } catch (error) {
+      console.error("Unexpected error calculating profit:", error);
+      return 0;
     }
   };
 
@@ -137,6 +113,8 @@ export function useInvestmentActions(user: User | null) {
 
   return {
     invest,
+    claimProfit,
+    getClaimableProfit,
     getReferralBonus,
     getUserDownlines
   };

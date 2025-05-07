@@ -36,12 +36,13 @@ export function useUserInvestmentData(user: User | null) {
             userId: inv.user_id,
             productId: inv.product_id,
             amount: inv.amount,
-            startDate: new Date(inv.start_date),
+            startDate: new Date(inv.start_date || inv.created_at),
             endDate: new Date(inv.end_date),
             startingValue: inv.starting_value,
             currentValue: inv.current_value,
             finalValue: inv.final_value,
-            status: inv.status as 'active' | 'completed' | 'cancelled'
+            status: inv.status as 'active' | 'completed' | 'cancelled',
+            lastProfitClaimDate: inv.last_profit_claim_date ? new Date(inv.last_profit_claim_date) : undefined
           }));
           
           setUserInvestments(mappedInvestments);
@@ -61,7 +62,7 @@ export function useUserInvestmentData(user: User | null) {
           const mappedTransactions: Transaction[] = transactionsData.map(tx => ({
             id: tx.id,
             userId: tx.user_id,
-            type: tx.type as 'deposit' | 'withdrawal' | 'investment' | 'return' | 'referral',
+            type: tx.type as 'deposit' | 'withdrawal' | 'investment' | 'return' | 'referral' | 'profit',
             amount: tx.amount,
             status: tx.status as 'pending' | 'completed' | 'failed' | 'rejected',
             date: new Date(tx.date || Date.now()),

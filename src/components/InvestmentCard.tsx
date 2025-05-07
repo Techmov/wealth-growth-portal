@@ -2,11 +2,12 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Product, Investment } from "@/types";
+import { Product } from "@/types";
 import { useInvestment } from "@/context/InvestmentContext";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface InvestmentCardProps {
   product: Product;
@@ -32,9 +33,9 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
       setIsInvesting(true);
       await invest(product.id);
       toast.success(`Successfully invested in ${product.name}!`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Investment failed:", error);
-      toast.error("Failed to process investment. Please try again.");
+      toast.error(error.message || "Failed to process investment. Please try again.");
     } finally {
       setIsInvesting(false);
     }
@@ -49,6 +50,8 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
     'medium': 'bg-yellow-100 text-yellow-800',
     'high': 'bg-red-100 text-red-800'
   };
+  
+  const insufficientBalance = user && product.amount > user.balance;
 
   return (
     <Card className="overflow-hidden border-t-4 border-t-wealth-accent hover:shadow-md transition-shadow">
@@ -87,6 +90,15 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
             <div className="text-2xl font-bold">${calculateReturn().toFixed(2)}</div>
           </div>
         </div>
+        
+        {insufficientBalance && (
+          <Alert variant="destructive" className="py-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              Insufficient balance. You need ${product.amount.toFixed(2)} to invest.
+            </AlertDescription>
+          </Alert>
+        )}
       </CardContent>
       <CardFooter>
         <Button 
@@ -99,6 +111,8 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Processing...
             </>
+          ) : insufficientBalance ? (
+            "Deposit Funds"
           ) : (
             "Invest Now"
           )}

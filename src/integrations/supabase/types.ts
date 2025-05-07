@@ -17,6 +17,7 @@ export type Database = {
           end_date: string
           final_value: number
           id: string
+          last_profit_claim_date: string | null
           product_id: string
           start_date: string | null
           starting_value: number
@@ -30,6 +31,7 @@ export type Database = {
           end_date: string
           final_value: number
           id?: string
+          last_profit_claim_date?: string | null
           product_id: string
           start_date?: string | null
           starting_value: number
@@ -43,6 +45,7 @@ export type Database = {
           end_date?: string
           final_value?: number
           id?: string
+          last_profit_claim_date?: string | null
           product_id?: string
           start_date?: string | null
           starting_value?: number
@@ -257,6 +260,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_claimable_profit: {
+        Args: { p_investment_id: string }
+        Returns: number
+      }
+      claim_investment_profit: {
+        Args: { p_investment_id: string }
+        Returns: Json
+      }
       get_admin_plans: {
         Args: Record<PropertyKey, never>
         Returns: {

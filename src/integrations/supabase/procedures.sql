@@ -17,7 +17,22 @@ DECLARE
   v_investment_id UUID;
   v_user_balance NUMERIC;
   v_transaction_id UUID;
+  v_product_record products%ROWTYPE;
 BEGIN
+  -- Fetch the product information
+  SELECT * INTO v_product_record
+  FROM products
+  WHERE id = p_product_id;
+  
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Product not found';
+  END IF;
+  
+  -- Check if product is active
+  IF NOT v_product_record.active THEN
+    RAISE EXCEPTION 'This investment product is not currently available';
+  END IF;
+  
   -- Check if user exists and get current balance
   SELECT balance INTO v_user_balance
   FROM profiles
@@ -28,12 +43,19 @@ BEGIN
   END IF;
   
   -- Check if user has enough balance
-  IF v_user_balance < p_amount THEN
+  IF v_user_balance < v_product_record.amount THEN
     RAISE EXCEPTION 'Insufficient balance';
   END IF;
   
   -- Begin transaction
   BEGIN
+    -- Calculate investment parameters
+    p_amount := v_product_record.amount;
+    p_starting_value := v_product_record.amount;
+    p_current_value := v_product_record.amount;
+    p_end_date := NOW() + (v_product_record.duration * INTERVAL '1 day');
+    p_final_value := v_product_record.amount * 2; -- Double the investment amount
+    
     -- Create new investment
     INSERT INTO investments (
       user_id,
@@ -43,7 +65,8 @@ BEGIN
       starting_value,
       current_value,
       final_value,
-      status
+      status,
+      last_profit_claim_date
     ) VALUES (
       p_user_id,
       p_product_id,
@@ -52,7 +75,8 @@ BEGIN
       p_starting_value,
       p_current_value,
       p_final_value,
-      'active'
+      'active',
+      NOW()
     ) RETURNING id INTO v_investment_id;
     
     -- Create transaction record
@@ -67,7 +91,7 @@ BEGIN
       'investment',
       -p_amount, -- Negative as money is leaving balance
       'completed',
-      'Investment in product ' || p_product_id
+      'Investment in ' || v_product_record.name
     ) RETURNING id INTO v_transaction_id;
     
     -- Update user balance
@@ -104,7 +128,7 @@ DECLARE
 BEGIN
   -- For each active investment
   FOR inv IN 
-    SELECT i.id, i.starting_value, i.start_date, i.end_date, p.growth_rate
+    SELECT i.id, i.starting_value, i.start_date, i.end_date, p.growth_rate, i.last_profit_claim_date
     FROM investments i
     JOIN products p ON i.product_id = p.id
     WHERE i.status = 'active'

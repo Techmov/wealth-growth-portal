@@ -15,6 +15,8 @@ type InvestmentContextType = {
   platformTrc20Address: string;
   isLoading: boolean;
   invest: (productId: string) => Promise<void>;
+  claimProfit: (investmentId: string) => Promise<any>;
+  getClaimableProfit: (investmentId: string) => Promise<number>;
   getReferralBonus: (referralCode: string) => Promise<void>;
   getUserDownlines: () => Downline[];
 };
@@ -33,7 +35,13 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
     withdrawalRequests, 
     isLoading: userDataLoading 
   } = useUserInvestmentData(user);
-  const { invest, getReferralBonus, getUserDownlines } = useInvestmentActions(user);
+  const { 
+    invest, 
+    claimProfit, 
+    getClaimableProfit,
+    getReferralBonus, 
+    getUserDownlines 
+  } = useInvestmentActions(user);
 
   // Combine loading states
   const isLoading = productsLoading || userDataLoading;
@@ -48,6 +56,8 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
       platformTrc20Address,
       isLoading,
       invest, 
+      claimProfit,
+      getClaimableProfit,
       getReferralBonus,
       getUserDownlines
     }}>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/StatCard";
 import { TransactionsList } from "@/components/TransactionsList";
 import { Transaction, Investment } from "@/types";
+import { ActiveInvestmentCard } from "@/components/ActiveInvestmentCard";
 import {
   Wallet,
   ArrowDown,
@@ -19,34 +20,6 @@ import {
   ArrowRight,
   CircleDollarSign,
 } from "lucide-react";
-
-// New component for investment item to reduce complexity
-const InvestmentItem = ({ investment, product }: { investment: Investment, product: any }) => {
-  return (
-    <div className="border rounded-lg p-4">
-      <div className="flex justify-between mb-2">
-        <h3 className="font-medium">{product?.name || "Investment"}</h3>
-        <span className="text-sm bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-          Active
-        </span>
-      </div>
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Invested Amount:</span>
-          <span>${investment.amount.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Current Value:</span>
-          <span>${investment.currentValue.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">End Date:</span>
-          <span>{new Date(investment.endDate).toLocaleDateString()}</span>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const Dashboard = () => {
   const { user, isLoading: authLoading } = useAuth();
@@ -165,7 +138,7 @@ const Dashboard = () => {
                     const investmentProduct = products?.find(p => p.id === investment.productId);
                     
                     return (
-                      <InvestmentItem 
+                      <ActiveInvestmentCard 
                         key={investment.id}
                         investment={investment}
                         product={investmentProduct}

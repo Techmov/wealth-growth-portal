@@ -28,13 +28,14 @@ export interface Investment {
   currentValue: number;
   finalValue: number;
   status: 'active' | 'completed' | 'cancelled';
+  lastProfitClaimDate?: Date;
 }
 
 // Transaction type from Supabase
 export interface Transaction {
   id: string;
   userId: string;
-  type: 'deposit' | 'withdrawal' | 'investment' | 'return' | 'referral';
+  type: 'deposit' | 'withdrawal' | 'investment' | 'return' | 'referral' | 'profit';
   amount: number;
   status: 'pending' | 'completed' | 'failed' | 'rejected';
   date: Date;
