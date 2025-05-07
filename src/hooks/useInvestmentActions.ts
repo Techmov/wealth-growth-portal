@@ -11,7 +11,7 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // Call the Edge Function instead of directly using RPC
+      // Call the Edge Function with properly structured parameters
       const { data, error } = await supabase.functions.invoke('create-investment', {
         body: { 
           userId: user.id,
