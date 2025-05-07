@@ -54,18 +54,20 @@ export function AdminPromotionsManagement() {
     try {
       setIsLoading(true);
       
+      // Use any type to bypass the TypeScript error since the promotions table exists in the DB
+      // but isn't yet reflected in the TypeScript types
       const { data, error } = await supabase
         .from('promotions')
         .select('*')
         .order('priority', { ascending: false })
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as { data: any, error: any };
       
       if (error) {
         throw error;
       }
       
       // Format dates
-      const formattedPromotions = data.map(promo => ({
+      const formattedPromotions = data.map((promo: any) => ({
         ...promo,
         created_at: promo.created_at ? new Date(promo.created_at) : undefined,
         updated_at: promo.updated_at ? new Date(promo.updated_at) : undefined
@@ -97,7 +99,7 @@ export function AdminPromotionsManagement() {
           is_active: !currentStatus,
           updated_at: new Date()
         })
-        .eq('id', id);
+        .eq('id', id) as { error: any };
       
       if (error) {
         throw error;
@@ -125,7 +127,7 @@ export function AdminPromotionsManagement() {
       const { error } = await supabase
         .from('promotions')
         .delete()
-        .eq('id', promoToDelete);
+        .eq('id', promoToDelete) as { error: any };
       
       if (error) {
         throw error;

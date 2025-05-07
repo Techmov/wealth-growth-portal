@@ -22,7 +22,7 @@ export const useHomeContent = () => {
           .select('*')
           .eq('is_active', true)
           .order('priority', { ascending: false })
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false }) as { data: any, error: any };
 
         if (promotionsError) {
           throw new Error(`Error fetching promotions: ${promotionsError.message}`);
@@ -34,7 +34,7 @@ export const useHomeContent = () => {
           .select('*')
           .eq('is_active', true)
           .order('priority', { ascending: false })
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false }) as { data: any, error: any };
 
         if (offersError) {
           throw new Error(`Error fetching offers: ${offersError.message}`);
@@ -46,14 +46,14 @@ export const useHomeContent = () => {
           .select('*')
           .eq('is_active', true)
           .order('priority', { ascending: false })
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false }) as { data: any, error: any };
 
         if (featuresError) {
           throw new Error(`Error fetching features: ${featuresError.message}`);
         }
         
         // Format dates for offers
-        const formattedOffers = offersData.map(offer => ({
+        const formattedOffers = offersData.map((offer: any) => ({
           ...offer,
           start_date: offer.start_date ? new Date(offer.start_date) : undefined,
           end_date: offer.end_date ? new Date(offer.end_date) : undefined,
@@ -62,14 +62,14 @@ export const useHomeContent = () => {
         }));
 
         // Format dates for promotions
-        const formattedPromotions = promotionsData.map(promo => ({
+        const formattedPromotions = promotionsData.map((promo: any) => ({
           ...promo,
           created_at: promo.created_at ? new Date(promo.created_at) : undefined,
           updated_at: promo.updated_at ? new Date(promo.updated_at) : undefined
         }));
 
         // Format dates for features
-        const formattedFeatures = featuresData.map(feature => ({
+        const formattedFeatures = featuresData.map((feature: any) => ({
           ...feature,
           created_at: feature.created_at ? new Date(feature.created_at) : undefined,
           updated_at: feature.updated_at ? new Date(feature.updated_at) : undefined

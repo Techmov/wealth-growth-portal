@@ -77,7 +77,7 @@ export function PromoFormDialog({
             ...formData,
             updated_at: now
           })
-          .eq('id', promotion.id);
+          .eq('id', promotion.id) as { error: any };
         
         if (error) throw error;
         toast.success("Promotion updated successfully");
@@ -89,7 +89,7 @@ export function PromoFormDialog({
             ...formData,
             created_at: now,
             updated_at: now
-          });
+          }) as { error: any };
         
         if (error) throw error;
         toast.success("Promotion created successfully");
