@@ -40,13 +40,13 @@ const DepositPage = () => {
             return;
           }
 
-          // Format the deposits with proper type casting for the transaction type
+          // Format the deposits with proper type casting for the transaction type and status
           const formattedDeposits: Transaction[] = data.map(tx => ({
             id: tx.id,
             userId: tx.user_id,
             amount: tx.amount,
             type: tx.type as "deposit" | "withdrawal" | "investment" | "return" | "referral" | "profit",
-            status: tx.status,
+            status: tx.status as "pending" | "completed" | "failed" | "rejected",
             date: new Date(tx.date || Date.now()),
             description: tx.description || undefined,
             txHash: tx.tx_hash || undefined
