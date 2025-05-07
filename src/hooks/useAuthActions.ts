@@ -206,7 +206,7 @@ export const useAuthActions = ({
     }
   };
 
-  // Updated request withdrawal function to work with the new database function
+  // Updated request withdrawal function to work with the new database function and withdrawal source parameter
   const requestWithdrawal = async (amount: number, trc20Address: string, withdrawalSource: 'profit' | 'referral_bonus', withdrawalPassword?: string) => {
     if (!user) {
       toast.error("User not authenticated");

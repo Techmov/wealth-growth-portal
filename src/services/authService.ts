@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { LoginCredentials, SignupCredentials } from "@/types/auth";
 
@@ -154,26 +153,30 @@ export const deposit = async (userId: string, amount: number, txHash: string) =>
   }
 };
 
-// Fix the withdrawal request function to include trc20Address parameter
-export const requestWithdrawal = async (userId: string, amount: number, trc20Address: string) => {
+// Update the withdrawal request function to include withdrawal source parameter
+export const requestWithdrawal = async (
+  userId: string, 
+  amount: number, 
+  trc20Address: string,
+  withdrawalSource: 'profit' | 'referral_bonus' = 'profit'
+) => {
   try {
-    // Create a withdrawal request record
-    const { data, error } = await supabase
-      .from('withdrawal_requests')
-      .insert({
-        user_id: userId,
-        amount,
-        status: 'pending',
-        trc20_address: trc20Address
-      })
-      .select('id')
-      .single();
+    // Use the new database function for withdrawal requests
+    const { data, error } = await supabase.rpc(
+      'request_withdrawal',
+      {
+        p_user_id: userId,
+        p_amount: amount,
+        p_trc20_address: trc20Address,
+        p_withdrawal_source: withdrawalSource
+      }
+    );
       
     if (error) {
       return Promise.reject(error);
     }
     
-    return Promise.resolve(data.id);
+    return Promise.resolve(data);
   } catch (error) {
     return Promise.reject(error);
   }
