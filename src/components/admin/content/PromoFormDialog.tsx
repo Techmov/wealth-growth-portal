@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { db } from "@/utils/dbTypes";
 
 interface PromoFormDialogProps {
   open: boolean;
@@ -71,34 +72,31 @@ export function PromoFormDialog({
       
       if (promotion?.id) {
         // Update existing promotion
-        const dataToUpdate: Partial<Promotion> = {
+        const dataToUpdate: Partial<Promotion> & { title: string, description: string } = {
           ...formData,
           id: promotion.id,
-          title: formData.title,          // Ensure required fields are included
-          description: formData.description, // Ensure required fields are included
+          title: formData.title!,          // Required field
+          description: formData.description!, // Required field
           updated_at: now
         };
         
-        const { error } = await supabase
-          .from('promotions')
-          .update(dataToUpdate)
-          .eq('id', promotion.id);
+        // Update using our typed db helper
+        const { error } = await db.promotions.update(dataToUpdate);
         
         if (error) throw error;
         toast.success("Promotion updated successfully");
       } else {
         // Create new promotion
-        const dataToInsert: Partial<Promotion> = {
+        const dataToInsert: Partial<Promotion> & { title: string, description: string } = {
           ...formData,
-          title: formData.title!,          // Ensure required fields are included
-          description: formData.description!, // Ensure required fields are included
+          title: formData.title!,          // Required field
+          description: formData.description!, // Required field
           created_at: now,
           updated_at: now
         };
         
-        const { error } = await supabase
-          .from('promotions')
-          .insert(dataToInsert);
+        // Insert using our typed db helper
+        const { error } = await db.promotions.insert(dataToInsert);
         
         if (error) throw error;
         toast.success("Promotion created successfully");

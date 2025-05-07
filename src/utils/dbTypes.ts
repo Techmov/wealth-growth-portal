@@ -22,37 +22,30 @@ export const db = {
     
     /**
      * Insert a promotion with proper typing
+     * Ensures required fields are present
      */
-    insert: (promotion: Partial<Promotion>) => {
-      // Validate required fields for insert
+    insert: (promotion: Partial<Promotion> & { title: string, description: string }) => {
+      // Additional validation check for safety
       if (!promotion.title || !promotion.description) {
         throw new Error('Title and description are required for promotions');
       }
       
-      const promotionToInsert = { 
-        ...promotion,
-        // Ensure we're sending correct types to the database
-        title: promotion.title,
-        description: promotion.description
-      };
-      
-      return supabase.from('promotions').insert(promotionToInsert);
+      return supabase.from('promotions').insert(promotion);
     },
     
     /**
      * Update a promotion with proper typing
+     * Ensures required fields are present
      */
-    update: (promotion: Partial<Promotion>) => {
+    update: (promotion: Partial<Promotion> & { title: string, description: string }) => {
       // Ensure we have an ID for updates
       if (!promotion.id) {
         throw new Error('ID is required for updating a promotion');
       }
       
-      const promotionToUpdate = { ...promotion };
-      
       return supabase
         .from('promotions')
-        .update(promotionToUpdate)
+        .update(promotion)
         .eq('id', promotion.id);
     },
     
@@ -78,37 +71,30 @@ export const db = {
     
     /**
      * Insert an offer with proper typing
+     * Ensures required fields are present
      */
-    insert: (offer: Partial<Offer>) => {
-      // Validate required fields for insert
+    insert: (offer: Partial<Offer> & { title: string, description: string }) => {
+      // Additional validation check for safety
       if (!offer.title || !offer.description) {
         throw new Error('Title and description are required for offers');
       }
       
-      const offerToInsert = { 
-        ...offer,
-        // Ensure we're sending correct types to the database
-        title: offer.title,
-        description: offer.description
-      };
-      
-      return supabase.from('offers').insert(offerToInsert);
+      return supabase.from('offers').insert(offer);
     },
     
     /**
      * Update an offer with proper typing
+     * Ensures required fields are present
      */
-    update: (offer: Partial<Offer>) => {
+    update: (offer: Partial<Offer> & { title: string, description: string }) => {
       // Ensure we have an ID for updates
       if (!offer.id) {
         throw new Error('ID is required for updating an offer');
       }
       
-      const offerToUpdate = { ...offer };
-      
       return supabase
         .from('offers')
-        .update(offerToUpdate)
+        .update(offer)
         .eq('id', offer.id);
     },
     
@@ -134,38 +120,30 @@ export const db = {
     
     /**
      * Insert a feature with proper typing
+     * Ensures required fields are present
      */
-    insert: (feature: Partial<Feature>) => {
-      // Validate required fields for insert
+    insert: (feature: Partial<Feature> & { title: string, description: string, icon_name: string }) => {
+      // Additional validation check for safety
       if (!feature.title || !feature.description || !feature.icon_name) {
         throw new Error('Title, description, and icon_name are required for features');
       }
       
-      const featureToInsert = { 
-        ...feature,
-        // Ensure we're sending correct types to the database
-        title: feature.title,
-        description: feature.description,
-        icon_name: feature.icon_name
-      };
-      
-      return supabase.from('features').insert(featureToInsert);
+      return supabase.from('features').insert(feature);
     },
     
     /**
      * Update a feature with proper typing
+     * Ensures required fields are present
      */
-    update: (feature: Partial<Feature>) => {
+    update: (feature: Partial<Feature> & { title: string, description: string, icon_name: string }) => {
       // Ensure we have an ID for updates
       if (!feature.id) {
         throw new Error('ID is required for updating a feature');
       }
       
-      const featureToUpdate = { ...feature };
-      
       return supabase
         .from('features')
-        .update(featureToUpdate)
+        .update(feature)
         .eq('id', feature.id);
     },
     

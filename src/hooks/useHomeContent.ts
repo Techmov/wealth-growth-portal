@@ -54,9 +54,10 @@ export const useHomeContent = () => {
         }
         
         // Format data with proper typing
-        const formattedPromotions = (promotionsData || []) as Promotion[];
-        const formattedOffers = (offersData || []) as Offer[];
-        const formattedFeatures = (featuresData || []) as Feature[];
+        // Use as Promotion[] to tell TypeScript these objects match our interface
+        const formattedPromotions = (promotionsData || []).map(promo => formatDates(promo)) as Promotion[];
+        const formattedOffers = (offersData || []).map(offer => formatDates(offer)) as Offer[];
+        const formattedFeatures = (featuresData || []).map(feature => formatDates(feature)) as Feature[];
         
         setPromotions(formattedPromotions);
         setOffers(formattedOffers);
