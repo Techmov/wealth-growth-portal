@@ -22,7 +22,7 @@ BEGIN
   -- Fetch the product information
   SELECT * INTO v_product_record
   FROM products
-  WHERE id = p_product_id::UUID; -- Explicit cast to UUID
+  WHERE id = p_product_id; -- Parameter is already UUID type
   
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Product not found';
@@ -69,7 +69,7 @@ BEGIN
       last_profit_claim_date
     ) VALUES (
       p_user_id,
-      p_product_id::UUID,
+      p_product_id,
       p_amount,
       p_end_date,
       p_starting_value,

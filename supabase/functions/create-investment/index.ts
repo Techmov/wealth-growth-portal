@@ -43,8 +43,8 @@ serve(async (req) => {
       }
     );
 
-    // Use supabaseClient with admin privileges to call the database function
-    // Cast product_id explicitly to UUID type in the function call
+    // Call the database function with proper parameter handling
+    // Pass productId as-is, the database function will handle it
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
       p_product_id: productId,
