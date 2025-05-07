@@ -8,23 +8,49 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/StatCard";
 import { TransactionsList } from "@/components/TransactionsList";
-import { InvestmentCard } from "@/components/InvestmentCard";
-import { Transaction } from "@/types";
+import { Transaction, Investment } from "@/types";
 import {
   Wallet,
   ArrowDown,
   ArrowUp,
   BarChart2,
   TrendingUp,
-  User,
   Gift,
   ArrowRight,
   CircleDollarSign,
 } from "lucide-react";
 
+// New component for investment item to reduce complexity
+const InvestmentItem = ({ investment, product }: { investment: Investment, product: any }) => {
+  return (
+    <div className="border rounded-lg p-4">
+      <div className="flex justify-between mb-2">
+        <h3 className="font-medium">{product?.name || "Investment"}</h3>
+        <span className="text-sm bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+          Active
+        </span>
+      </div>
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Invested Amount:</span>
+          <span>${investment.amount.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Current Value:</span>
+          <span>${investment.currentValue.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">End Date:</span>
+          <span>{new Date(investment.endDate).toLocaleDateString()}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
-  const { user, isLoading } = useAuth();
-  const { products, userInvestments: investments, transactions } = useInvestment();
+  const { user, isLoading: authLoading } = useAuth();
+  const { products, userInvestments, transactions, isLoading: investmentLoading } = useInvestment();
   const navigate = useNavigate();
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
@@ -38,7 +64,7 @@ const Dashboard = () => {
     }
   }, [transactions]);
 
-  if (isLoading) {
+  if (authLoading || investmentLoading) {
     return <div className="flex justify-center items-center min-h-screen">
       <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
     </div>;
@@ -50,7 +76,7 @@ const Dashboard = () => {
   }
 
   // Guard against undefined investments array
-  const activeInvestments = investments?.filter(inv => inv.status === 'active') || [];
+  const activeInvestments = userInvestments?.filter(inv => inv.status === 'active') || [];
   
   // Calculate total invested amount
   const totalInvested = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
@@ -137,31 +163,13 @@ const Dashboard = () => {
                   {activeInvestments.slice(0, 2).map(investment => {
                     // Find matching product for this investment
                     const investmentProduct = products?.find(p => p.id === investment.productId);
-                    if (!investmentProduct) return null;
                     
                     return (
-                      <div key={investment.id} className="border rounded-lg p-4">
-                        <div className="flex justify-between mb-2">
-                          <h3 className="font-medium">{investmentProduct.name}</h3>
-                          <span className="text-sm bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                            Active
-                          </span>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Invested Amount:</span>
-                            <span>${investment.amount.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Current Value:</span>
-                            <span>${investment.currentValue.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">End Date:</span>
-                            <span>{new Date(investment.endDate).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </div>
+                      <InvestmentItem 
+                        key={investment.id}
+                        investment={investment}
+                        product={investmentProduct}
+                      />
                     );
                   })}
                   

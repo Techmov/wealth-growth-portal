@@ -47,7 +47,7 @@ export function InvestmentPlanForm({ product, onSuccess, onCancel }: InvestmentP
       };
 
       let result;
-      if (isEditing) {
+      if (isEditing && product.id) {
         result = await supabase
           .from('products')
           .update(productData)

@@ -55,6 +55,10 @@ export interface WithdrawalRequest {
   trc20Address: string;
   txHash?: string;
   rejectionReason?: string;
+  // Additional fields for UI display from join queries
+  userName?: string;
+  username?: string;
+  userEmail?: string;
 }
 
 // Helper types for UI components

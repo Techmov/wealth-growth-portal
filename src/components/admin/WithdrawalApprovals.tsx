@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { WithdrawalRequest } from "@/types";
@@ -72,7 +73,7 @@ export function WithdrawalApprovals() {
           trc20Address: item.trc20_address || "",
           txHash: item.tx_hash || undefined,
           rejectionReason: item.rejection_reason || undefined,
-          // @ts-ignore - Adding these fields for display
+          // Adding profile data
           userName: item.profiles?.name || "Unknown",
           userEmail: item.profiles?.email || "",
           username: item.profiles?.username || ""

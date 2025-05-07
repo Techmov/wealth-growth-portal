@@ -10,10 +10,9 @@ import { Loader2 } from "lucide-react";
 
 interface InvestmentCardProps {
   product: Product;
-  investment?: Investment;
 }
 
-export function InvestmentCard({ product, investment }: InvestmentCardProps) {
+export function InvestmentCard({ product }: InvestmentCardProps) {
   const [isInvesting, setIsInvesting] = useState(false);
   const { invest } = useInvestment();
   const { user } = useAuth();

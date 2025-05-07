@@ -13,7 +13,7 @@ interface StatCardProps {
   className?: string;
   valueClassName?: string;
   isGrowing?: boolean;
-  onAction?: () => void; // Adding onAction prop
+  onAction?: () => void; // Added onAction prop
 }
 
 export function StatCard({
@@ -29,7 +29,10 @@ export function StatCard({
   onAction
 }: StatCardProps) {
   return (
-    <Card className={cn("overflow-hidden", className, onAction && "cursor-pointer")} onClick={onAction}>
+    <Card 
+      className={cn("overflow-hidden", className, onAction && "cursor-pointer")} 
+      onClick={onAction}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {icon && <div className="text-muted-foreground">{icon}</div>}
