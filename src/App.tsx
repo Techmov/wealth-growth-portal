@@ -10,6 +10,7 @@ import {
 import { supabase } from "./integrations/supabase/client";
 import { AuthProvider } from "./context/AuthContext";
 import { InvestmentProvider } from "./context/InvestmentContext";
+import { ThemeProvider } from "./components/ThemeProvider";
 import { Toaster } from "sonner";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
@@ -26,7 +27,6 @@ import NotFound from "./pages/NotFound";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { useAuth } from "./context/AuthContext";
 import { initializeRealtimeSubscriptions } from "./integrations/supabase/realtime";
-import { toast } from "sonner";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 // Add component for admin redirection
@@ -76,59 +76,61 @@ function App() {
   }
 
   return (
-    <AuthProvider>
-      <Router>
-        <Toaster position="top-right" richColors />
-        <Routes>
-          <Route path="/" element={<Index />} />
-          
-          {/* Public routes - redirect to dashboard if authenticated */}
-          <Route element={<ProtectedRoute requireAuth={false} redirectTo="/dashboard" />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-          </Route>
-          
-          {/* Protected routes - require authentication */}
-          <Route element={<ProtectedRoute requireAuth={true} redirectTo="/login" />}>
-            {/* User routes - wrapped with InvestmentProvider */}
-            <Route element={
-              <InvestmentProvider>
-                <Outlet />
-                <AdminRedirect />
-              </InvestmentProvider>
-            }>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/investments" element={<InvestmentsPage />} />
-              <Route path="/transactions" element={<TransactionsPage />} />
-              <Route path="/deposit" element={<DepositPage />} />
-              <Route path="/withdraw" element={<WithdrawalPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/referrals" element={<ReferralsPage />} />
-              <Route path="/change-password" element={<ChangePasswordPage />} />
-              
-              {/* Redirect old withdrawal route to the withdrawal page */}
-              <Route path="/withdrawal" element={<Navigate to="/withdraw" replace />} />
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <AuthProvider>
+        <Router>
+          <Toaster position="top-right" richColors />
+          <Routes>
+            <Route path="/" element={<Index />} />
+            
+            {/* Public routes - redirect to dashboard if authenticated */}
+            <Route element={<ProtectedRoute requireAuth={false} redirectTo="/dashboard" />}>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
             </Route>
             
-            {/* Admin routes - require admin role */}
-            <Route element={<ProtectedRoute requireAuth={true} requireAdmin={true} redirectTo="/dashboard" />}>
-              <Route path="/admin" element={
+            {/* Protected routes - require authentication */}
+            <Route element={<ProtectedRoute requireAuth={true} redirectTo="/login" />}>
+              {/* User routes - wrapped with InvestmentProvider */}
+              <Route element={
                 <InvestmentProvider>
-                  <AdminDashboard />
+                  <Outlet />
+                  <AdminRedirect />
                 </InvestmentProvider>
-              } />
-              <Route path="/admin/dashboard" element={
-                <InvestmentProvider>
-                  <AdminDashboard />
-                </InvestmentProvider>
-              } />
+              }>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/investments" element={<InvestmentsPage />} />
+                <Route path="/transactions" element={<TransactionsPage />} />
+                <Route path="/deposit" element={<DepositPage />} />
+                <Route path="/withdraw" element={<WithdrawalPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/referrals" element={<ReferralsPage />} />
+                <Route path="/change-password" element={<ChangePasswordPage />} />
+                
+                {/* Redirect old withdrawal route to the withdrawal page */}
+                <Route path="/withdrawal" element={<Navigate to="/withdraw" replace />} />
+              </Route>
+              
+              {/* Admin routes - require admin role */}
+              <Route element={<ProtectedRoute requireAuth={true} requireAdmin={true} redirectTo="/dashboard" />}>
+                <Route path="/admin" element={
+                  <InvestmentProvider>
+                    <AdminDashboard />
+                  </InvestmentProvider>
+                } />
+                <Route path="/admin/dashboard" element={
+                  <InvestmentProvider>
+                    <AdminDashboard />
+                  </InvestmentProvider>
+                } />
+              </Route>
             </Route>
-          </Route>
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

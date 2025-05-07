@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
+import { ModeToggle } from "@/components/ModeToggle";
 import { 
   NavigationMenu, NavigationMenuLink, NavigationMenuList, NavigationMenuItem,
   navigationMenuTriggerStyle
@@ -111,6 +112,8 @@ export function Header() {
               </NavigationMenuList>
             </NavigationMenu>
 
+            <ModeToggle />
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -149,7 +152,8 @@ export function Header() {
             </DropdownMenu>
           </div>
         ) : (
-          <div className="hidden md:flex gap-4">
+          <div className="hidden md:flex gap-4 items-center">
+            <ModeToggle />
             <Link to="/login">
               <Button variant="outline">Login</Button>
             </Link>
@@ -160,7 +164,9 @@ export function Header() {
         )}
 
         {/* Mobile Navigation */}
-        <div className="md:hidden flex items-center">
+        <div className="md:hidden flex items-center gap-2">
+          <ModeToggle />
+          
           {user ? (
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
