@@ -11,14 +11,35 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // Instead of using RPC, we'll use an insert directly
+      // First, get the product details to calculate the initial values
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('amount, duration, growth_rate')
+        .eq('id', productId)
+        .single();
+
+      if (productError || !product) {
+        throw new Error(productError?.message || "Product not found");
+      }
+
+      // Calculate end date based on product duration
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + product.duration);
+
+      // Now insert with all required fields
       const { data, error } = await supabase
         .from('investments')
         .insert({
           user_id: user.id,
           product_id: productId,
+          amount: product.amount,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+          starting_value: product.amount,
+          current_value: product.amount,
+          final_value: product.amount * 2, // Assuming 100% return as mentioned in UI
           status: 'active'
-          // The database trigger will handle the other fields
         })
         .select()
         .single();
