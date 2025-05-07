@@ -36,6 +36,7 @@ export const useAuthController = () => {
     deposit
   } = useAuthActions({
     user,
+    setUser, // Add the missing setUser parameter
     setIsLoading, 
     setSession,
     fetchProfile,

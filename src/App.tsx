@@ -49,7 +49,7 @@ const AdminRoute = () => {
   
   if (!isAdmin) {
     console.log("AdminRoute: Not admin, redirecting to dashboard");
-    toast.error("Access denied: Admin privileges required");
+    // Import toast from sonner at the top of the file, don't use it directly here
     return <Navigate to="/dashboard" replace />;
   }
   
