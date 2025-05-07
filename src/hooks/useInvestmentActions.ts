@@ -11,7 +11,7 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // Ensure productId is passed as a string - the Edge Function and database function will handle UUID conversion
+      // Pass productId directly as a string without any manipulation
       const { data, error } = await supabase.functions.invoke('create-investment', {
         body: { 
           userId: user.id,
