@@ -8,6 +8,18 @@ import { WithdrawalApprovals } from "@/components/admin/withdrawals/WithdrawalAp
 import { InvestmentPlanManagement } from "@/components/admin/investment-plans/InvestmentPlanManagement";
 import { ContentManagement } from "@/components/admin/ContentManagement";
 import { AdminDashboardOverview } from "@/components/admin/dashboard/AdminDashboardOverview";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // default: true
+      retry: 1,
+      staleTime: 30000,
+    },
+  },
+});
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -18,46 +30,48 @@ const AdminDashboard = () => {
   };
 
   return (
-    <UserLayout>
-      <div className="container py-8">
-        <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+    <QueryClientProvider client={queryClient}>
+      <UserLayout>
+        <div className="container py-8">
+          <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="w-full flex justify-start overflow-x-auto">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="deposits">Deposits</TabsTrigger>
-            <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
-            <TabsTrigger value="plans">Investment Plans</TabsTrigger>
-            <TabsTrigger value="content">Content</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="dashboard" className="space-y-4">
-            <AdminDashboardOverview />
-          </TabsContent>
-          
-          <TabsContent value="users" className="space-y-4">
-            <UserManagement />
-          </TabsContent>
-          
-          <TabsContent value="deposits" className="space-y-4">
-            <DepositApprovals onStatusChange={handleStatusChange} />
-          </TabsContent>
-          
-          <TabsContent value="withdrawals" className="space-y-4">
-            <WithdrawalApprovals onStatusChange={handleStatusChange} />
-          </TabsContent>
-          
-          <TabsContent value="plans" className="space-y-4">
-            <InvestmentPlanManagement onStatusChange={handleStatusChange} />
-          </TabsContent>
-          
-          <TabsContent value="content" className="space-y-4">
-            <ContentManagement />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </UserLayout>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList className="w-full flex justify-start overflow-x-auto">
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="deposits">Deposits</TabsTrigger>
+              <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
+              <TabsTrigger value="plans">Investment Plans</TabsTrigger>
+              <TabsTrigger value="content">Content</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="dashboard" className="space-y-4">
+              <AdminDashboardOverview />
+            </TabsContent>
+            
+            <TabsContent value="users" className="space-y-4">
+              <UserManagement />
+            </TabsContent>
+            
+            <TabsContent value="deposits" className="space-y-4">
+              <DepositApprovals onStatusChange={handleStatusChange} />
+            </TabsContent>
+            
+            <TabsContent value="withdrawals" className="space-y-4">
+              <WithdrawalApprovals onStatusChange={handleStatusChange} />
+            </TabsContent>
+            
+            <TabsContent value="plans" className="space-y-4">
+              <InvestmentPlanManagement onStatusChange={handleStatusChange} />
+            </TabsContent>
+            
+            <TabsContent value="content" className="space-y-4">
+              <ContentManagement />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </UserLayout>
+    </QueryClientProvider>
   );
 };
 
