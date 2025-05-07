@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -64,10 +63,10 @@ export function AdminPromotionsManagement() {
         throw error;
       }
       
-      // Get the data with the proper type
-      const formattedPromotions = data || [];
+      // Cast the data to the correct type
+      const formattedPromotions = (data || []) as Promotion[];
       
-      setPromotions(formattedPromotions as Promotion[]);
+      setPromotions(formattedPromotions);
     } catch (error: any) {
       toast.error(`Error fetching promotions: ${error.message}`);
     } finally {
@@ -147,7 +146,10 @@ export function AdminPromotionsManagement() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Manage Promotions</h2>
-        <Button onClick={handleAdd}>
+        <Button onClick={() => {
+          setSelectedPromotion(null);
+          setIsFormOpen(true);
+        }}>
           <Plus className="mr-2 h-4 w-4" /> Add New Promotion
         </Button>
       </div>
@@ -160,7 +162,10 @@ export function AdminPromotionsManagement() {
         ) : promotions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center px-4">
             <p className="text-muted-foreground mb-4">No promotions found. Create your first promotion to showcase on the homepage.</p>
-            <Button onClick={handleAdd}>
+            <Button onClick={() => {
+              setSelectedPromotion(null);
+              setIsFormOpen(true);
+            }}>
               <Plus className="mr-2 h-4 w-4" /> Add New Promotion
             </Button>
           </div>
@@ -235,7 +240,23 @@ export function AdminPromotionsManagement() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={() => {
+              if (promoToDelete) {
+                supabase
+                  .from('promotions')
+                  .delete()
+                  .eq('id', promoToDelete)
+                  .then(({ error }) => {
+                    if (error) {
+                      toast.error(`Error deleting promotion: ${error.message}`);
+                    } else {
+                      toast.success("Promotion deleted successfully");
+                      setPromotions(promotions.filter(promo => promo.id !== promoToDelete));
+                    }
+                    setPromoToDelete(null);
+                  });
+              }
+            }}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -245,7 +266,11 @@ export function AdminPromotionsManagement() {
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         promotion={selectedPromotion}
-        onSuccess={handleFormSuccess}
+        onSuccess={() => {
+          setIsFormOpen(false);
+          setSelectedPromotion(null);
+          fetchPromotions();
+        }}
       />
     </div>
   );

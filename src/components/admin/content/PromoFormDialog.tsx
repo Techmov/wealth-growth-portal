@@ -71,25 +71,34 @@ export function PromoFormDialog({
       
       if (promotion?.id) {
         // Update existing promotion
+        const dataToUpdate: Partial<Promotion> = {
+          ...formData,
+          id: promotion.id,
+          title: formData.title,          // Ensure required fields are included
+          description: formData.description, // Ensure required fields are included
+          updated_at: now
+        };
+        
         const { error } = await supabase
           .from('promotions')
-          .update({
-            ...formData,
-            updated_at: now
-          })
+          .update(dataToUpdate)
           .eq('id', promotion.id);
         
         if (error) throw error;
         toast.success("Promotion updated successfully");
       } else {
         // Create new promotion
+        const dataToInsert: Partial<Promotion> = {
+          ...formData,
+          title: formData.title!,          // Ensure required fields are included
+          description: formData.description!, // Ensure required fields are included
+          created_at: now,
+          updated_at: now
+        };
+        
         const { error } = await supabase
           .from('promotions')
-          .insert({
-            ...formData,
-            created_at: now,
-            updated_at: now
-          });
+          .insert(dataToInsert);
         
         if (error) throw error;
         toast.success("Promotion created successfully");

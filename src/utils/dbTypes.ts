@@ -24,8 +24,18 @@ export const db = {
      * Insert a promotion with proper typing
      */
     insert: (promotion: Partial<Promotion>) => {
-      // Make sure we're sending string dates to Supabase, not Date objects
-      const promotionToInsert = { ...promotion };
+      // Validate required fields for insert
+      if (!promotion.title || !promotion.description) {
+        throw new Error('Title and description are required for promotions');
+      }
+      
+      const promotionToInsert = { 
+        ...promotion,
+        // Ensure we're sending correct types to the database
+        title: promotion.title,
+        description: promotion.description
+      };
+      
       return supabase.from('promotions').insert(promotionToInsert);
     },
     
@@ -33,9 +43,17 @@ export const db = {
      * Update a promotion with proper typing
      */
     update: (promotion: Partial<Promotion>) => {
-      // Make sure we're sending string dates to Supabase, not Date objects
+      // Ensure we have an ID for updates
+      if (!promotion.id) {
+        throw new Error('ID is required for updating a promotion');
+      }
+      
       const promotionToUpdate = { ...promotion };
-      return supabase.from('promotions').update(promotionToUpdate);
+      
+      return supabase
+        .from('promotions')
+        .update(promotionToUpdate)
+        .eq('id', promotion.id);
     },
     
     /**
@@ -62,8 +80,18 @@ export const db = {
      * Insert an offer with proper typing
      */
     insert: (offer: Partial<Offer>) => {
-      // Make sure we're sending string dates to Supabase, not Date objects
-      const offerToInsert = { ...offer };
+      // Validate required fields for insert
+      if (!offer.title || !offer.description) {
+        throw new Error('Title and description are required for offers');
+      }
+      
+      const offerToInsert = { 
+        ...offer,
+        // Ensure we're sending correct types to the database
+        title: offer.title,
+        description: offer.description
+      };
+      
       return supabase.from('offers').insert(offerToInsert);
     },
     
@@ -71,9 +99,17 @@ export const db = {
      * Update an offer with proper typing
      */
     update: (offer: Partial<Offer>) => {
-      // Make sure we're sending string dates to Supabase, not Date objects
+      // Ensure we have an ID for updates
+      if (!offer.id) {
+        throw new Error('ID is required for updating an offer');
+      }
+      
       const offerToUpdate = { ...offer };
-      return supabase.from('offers').update(offerToUpdate);
+      
+      return supabase
+        .from('offers')
+        .update(offerToUpdate)
+        .eq('id', offer.id);
     },
     
     /**
@@ -100,8 +136,19 @@ export const db = {
      * Insert a feature with proper typing
      */
     insert: (feature: Partial<Feature>) => {
-      // Make sure we're sending string dates to Supabase, not Date objects
-      const featureToInsert = { ...feature };
+      // Validate required fields for insert
+      if (!feature.title || !feature.description || !feature.icon_name) {
+        throw new Error('Title, description, and icon_name are required for features');
+      }
+      
+      const featureToInsert = { 
+        ...feature,
+        // Ensure we're sending correct types to the database
+        title: feature.title,
+        description: feature.description,
+        icon_name: feature.icon_name
+      };
+      
       return supabase.from('features').insert(featureToInsert);
     },
     
@@ -109,9 +156,17 @@ export const db = {
      * Update a feature with proper typing
      */
     update: (feature: Partial<Feature>) => {
-      // Make sure we're sending string dates to Supabase, not Date objects
+      // Ensure we have an ID for updates
+      if (!feature.id) {
+        throw new Error('ID is required for updating a feature');
+      }
+      
       const featureToUpdate = { ...feature };
-      return supabase.from('features').update(featureToUpdate);
+      
+      return supabase
+        .from('features')
+        .update(featureToUpdate)
+        .eq('id', feature.id);
     },
     
     /**

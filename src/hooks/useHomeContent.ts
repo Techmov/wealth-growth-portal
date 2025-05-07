@@ -53,14 +53,14 @@ export const useHomeContent = () => {
           throw new Error(`Error fetching features: ${featuresError.message}`);
         }
         
-        // Format dates for all data if needed
-        const formattedPromotions = promotionsData || [];
-        const formattedOffers = offersData || [];
-        const formattedFeatures = featuresData || [];
+        // Format data with proper typing
+        const formattedPromotions = (promotionsData || []) as Promotion[];
+        const formattedOffers = (offersData || []) as Offer[];
+        const formattedFeatures = (featuresData || []) as Feature[];
         
-        setPromotions(formattedPromotions as Promotion[]);
-        setOffers(formattedOffers as Offer[]);
-        setFeatures(formattedFeatures as Feature[]);
+        setPromotions(formattedPromotions);
+        setOffers(formattedOffers);
+        setFeatures(formattedFeatures);
       } catch (err: any) {
         console.error("Error fetching home content:", err);
         setError(err.message);
