@@ -67,7 +67,7 @@ export function PromoFormDialog({
     setIsSubmitting(true);
     
     try {
-      const now = new Date();
+      const now = new Date().toISOString();
       
       if (promotion?.id) {
         // Update existing promotion
@@ -77,7 +77,7 @@ export function PromoFormDialog({
             ...formData,
             updated_at: now
           })
-          .eq('id', promotion.id) as { error: any };
+          .eq('id', promotion.id);
         
         if (error) throw error;
         toast.success("Promotion updated successfully");
@@ -89,7 +89,7 @@ export function PromoFormDialog({
             ...formData,
             created_at: now,
             updated_at: now
-          }) as { error: any };
+          });
         
         if (error) throw error;
         toast.success("Promotion created successfully");

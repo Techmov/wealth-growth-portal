@@ -1,6 +1,8 @@
 
 import { Feature } from "@/types/content";
 import { FeatureCard } from "./FeatureCard";
+import * as LucideIcons from "lucide-react";
+import { Star } from "lucide-react";
 
 interface FeaturesSectionProps {
   features: Feature[];

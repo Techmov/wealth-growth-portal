@@ -1,6 +1,7 @@
 
 import { Feature } from "@/types/content";
 import * as LucideIcons from "lucide-react";
+import { Star } from "lucide-react";
 
 interface FeatureCardProps {
   feature: Feature;
@@ -9,7 +10,7 @@ interface FeatureCardProps {
 
 export function FeatureCard({ feature, className = "" }: FeatureCardProps) {
   // Dynamic icon component selection
-  const IconComponent = (LucideIcons as any)[feature.icon_name] || LucideIcons.Star;
+  const IconComponent = (LucideIcons as any)[feature.icon_name] || Star;
   
   return (
     <div className={`bg-white/10 backdrop-blur-sm p-6 rounded-lg ${className}`}>

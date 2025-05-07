@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Promotion, Offer, Feature } from "@/types/content";
+import { db, formatDates } from "@/utils/dbTypes";
 
 export const useHomeContent = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -22,7 +23,7 @@ export const useHomeContent = () => {
           .select('*')
           .eq('is_active', true)
           .order('priority', { ascending: false })
-          .order('created_at', { ascending: false }) as { data: any, error: any };
+          .order('created_at', { ascending: false });
 
         if (promotionsError) {
           throw new Error(`Error fetching promotions: ${promotionsError.message}`);
@@ -34,7 +35,7 @@ export const useHomeContent = () => {
           .select('*')
           .eq('is_active', true)
           .order('priority', { ascending: false })
-          .order('created_at', { ascending: false }) as { data: any, error: any };
+          .order('created_at', { ascending: false });
 
         if (offersError) {
           throw new Error(`Error fetching offers: ${offersError.message}`);
@@ -46,38 +47,20 @@ export const useHomeContent = () => {
           .select('*')
           .eq('is_active', true)
           .order('priority', { ascending: false })
-          .order('created_at', { ascending: false }) as { data: any, error: any };
+          .order('created_at', { ascending: false });
 
         if (featuresError) {
           throw new Error(`Error fetching features: ${featuresError.message}`);
         }
         
-        // Format dates for offers
-        const formattedOffers = offersData.map((offer: any) => ({
-          ...offer,
-          start_date: offer.start_date ? new Date(offer.start_date) : undefined,
-          end_date: offer.end_date ? new Date(offer.end_date) : undefined,
-          created_at: offer.created_at ? new Date(offer.created_at) : undefined,
-          updated_at: offer.updated_at ? new Date(offer.updated_at) : undefined
-        }));
-
-        // Format dates for promotions
-        const formattedPromotions = promotionsData.map((promo: any) => ({
-          ...promo,
-          created_at: promo.created_at ? new Date(promo.created_at) : undefined,
-          updated_at: promo.updated_at ? new Date(promo.updated_at) : undefined
-        }));
-
-        // Format dates for features
-        const formattedFeatures = featuresData.map((feature: any) => ({
-          ...feature,
-          created_at: feature.created_at ? new Date(feature.created_at) : undefined,
-          updated_at: feature.updated_at ? new Date(feature.updated_at) : undefined
-        }));
+        // Format dates for all data
+        const formattedOffers = offersData?.map(offer => formatDates(offer)) || [];
+        const formattedPromotions = promotionsData?.map(promo => formatDates(promo)) || [];
+        const formattedFeatures = featuresData?.map(feature => formatDates(feature)) || [];
         
-        setPromotions(formattedPromotions);
-        setOffers(formattedOffers);
-        setFeatures(formattedFeatures);
+        setPromotions(formattedPromotions as Promotion[]);
+        setOffers(formattedOffers as Offer[]);
+        setFeatures(formattedFeatures as Feature[]);
       } catch (err: any) {
         console.error("Error fetching home content:", err);
         setError(err.message);

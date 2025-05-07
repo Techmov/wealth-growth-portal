@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Promotion } from "@/types/content";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDates } from "@/utils/dbTypes";
 import { 
   Table, 
   TableBody, 
@@ -54,26 +54,20 @@ export function AdminPromotionsManagement() {
     try {
       setIsLoading(true);
       
-      // Use any type to bypass the TypeScript error since the promotions table exists in the DB
-      // but isn't yet reflected in the TypeScript types
       const { data, error } = await supabase
         .from('promotions')
         .select('*')
         .order('priority', { ascending: false })
-        .order('created_at', { ascending: false }) as { data: any, error: any };
+        .order('created_at', { ascending: false });
       
       if (error) {
         throw error;
       }
       
       // Format dates
-      const formattedPromotions = data.map((promo: any) => ({
-        ...promo,
-        created_at: promo.created_at ? new Date(promo.created_at) : undefined,
-        updated_at: promo.updated_at ? new Date(promo.updated_at) : undefined
-      }));
+      const formattedPromotions = data?.map(promo => formatDates(promo)) || [];
       
-      setPromotions(formattedPromotions);
+      setPromotions(formattedPromotions as Promotion[]);
     } catch (error: any) {
       toast.error(`Error fetching promotions: ${error.message}`);
     } finally {
@@ -97,9 +91,9 @@ export function AdminPromotionsManagement() {
         .from('promotions')
         .update({ 
           is_active: !currentStatus,
-          updated_at: new Date()
+          updated_at: new Date().toISOString()
         })
-        .eq('id', id) as { error: any };
+        .eq('id', id);
       
       if (error) {
         throw error;
@@ -127,7 +121,7 @@ export function AdminPromotionsManagement() {
       const { error } = await supabase
         .from('promotions')
         .delete()
-        .eq('id', promoToDelete) as { error: any };
+        .eq('id', promoToDelete);
       
       if (error) {
         throw error;

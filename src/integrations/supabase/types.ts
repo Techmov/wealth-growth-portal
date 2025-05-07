@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      features: {
+        Row: {
+          created_at: string | null
+          description: string
+          icon_name: string
+          id: string
+          is_active: boolean
+          priority: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          icon_name: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       investments: {
         Row: {
           amount: number
@@ -75,6 +108,48 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      offers: {
+        Row: {
+          created_at: string | null
+          description: string
+          discount_percentage: number | null
+          end_date: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          priority: number
+          start_date: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          discount_percentage?: number | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          priority?: number
+          start_date?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          discount_percentage?: number | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          priority?: number
+          start_date?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       products: {
         Row: {
@@ -186,6 +261,45 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      promotions: {
+        Row: {
+          button_link: string | null
+          button_text: string | null
+          created_at: string | null
+          description: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          priority: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          priority?: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          priority?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       transactions: {
         Row: {
