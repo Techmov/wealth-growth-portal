@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService"; 
@@ -92,47 +91,49 @@ export const useAuthActions = ({
     }
   };
 
-  // Fixed logout function with proper async handling and forced navigation
+  // Improved logout function with proper async handling
   const logout = async () => {
     try {
+      console.log("Starting logout process");
       setIsLoading(true);
-      console.log("Logging out user");
       
       // First clear local state to prevent any UI flickers or redirect loops
       setUser(null);
       setSession(null);
       
-      // Show loading toast while logging out
+      // Show loading toast
       const toastId = toast.loading("Logging out...");
       
-      // Call Supabase auth signOut and await its completion
+      // Call Supabase auth signOut with global scope to clear all sessions
       const { error } = await supabase.auth.signOut({ scope: 'global' });
       
       if (error) {
-        console.error("Logout error:", error);
-        toast.error(error.message || "Failed to logout");
+        console.error("Logout error from Supabase:", error);
+        toast.error("An error occurred during logout", {
+          id: toastId,
+          description: error.message
+        });
         throw error;
       }
       
       // Update success toast
       toast.success("Logged out successfully", {
-        id: toastId,
-        description: "You have been successfully logged out."
+        id: toastId
       });
       
-      // Force reload to ensure clean state
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
+      console.log("Logout successful, redirecting to home page");
+      
+      // Force navigation to ensure clean state
+      window.location.href = '/';
       
     } catch (error: any) {
-      console.error("Logout error:", error);
+      console.error("Unhandled error during logout:", error);
       toast.error("Logout failed", {
-        description: error.message || "Something went wrong. Please try again."
+        description: "Please try again"
       });
-      throw error;
-    } finally {
+      // Ensure loading state is reset even on error
       setIsLoading(false);
+      throw error;
     }
   };
 

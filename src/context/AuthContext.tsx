@@ -1,6 +1,8 @@
 
 import { createContext, useContext, useEffect, ReactNode, useState } from "react";
-import { useAuthController } from "@/hooks/useAuthController";
+import { useAuthState } from "@/hooks/useAuthState";
+import { useAuthActions } from "@/hooks/useAuthActions";
+import { useAuthInitialization } from "@/hooks/useAuthInitialization";
 import { User } from "@/types";
 import { Session } from "@supabase/supabase-js";
 import { Loader2 } from "lucide-react";
@@ -27,56 +29,66 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Define the authentication provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [initialized, setInitialized] = useState(false);
-  
+  // Get auth state from custom hook
   const {
     user,
+    setUser,
+    profile,
+    setProfile,
     session,
+    setSession,
     isLoading,
+    setIsLoading,
     isAdmin,
+    setIsAdmin,
+    loginSuccess,
+    setLoginSuccess,
+    resetLoginSuccess,
+    fetchProfile
+  } = useAuthState();
+
+  // Get auth actions from custom hook
+  const {
     login,
     signup,
     logout,
     updateUser,
     updateTrc20Address,
     requestWithdrawal,
-    deposit,
-    loginSuccess,
-    resetLoginSuccess,
-  } = useAuthController();
+    deposit
+  } = useAuthActions({
+    user,
+    setUser,
+    setIsLoading,
+    setSession,
+    fetchProfile,
+    setLoginSuccess
+  });
+
+  // Initialize auth with custom hook
+  useAuthInitialization({
+    setSession,
+    setIsLoading,
+    fetchProfile
+  });
 
   // Effect for debugging auth state
   useEffect(() => {
-    if (session) {
-      console.log("AuthContext: Session active for user:", session.user.email);
-    } else if (!isLoading) {
-      console.log("AuthContext: No active session");
-    }
-  }, [session, isLoading]);
+    console.log("AuthContext: Auth state updated", { 
+      hasSession: !!session, 
+      hasUser: !!user, 
+      isLoading, 
+      loginSuccess 
+    });
+  }, [session, user, isLoading, loginSuccess]);
 
-  // Effect to mark initialization complete
-  useEffect(() => {
-    const markInitialized = () => {
-      // Small delay to ensure all auth state is properly processed
-      const timer = setTimeout(() => {
-        setInitialized(true);
-      }, 500);
-      return () => clearTimeout(timer);
-    };
-    
-    // Only mark as initialized when loading state has settled
-    if (!isLoading) {
-      markInitialized();
-    }
-  }, [isLoading]);
-
-  // Display loading state while initializing
-  if (!initialized) {
+  // Use a simpler loading state without additional initialization flag
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-2">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Initializing authentication...</p>
+          <p className="text-sm text-muted-foreground">Loading authentication...</p>
         </div>
       </div>
     );

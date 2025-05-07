@@ -14,76 +14,91 @@ export const useAuthInitialization = ({
   fetchProfile
 }: AuthInitializationProps) => {
   const initializeAuth = useCallback(async () => {
+    // Setup a hard safety timeout to prevent infinite loading
+    const safetyTimeout = setTimeout(() => {
+      console.log("SAFETY TIMEOUT: Auth initialization took too long, forcing loading state to false");
+      setIsLoading(false);
+    }, 8000); // 8 seconds maximum before forcing loading to false
+    
     try {
-      console.log("Initializing auth state...");
+      console.log("Starting auth initialization...");
       setIsLoading(true);
       
-      // First set up the auth listener BEFORE checking the session
+      // First get current session - avoid race conditions by checking session first
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log("Initial session check:", session ? "Found session" : "No session");
+      
+      // Update session state immediately
+      setSession(session);
+      
+      // Then set up auth listener for future changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         (event, currentSession) => {
           console.log("Auth state changed:", event);
+          
+          // Update session state
           setSession(currentSession);
           
-          // Only fetch profile if we have a user and it's a SIGNED_IN event
+          // For SIGNED_IN and TOKEN_REFRESHED events with a valid user, fetch profile
           if (currentSession?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-            console.log("User signed in/token refreshed, fetching profile...");
-            // Use setTimeout to prevent Supabase auth deadlock
+            console.log("User authenticated, fetching profile...");
+            // Use setTimeout to avoid Supabase auth deadlock
             setTimeout(() => {
-              fetchProfile(currentSession.user.id).catch(err => {
-                console.error("Error fetching profile on auth change:", err);
-                setIsLoading(false);
-              });
+              fetchProfile(currentSession.user.id)
+                .catch(err => {
+                  console.error("Error fetching profile on auth change:", err);
+                  setIsLoading(false);
+                });
             }, 0);
-          } else if (!currentSession && event === 'SIGNED_OUT') {
+          } else if (event === 'SIGNED_OUT') {
             console.log("User signed out, clearing loading state");
-            // If there's no session, ensure we're not in loading state
             setIsLoading(false);
           }
         }
       );
-
-      // Then check for existing session
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("Existing session check:", session ? "Found session" : "No session");
       
-      setSession(session);
-      
+      // Handle initial session profile fetch if needed
       if (session?.user) {
+        console.log("Initial session has user, fetching profile...");
         try {
           await fetchProfile(session.user.id);
         } catch (error) {
-          console.error("Error fetching profile during initialization:", error);
+          console.error("Error fetching initial profile:", error);
         } finally {
-          // Always ensure loading state is concluded
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 300); // Small delay to prevent race conditions
+          clearTimeout(safetyTimeout); // Clear safety timeout as we're done
+          setIsLoading(false); // Ensure loading is false after profile fetch
         }
       } else {
-        // No session, so we're not loading anymore
-        setIsLoading(false);
+        console.log("No initial user session, auth initialization complete");
+        clearTimeout(safetyTimeout); // Clear safety timeout as we're done
+        setIsLoading(false); // No user, so we're done loading
       }
 
+      // Return cleanup function
       return () => {
+        clearTimeout(safetyTimeout); // Clear safety timeout on cleanup
         subscription.unsubscribe();
       };
     } catch (error) {
-      console.error("Error during auth initialization:", error);
-      // Make sure to set loading to false on error too
-      setIsLoading(false);
+      console.error("Critical error during auth initialization:", error);
+      clearTimeout(safetyTimeout); // Clear safety timeout on error
+      setIsLoading(false); // Ensure loading state is false on error
+      return () => {}; // Empty cleanup on error
     }
   }, [setSession, setIsLoading, fetchProfile]);
 
-  // Call the initialization function
+  // Execute the initialization function
   useEffect(() => {
-    const cleanup = initializeAuth();
+    console.log("Auth initialization hook running");
+    const cleanupPromise = initializeAuth();
+    
     return () => {
-      cleanup.then(unsubscribe => {
-        if (typeof unsubscribe === 'function') {
-          unsubscribe();
+      cleanupPromise.then(cleanup => {
+        if (typeof cleanup === 'function') {
+          cleanup();
         }
       }).catch(err => {
-        console.error("Error cleaning up auth initialization:", err);
+        console.error("Error during auth cleanup:", err);
       });
     };
   }, [initializeAuth]);

@@ -18,20 +18,25 @@ export const ProtectedRoute = ({
   const { user, isAdmin, isLoading, session } = useAuth();
   const location = useLocation();
 
-  // Log state only once per render to reduce noise
+  // Log state for debugging
   useEffect(() => {
-    console.log("ProtectedRoute - Current path:", location.pathname);
-    console.log("ProtectedRoute - User state:", user ? "Authenticated" : "Not authenticated");
-    console.log("ProtectedRoute - Session state:", session ? "Session active" : "No session");
-    console.log("ProtectedRoute - Loading state:", isLoading);
-  }, [location.pathname, user, session, isLoading]);
+    console.log("ProtectedRoute - Path:", location.pathname);
+    console.log("ProtectedRoute - Auth state:", { 
+      hasSession: !!session,
+      hasUser: !!user,
+      isAdmin,
+      isLoading
+    });
+  }, [location.pathname, user, session, isAdmin, isLoading]);
 
-  // Handle loading state
+  // Handle loading state (but with a more graceful component)
   if (isLoading) {
-    console.log("ProtectedRoute: Still loading, showing loading indicator");
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Verifying access...</p>
+        </div>
       </div>
     );
   }
@@ -41,19 +46,19 @@ export const ProtectedRoute = ({
 
   // If authentication is required and user is not logged in
   if (requireAuth && !isAuthenticated) {
-    console.log("Authentication required but user not logged in - redirecting to login");
+    console.log("Authentication required but not logged in - redirecting to", redirectTo);
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
   // If admin privileges are required and user is not an admin
   if (requireAdmin && !isAdmin) {
-    console.log("Admin privileges required but user is not admin - redirecting to dashboard");
+    console.log("Admin privileges required but not admin - redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
 
   // If user is logged in but this is a login/signup page, redirect to dashboard
   if (!requireAuth && isAuthenticated) {
-    console.log("User is authenticated and on auth page - redirecting to dashboard");
+    console.log("Already authenticated on auth page - redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
 
