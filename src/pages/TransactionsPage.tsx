@@ -12,7 +12,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useInvestment } from "@/context/InvestmentContext";
 import { TransactionsList } from "@/components/TransactionsList";
 import { WithdrawalsRequestList } from "@/components/WithdrawalsRequestList";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
+import { AlertCircle, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
+import { ResponsivePagination } from "@/components/ResponsivePagination";
 
 const TransactionsPage = () => {
   const { user, deposit, requestWithdrawal } = useAuth();
@@ -24,6 +26,10 @@ const TransactionsPage = () => {
   const [txHash, setTxHash] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
 
   useEffect(() => {
     if (!user) {
@@ -55,9 +61,15 @@ const TransactionsPage = () => {
       await deposit(depositAmount, txHash);
       setAmount("");
       setTxHash("");
-      toast.success("Deposit request submitted successfully. It will be reviewed by an admin.");
+      toast.success("Deposit request submitted successfully", {
+        description: "It will be reviewed by an admin within 24 hours.",
+        duration: 5000
+      });
     } catch (error: any) {
       setError(error.message || "Failed to process deposit");
+      toast.error("Deposit request failed", {
+        description: error.message || "Something went wrong. Please try again.",
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -75,32 +87,61 @@ const TransactionsPage = () => {
     
     if (withdrawalAmount > user.balance) {
       setError("Insufficient balance");
+      toast.error("Insufficient balance", {
+        description: `Your balance is $${user.balance.toFixed(2)}`,
+      });
       return;
     }
     
     if (!user.trc20Address) {
       setError("Please set your TRC20 withdrawal address in your profile before requesting a withdrawal");
+      toast.error("No withdrawal address set", {
+        description: "Go to profile settings to set your TRC20 address",
+        action: {
+          label: "Go to Profile",
+          onClick: () => navigate("/profile"),
+        },
+      });
       return;
     }
     
     try {
       setIsProcessing(true);
-      // Update: Add the withdrawal source parameter (defaulting to 'profit')
       await requestWithdrawal(withdrawalAmount, user.trc20Address, 'profit');
       setAmount("");
-      toast.success("Withdrawal request submitted. It will be processed by an admin.");
+      toast.success("Withdrawal request submitted", {
+        description: "It will be processed by an admin within 24 hours.",
+        duration: 5000
+      });
     } catch (error: any) {
       setError(error.message || "Failed to process withdrawal request");
+      toast.error("Withdrawal request failed", {
+        description: error.message || "Something went wrong. Please try again.",
+      });
     } finally {
       setIsProcessing(false);
     }
   };
 
+  // Calculate current items for pagination
+  const indexOfLastTransaction = currentPage * itemsPerPage;
+  const indexOfFirstTransaction = indexOfLastTransaction - itemsPerPage;
+  const currentTransactions = transactions.slice(indexOfFirstTransaction, indexOfLastTransaction);
+  const currentWithdrawals = withdrawalRequests.slice(indexOfFirstTransaction, indexOfLastTransaction);
+
+  // Change page
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const totalTransactionPages = Math.ceil(transactions.length / itemsPerPage);
+  const totalWithdrawalPages = Math.ceil(withdrawalRequests.length / itemsPerPage);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      <main className="flex-grow container py-8">
+      <main className="flex-grow container py-8 px-4 sm:px-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Deposits & Withdrawals</h1>
           <p className="text-muted-foreground">
@@ -120,10 +161,28 @@ const TransactionsPage = () => {
               </CardContent>
             </Card>
 
+            <div className="grid grid-cols-2 gap-4 mt-6">
+              <Button 
+                variant="outline" 
+                className="w-full flex gap-2" 
+                onClick={() => navigate("/deposit")}
+              >
+                <ArrowUp className="h-4 w-4" /> Full Deposit
+              </Button>
+              
+              <Button 
+                variant="outline"
+                className="w-full flex gap-2"
+                onClick={() => navigate("/withdraw")}
+              >
+                <ArrowDown className="h-4 w-4" /> Full Withdraw
+              </Button>
+            </div>
+
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle>Deposit or Withdraw</CardTitle>
-                <CardDescription>Move funds in or out of your account</CardDescription>
+                <CardTitle>Quick Transaction</CardTitle>
+                <CardDescription>Quickly deposit or withdraw funds</CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="deposit" value={activeTab} onValueChange={setActiveTab}>
@@ -133,8 +192,9 @@ const TransactionsPage = () => {
                   </TabsList>
                   
                   {error && (
-                    <div className="p-3 mb-4 bg-red-100 border border-red-400 text-red-700 text-sm rounded">
-                      {error}
+                    <div className="p-3 mb-4 bg-red-100 border border-red-400 text-red-700 text-sm rounded flex items-start gap-2">
+                      <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                      <span>{error}</span>
                     </div>
                   )}
 
@@ -150,7 +210,7 @@ const TransactionsPage = () => {
                     
                     <div className="p-3 mb-4 bg-gray-50 border border-gray-200 rounded">
                       <p className="text-sm font-medium mb-1">Platform TRC20 Address:</p>
-                      <p className="font-mono text-sm break-all">{platformTrc20Address}</p>
+                      <p className="font-mono text-xs sm:text-sm break-all">{platformTrc20Address}</p>
                     </div>
                     
                     <form onSubmit={handleManualDeposit} className="space-y-4">
@@ -176,7 +236,7 @@ const TransactionsPage = () => {
                         <Input
                           id="tx-hash"
                           placeholder="Enter your transaction hash"
-                          className="font-mono"
+                          className="font-mono text-sm"
                           value={txHash}
                           onChange={(e) => setTxHash(e.target.value)}
                         />
@@ -185,8 +245,17 @@ const TransactionsPage = () => {
                         </p>
                       </div>
                       
-                      <Button type="submit" className="w-full" disabled={isProcessing}>
-                        {isProcessing ? "Processing..." : "Submit Deposit"}
+                      <Button 
+                        type="submit" 
+                        className="w-full" 
+                        disabled={isProcessing || !amount || !txHash}
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : "Submit Deposit"}
                       </Button>
                     </form>
                   </TabsContent>
@@ -229,8 +298,17 @@ const TransactionsPage = () => {
                         </ul>
                       </div>
                       
-                      <Button type="submit" className="w-full" disabled={isProcessing || !user.trc20Address}>
-                        {isProcessing ? "Processing..." : "Request Withdrawal"}
+                      <Button 
+                        type="submit" 
+                        className="w-full" 
+                        disabled={isProcessing || !user.trc20Address || !amount || amount === "0"}
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : "Request Withdrawal"}
                       </Button>
                     </form>
                   </TabsContent>
@@ -253,7 +331,16 @@ const TransactionsPage = () => {
                     <CardDescription>All your account activities</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <TransactionsList transactions={transactions} />
+                    <TransactionsList transactions={currentTransactions} />
+                    {transactions.length > itemsPerPage && (
+                      <div className="mt-6">
+                        <ResponsivePagination
+                          currentPage={currentPage}
+                          totalPages={totalTransactionPages}
+                          onPageChange={handlePageChange}
+                        />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -265,7 +352,16 @@ const TransactionsPage = () => {
                     <CardDescription>Status of your withdrawal requests</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <WithdrawalsRequestList withdrawalRequests={withdrawalRequests} />
+                    <WithdrawalsRequestList withdrawalRequests={currentWithdrawals} />
+                    {withdrawalRequests.length > itemsPerPage && (
+                      <div className="mt-6">
+                        <ResponsivePagination
+                          currentPage={currentPage}
+                          totalPages={totalWithdrawalPages}
+                          onPageChange={handlePageChange}
+                        />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

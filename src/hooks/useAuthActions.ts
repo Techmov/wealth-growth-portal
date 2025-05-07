@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService"; 
@@ -8,6 +9,7 @@ export const useAuthActions = ({
   setSession,
   fetchProfile,
   setLoginSuccess,
+  setUser,
 }) => {
   // Login function
   const login = async (email: string, password: string) => {
@@ -34,7 +36,9 @@ export const useAuthActions = ({
         await fetchProfile(session.user.id);
         // Set login success flag to trigger redirect
         setLoginSuccess(true);
-        toast.success("Login successful!");
+        toast.success("Login successful!", { 
+          description: "Welcome back to your account." 
+        });
         return { success: true, session };
       } catch (profileError) {
         console.error("Error fetching profile:", profileError);
@@ -66,9 +70,22 @@ export const useAuthActions = ({
     try {
       setIsLoading(true);
       await authService.signup({ name, email, password, referralCode });
+      toast.success("Signup successful!", {
+        description: "Please check your email to confirm your account."
+      });
       return { user: null, session: null };
     } catch (error: any) {
       console.error("Signup error:", error);
+      
+      // Handle specific error codes
+      if (error.message?.includes("User already registered")) {
+        toast.error("This email is already registered", {
+          description: "Please use a different email or try logging in."
+        });
+      } else {
+        toast.error(error.message || "Failed to signup");
+      }
+      
       throw error;
     } finally {
       setIsLoading(false);
@@ -81,8 +98,12 @@ export const useAuthActions = ({
       setIsLoading(true);
       console.log("Logging out user");
       
-      // First clear session state to prevent any UI flickers
+      // First clear session and user state to prevent any UI flickers
       setSession(null);
+      setUser(null);
+      
+      // Show loading toast while logging out
+      const toastId = toast.loading("Logging out...");
       
       // Call Supabase auth signOut and await its completion
       const { error } = await supabase.auth.signOut({ scope: 'global' });
@@ -93,7 +114,11 @@ export const useAuthActions = ({
         throw error;
       }
       
-      toast.success("Logged out successfully");
+      // Update success toast
+      toast.success("Logged out successfully", {
+        id: toastId,
+        description: "You have been successfully logged out."
+      });
       
       // Force reload to ensure clean state
       setTimeout(() => {
@@ -102,6 +127,9 @@ export const useAuthActions = ({
       
     } catch (error: any) {
       console.error("Logout error:", error);
+      toast.error("Logout failed", {
+        description: error.message || "Something went wrong. Please try again."
+      });
       throw error;
     } finally {
       setIsLoading(false);
@@ -118,6 +146,8 @@ export const useAuthActions = ({
     try {
       setIsLoading(true);
       
+      const toastId = toast.loading("Updating profile...");
+      
       const { data, error } = await supabase
         .from('profiles')
         .update(userData)
@@ -127,17 +157,26 @@ export const useAuthActions = ({
       
       if (error) {
         console.error("Update user error:", error);
-        toast.error(error.message || "Failed to update user");
+        toast.error("Failed to update profile", {
+          id: toastId,
+          description: error.message || "Please try again later."
+        });
         return Promise.reject(error);
       }
       
       // Refresh user profile
       await fetchProfile(user.id);
       
+      toast.success("Profile updated successfully", {
+        id: toastId
+      });
+      
       return Promise.resolve();
     } catch (error: any) {
       console.error("Update user error:", error);
-      toast.error(error.message || "Failed to update user");
+      toast.error("Failed to update profile", {
+        description: error.message || "Please try again later."
+      });
       return Promise.reject(error);
     } finally {
       setIsLoading(false);
@@ -151,6 +190,8 @@ export const useAuthActions = ({
     }
     
     try {
+      const toastId = toast.loading("Updating withdrawal address...");
+      
       // Prepare update data
       const updateData: any = { trc20_address: address };
       
@@ -166,9 +207,20 @@ export const useAuthActions = ({
       
       // Refresh profile data
       await fetchProfile(user.id);
+      
+      toast.success("Withdrawal address updated", {
+        id: toastId,
+        description: "Your TRC20 address was successfully updated."
+      });
+      
       return Promise.resolve();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating TRC20 address:", error);
+      
+      toast.error("Failed to update address", {
+        description: error.message || "Please try again later."
+      });
+      
       return Promise.reject(error);
     }
   };
@@ -194,14 +246,16 @@ export const useAuthActions = ({
         });
         
       if (error) {
+        console.error("Deposit error:", error);
         return Promise.reject(error);
       }
       
-      toast.success("Deposit request submitted");
       return Promise.resolve();
     } catch (error: any) {
       console.error("Deposit error:", error);
-      toast.error(error.message || "Failed to submit deposit");
+      toast.error("Failed to submit deposit", {
+        description: error.message || "Please try again later."
+      });
       return Promise.reject(error);
     }
   };
@@ -236,6 +290,8 @@ export const useAuthActions = ({
     }
 
     try {
+      const toastId = toast.loading("Processing withdrawal request...");
+      
       // Use the new database function for withdrawal requests
       const { data, error } = await supabase.rpc(
         'request_withdrawal',
@@ -249,15 +305,24 @@ export const useAuthActions = ({
       
       if (error) {
         console.error("Error creating withdrawal request:", error);
-        toast.error(error.message || "Failed to submit withdrawal request");
+        toast.error("Failed to submit withdrawal request", {
+          id: toastId,
+          description: error.message || "Please try again later."
+        });
         return Promise.reject(error);
       }
       
-      toast.success("Withdrawal request submitted successfully! It will be processed within 24 hours.");
+      toast.success("Withdrawal request submitted", {
+        id: toastId,
+        description: "It will be processed within 24 hours."
+      });
+      
       return Promise.resolve(data);
     } catch (error: any) {
       console.error("Request withdrawal error:", error);
-      toast.error(error.message || "Failed to submit withdrawal request");
+      toast.error("Failed to submit withdrawal request", {
+        description: error.message || "Please try again."
+      });
       return Promise.reject(error);
     }
   };

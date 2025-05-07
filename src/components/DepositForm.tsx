@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { CreditCard, Info, ArrowUp, Copy, Check } from "lucide-react";
+import { CreditCard, Info, ArrowUp, Copy, Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useInvestment } from "@/context/InvestmentContext";
 
@@ -33,6 +33,11 @@ export function DepositForm() {
       return;
     }
     
+    if (depositAmount < 10) {
+      toast.error("Minimum deposit amount is 10 USDT");
+      return;
+    }
+    
     if (!txHash.trim()) {
       toast.error("Please enter your transaction hash");
       return;
@@ -44,9 +49,13 @@ export function DepositForm() {
       await deposit(depositAmount, txHash);
       setAmount("");
       setTxHash("");
-      toast.success("Deposit request submitted successfully");
+      toast.success("Deposit request submitted successfully", {
+        description: "An admin will verify and process your deposit within 24 hours"
+      });
     } catch (error: any) {
-      toast.error(error.message || "Failed to process deposit");
+      toast.error("Deposit failed", {
+        description: error.message || "Something went wrong. Please try again."
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -60,6 +69,12 @@ export function DepositForm() {
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  // Determine if button should be disabled
+  const isButtonDisabled = isProcessing || 
+    !amount || 
+    parseFloat(amount) <= 0 || 
+    !txHash.trim();
 
   return (
     <Card className="p-6">
@@ -78,7 +93,7 @@ export function DepositForm() {
               </span>
             </div>
             <div className="mt-2 p-3 bg-blue-100 rounded-md relative">
-              <div ref={addressRef} className="font-mono text-sm break-all">
+              <div ref={addressRef} className="font-mono text-sm break-all pr-10">
                 {platformTrc20Address}
               </div>
               <Button
@@ -139,9 +154,14 @@ export function DepositForm() {
             <Button 
               type="submit" 
               className="w-full"
-              disabled={isProcessing}
+              disabled={isButtonDisabled}
             >
-              {isProcessing ? "Processing..." : "Submit Deposit"}
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : "Submit Deposit"}
             </Button>
           </div>
         </form>

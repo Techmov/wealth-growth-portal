@@ -1,8 +1,10 @@
 
-import { createContext, useContext, useEffect, ReactNode } from "react";
+import { createContext, useContext, useEffect, ReactNode, useState } from "react";
 import { useAuthController } from "@/hooks/useAuthController";
 import { User } from "@/types";
 import { Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 // Define the type for the authentication context
 interface AuthContextType {
@@ -26,6 +28,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Define the authentication provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [initialized, setInitialized] = useState(false);
+  
   const {
     user,
     session,
@@ -39,8 +43,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     requestWithdrawal,
     deposit,
     loginSuccess,
-    resetLoginSuccess
+    resetLoginSuccess,
+    fetchProfile
   } = useAuthController();
+
+  // Effect to monitor and respond to Supabase auth state changes
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log("Auth state changed:", event);
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (newSession?.user?.id) {
+          await fetchProfile(newSession.user.id);
+        }
+      }
+      
+      if (event === 'SIGNED_OUT') {
+        console.log("User signed out, clearing data");
+      }
+    });
+
+    // Initialize auth state
+    const initializeAuth = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        
+        if (data.session?.user?.id) {
+          await fetchProfile(data.session.user.id);
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        setInitialized(true);
+      }
+    };
+    
+    initializeAuth();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Display loading state while initializing
+  if (!initialized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Make the authentication details available to all child components
   return (

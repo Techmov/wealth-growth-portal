@@ -1,5 +1,6 @@
 
 import { useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,11 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { ArrowDown, Clock } from "lucide-react";
+import { ArrowDown, Clock, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useWithdrawalStats } from "@/hooks/useWithdrawalStats";
 
 export function WithdrawalForm() {
+  const navigate = useNavigate();
   const { user, requestWithdrawal } = useAuth();
   const { stats, isLoading: statsLoading } = useWithdrawalStats(user);
   
@@ -40,17 +42,27 @@ export function WithdrawalForm() {
     
     // Validate source-specific balance
     if (withdrawalSource === 'profit' && withdrawalAmount > stats.profitAmount) {
-      toast.error("Insufficient profit funds for withdrawal");
+      toast.error("Insufficient profit funds for withdrawal", {
+        description: `Available: $${stats.profitAmount.toFixed(2)}`
+      });
       return;
     }
     
     if (withdrawalSource === 'referral_bonus' && withdrawalAmount > stats.referralBonus) {
-      toast.error("Insufficient referral bonus funds for withdrawal");
+      toast.error("Insufficient referral bonus funds for withdrawal", {
+        description: `Available: $${stats.referralBonus.toFixed(2)}`
+      });
       return;
     }
     
     if (!user.trc20Address) {
-      toast.error("Please set your TRC20 withdrawal address in your profile first");
+      toast.error("No withdrawal address set", {
+        description: "Please set your TRC20 address in profile settings first",
+        action: {
+          label: "Set Address",
+          onClick: () => navigate("/profile"),
+        }
+      });
       return;
     }
     
@@ -60,13 +72,27 @@ export function WithdrawalForm() {
       await requestWithdrawal(withdrawalAmount, user.trc20Address, withdrawalSource, withdrawalPassword || undefined);
       setAmount("");
       setWithdrawalPassword("");
-      toast.success("Withdrawal request submitted successfully");
+      toast.success("Withdrawal request submitted successfully", {
+        description: "An admin will process your withdrawal within 24 hours"
+      });
     } catch (error: any) {
-      toast.error(error.message || "Failed to process withdrawal request");
+      toast.error("Withdrawal request failed", {
+        description: error.message || "Something went wrong. Please try again."
+      });
     } finally {
       setIsProcessing(false);
     }
   };
+
+  // Calculate disabled state
+  const isButtonDisabled = isProcessing || 
+    !user.trc20Address || 
+    statsLoading || 
+    !amount ||
+    parseFloat(amount) <= 0 ||
+    (withdrawalSource === 'profit' && parseFloat(amount) > stats.profitAmount) ||
+    (withdrawalSource === 'referral_bonus' && parseFloat(amount) > stats.referralBonus) ||
+    (user.withdrawalPassword && !withdrawalPassword);
 
   return (
     <Card className="p-6">
@@ -78,34 +104,48 @@ export function WithdrawalForm() {
 
         {!user.trc20Address && (
           <Alert variant="default" className="bg-yellow-50 text-yellow-800 border-yellow-200">
-            <AlertDescription>
-              Please set your TRC20 address in your profile before requesting a withdrawal.
+            <AlertDescription className="flex flex-col space-y-2">
+              <p>Please set your TRC20 address in your profile before requesting a withdrawal.</p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="self-start"
+                onClick={() => navigate("/profile")}
+              >
+                Go to Profile Settings
+              </Button>
             </AlertDescription>
           </Alert>
         )}
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-3 py-2 bg-muted rounded-md">
-            <div className="text-sm">Available for Withdrawal</div>
-            <div className="font-semibold">${statsLoading ? "..." : stats.availableWithdrawal.toFixed(2)}</div>
+        {statsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-          
-          <div className="grid grid-cols-2 gap-2">
-            <div className="px-3 py-2 bg-blue-50 rounded-md">
-              <div className="text-sm text-blue-700">Profit</div>
-              <div className="font-semibold">${statsLoading ? "..." : stats.profitAmount.toFixed(2)}</div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-3 py-2 bg-muted rounded-md">
+              <div className="text-sm">Available for Withdrawal</div>
+              <div className="font-semibold">${stats.availableWithdrawal.toFixed(2)}</div>
             </div>
-            <div className="px-3 py-2 bg-green-50 rounded-md">
-              <div className="text-sm text-green-700">Referral Bonus</div>
-              <div className="font-semibold">${statsLoading ? "..." : stats.referralBonus.toFixed(2)}</div>
+            
+            <div className="grid grid-cols-2 gap-2">
+              <div className={`px-3 py-2 rounded-md transition-colors ${withdrawalSource === 'profit' ? 'bg-blue-100 border border-blue-200' : 'bg-blue-50'}`}>
+                <div className="text-sm text-blue-700">Profit</div>
+                <div className="font-semibold">${stats.profitAmount.toFixed(2)}</div>
+              </div>
+              <div className={`px-3 py-2 rounded-md transition-colors ${withdrawalSource === 'referral_bonus' ? 'bg-green-100 border border-green-200' : 'bg-green-50'}`}>
+                <div className="text-sm text-green-700">Referral Bonus</div>
+                <div className="font-semibold">${stats.referralBonus.toFixed(2)}</div>
+              </div>
             </div>
-          </div>
 
-          <div className="px-3 py-2 bg-orange-50 rounded-md flex justify-between">
-            <div className="text-sm text-orange-700">In Escrow (Pending)</div>
-            <div className="font-semibold">${statsLoading ? "..." : stats.escrowedAmount.toFixed(2)}</div>
+            <div className="px-3 py-2 bg-orange-50 rounded-md flex justify-between">
+              <div className="text-sm text-orange-700">In Escrow (Pending)</div>
+              <div className="font-semibold">${stats.escrowedAmount.toFixed(2)}</div>
+            </div>
           </div>
-        </div>
+        )}
 
         <form onSubmit={handleWithdraw} className="space-y-4">
           <div className="space-y-2">
@@ -163,9 +203,14 @@ export function WithdrawalForm() {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={isProcessing || !user.trc20Address || statsLoading || stats.availableWithdrawal < 10}
+              disabled={isButtonDisabled}
             >
-              {isProcessing ? "Processing..." : "Request Withdrawal"}
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : "Request Withdrawal"}
             </Button>
           </div>
         </form>

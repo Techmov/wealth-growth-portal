@@ -8,8 +8,9 @@ import { WithdrawalsRequestList } from "@/components/WithdrawalsRequestList";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { WithdrawalRequest } from "@/types";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, Loader2 } from "lucide-react";
 import { useWithdrawalStats } from "@/hooks/useWithdrawalStats";
+import { ResponsivePagination } from "@/components/ResponsivePagination";
 
 const WithdrawalPage = () => {
   const { user, isLoading } = useAuth();
@@ -17,6 +18,10 @@ const WithdrawalPage = () => {
   const navigate = useNavigate();
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
 
   // Fetch withdrawal requests from the database
   useEffect(() => {
@@ -87,16 +92,28 @@ const WithdrawalPage = () => {
   }, [user, isLoading, navigate]);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <UserLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </UserLayout>
+    );
   }
 
   if (!user) {
     return null;
   }
 
+  // Calculate current items for pagination
+  const indexOfLastWithdrawal = currentPage * itemsPerPage;
+  const indexOfFirstWithdrawal = indexOfLastWithdrawal - itemsPerPage;
+  const currentWithdrawals = withdrawalRequests.slice(indexOfFirstWithdrawal, indexOfLastWithdrawal);
+  const totalPages = Math.ceil(withdrawalRequests.length / itemsPerPage);
+
   return (
     <UserLayout>
-      <div className="container py-8 max-w-4xl">
+      <div className="container py-8 max-w-4xl px-4 sm:px-6">
         <Heading
           title="Withdraw Funds"
           description="Request a withdrawal to your TRC20 wallet"
@@ -111,39 +128,45 @@ const WithdrawalPage = () => {
           <div className="bg-card rounded-lg border p-6">
             <h3 className="text-lg font-semibold mb-4">Withdrawal Summary</h3>
             
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Available for Withdrawal:</span>
-                <span className="font-bold">${stats.availableWithdrawal.toFixed(2)}</span>
+            {stats ? (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Available for Withdrawal:</span>
+                  <span className="font-bold">${stats.availableWithdrawal.toFixed(2)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">From Profits:</span>
+                  <span>${stats.profitAmount.toFixed(2)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">From Referrals:</span>
+                  <span>${stats.referralBonus.toFixed(2)}</span>
+                </div>
+                
+                <hr className="my-2" />
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Pending Withdrawals:</span>
+                  <span>${stats.pendingWithdrawals.toFixed(2)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Escrowed Amount:</span>
+                  <span>${stats.escrowedAmount.toFixed(2)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="text-sm font-medium">Total Withdrawn:</span>
+                  <span className="font-bold">${user.totalWithdrawn.toFixed(2)}</span>
+                </div>
               </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm">From Profits:</span>
-                <span>${stats.profitAmount.toFixed(2)}</span>
+            ) : (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm">From Referrals:</span>
-                <span>${stats.referralBonus.toFixed(2)}</span>
-              </div>
-              
-              <hr className="my-2" />
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Pending Withdrawals:</span>
-                <span>${stats.pendingWithdrawals.toFixed(2)}</span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Escrowed Amount:</span>
-                <span>${stats.escrowedAmount.toFixed(2)}</span>
-              </div>
-              
-              <div className="flex justify-between items-center pt-2 border-t">
-                <span className="text-sm font-medium">Total Withdrawn:</span>
-                <span className="font-bold">${user.totalWithdrawn.toFixed(2)}</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
         
@@ -154,7 +177,25 @@ const WithdrawalPage = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <WithdrawalsRequestList withdrawalRequests={withdrawalRequests} />
+            <>
+              <WithdrawalsRequestList withdrawalRequests={currentWithdrawals} />
+              
+              {withdrawalRequests.length > itemsPerPage && (
+                <div className="mt-6">
+                  <ResponsivePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              )}
+              
+              {withdrawalRequests.length === 0 && (
+                <div className="text-center p-8 bg-gray-50 border rounded-lg">
+                  <p className="text-muted-foreground">You haven't made any withdrawal requests yet.</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -10,12 +10,15 @@ import {
 import { supabase } from "./integrations/supabase/client";
 import { AuthProvider } from "./context/AuthContext";
 import { InvestmentProvider } from "./context/InvestmentContext";
+import { Toaster } from "sonner";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import Dashboard from "./pages/Dashboard";
 import InvestmentsPage from "./pages/InvestmentsPage";
 import TransactionsPage from "./pages/TransactionsPage";
+import DepositPage from "./pages/DepositPage";
+import WithdrawalPage from "./pages/WithdrawalPage";
 import ProfilePage from "./pages/ProfilePage";
 import ReferralsPage from "./pages/ReferralsPage";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -23,7 +26,6 @@ import NotFound from "./pages/NotFound";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { useAuth } from "./context/AuthContext";
 import { initializeRealtimeSubscriptions } from "./integrations/supabase/realtime";
-import { toast } from "sonner";
 
 // Create separate components for protected routes to avoid hook issues
 const ProtectedRoute = () => {
@@ -104,6 +106,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+        <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<LoginPage />} />
@@ -120,14 +123,14 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/investments" element={<InvestmentsPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
+              <Route path="/deposit" element={<DepositPage />} />
+              <Route path="/withdraw" element={<WithdrawalPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/referrals" element={<ReferralsPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
               
-              {/* Redirect old deposit/withdraw routes to the transactions page */}
-              <Route path="/deposit" element={<Navigate to="/transactions" replace />} />
-              <Route path="/withdraw" element={<Navigate to="/transactions" replace />} />
-              <Route path="/withdrawal" element={<Navigate to="/transactions" replace />} />
+              {/* Redirect old withdrawal route to the withdrawal page */}
+              <Route path="/withdrawal" element={<Navigate to="/withdraw" replace />} />
             </Route>
             
             {/* Admin routes */}
