@@ -1,6 +1,4 @@
-
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/types";
 import { 
   Table, 
@@ -21,6 +19,8 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { incrementValue } from "@/utils/supabaseUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { adminUtils } from "@/utils/adminUtils";
 
 interface DepositApprovalsProps {
   onStatusChange?: () => void;
@@ -56,50 +56,16 @@ export function DepositApprovals({ onStatusChange }: DepositApprovalsProps) {
       setIsLoading(true);
       console.log("Fetching pending deposits...");
       
-      // Try to use admin RPC function first
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_pending_deposits');
+      const pendingDeposits = await adminUtils.getPendingDeposits();
       
-      if (rpcError) {
-        console.warn("Error using RPC, falling back to direct query:", rpcError);
-        
-        // Fallback to direct query
-        const { data, error } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('type', 'deposit')
-          .eq('status', 'pending')
-          .order('date', { ascending: false });
-        
-        if (error) {
-          throw error;
-        }
-
-        console.log(`Found ${data?.length || 0} pending deposits with direct query`);
-        if (data) {
-          const formattedDeposits: Transaction[] = data.map(tx => ({
-            id: tx.id,
-            userId: tx.user_id,
-            type: tx.type as 'deposit',
-            amount: tx.amount,
-            status: tx.status as 'pending',
-            date: new Date(tx.date || Date.now()),
-            description: tx.description,
-            trc20Address: tx.trc20_address,
-            txHash: tx.tx_hash,
-            depositScreenshot: tx.deposit_screenshot,
-            rejectionReason: tx.rejection_reason
-          }));
-          
-          setDeposits(formattedDeposits);
-        }
-      } else if (rpcData) {
-        console.log(`Found ${rpcData.length || 0} pending deposits with RPC`);
-        const formattedDeposits: Transaction[] = rpcData.map(tx => ({
+      if (pendingDeposits) {
+        console.log(`Found ${pendingDeposits.length} pending deposits`);
+        const formattedDeposits: Transaction[] = pendingDeposits.map(tx => ({
           id: tx.id,
           userId: tx.user_id,
-          type: 'deposit',
+          type: tx.type as 'deposit',
           amount: tx.amount,
-          status: 'pending',
+          status: tx.status as 'pending',
           date: new Date(tx.date || Date.now()),
           description: tx.description,
           trc20Address: tx.trc20_address,

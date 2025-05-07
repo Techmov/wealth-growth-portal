@@ -1,6 +1,4 @@
-
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Product } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -17,6 +15,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { adminUtils } from "@/utils/adminUtils";
 
 interface InvestmentPlanManagementProps {
   onStatusChange?: () => void;
@@ -51,36 +51,11 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
       setIsLoading(true);
       console.log("Fetching investment plans...");
       
-      const { data, error } = await supabase.rpc('get_admin_plans');
-
-      if (error) {
-        // Fallback to direct query if RPC fails
-        const { data: directData, error: directError } = await supabase
-          .from('products')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (directError) {
-          throw directError;
-        }
-        
-        if (directData) {
-          console.log(`Found ${directData.length} investment plans`);
-          const formattedPlans: Product[] = directData.map(plan => ({
-            id: plan.id,
-            name: plan.name,
-            description: plan.description,
-            amount: plan.amount,
-            duration: plan.duration,
-            growthRate: plan.growth_rate,
-            risk: plan.risk as 'low' | 'medium' | 'high',
-            active: plan.active
-          }));
-          setPlans(formattedPlans);
-        }
-      } else if (data) {
-        console.log(`Found ${data.length} investment plans`);
-        const formattedPlans: Product[] = data.map(plan => ({
+      const plans = await adminUtils.getAdminPlans();
+      
+      if (plans) {
+        console.log(`Found ${plans.length} investment plans`);
+        const formattedPlans: Product[] = plans.map(plan => ({
           id: plan.id,
           name: plan.name,
           description: plan.description,

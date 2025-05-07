@@ -80,6 +80,27 @@ serve(async (req) => {
         return new Response(JSON.stringify({ success: true, data: plans }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+
+      case "get_pending_withdrawals":
+        const { data: withdrawals, error: withdrawalsError } = await supabase
+          .from("withdrawal_requests")
+          .select(`
+            *,
+            profiles:user_id (
+              name,
+              email,
+              username
+            )
+          `)
+          .eq("status", "pending");
+        
+        if (withdrawalsError) {
+          throw withdrawalsError;
+        }
+        
+        return new Response(JSON.stringify({ success: true, data: withdrawals }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       
       default:
         return new Response(JSON.stringify({ error: "Invalid action" }), {

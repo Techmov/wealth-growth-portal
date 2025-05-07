@@ -1,6 +1,4 @@
-
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { User } from "@/types";
 import { 
   Table, 
@@ -25,6 +23,9 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Search, User as UserIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { adminUtils } from "@/utils/adminUtils";
+import { mapProfileToUser } from "@/utils/authMappers";
 
 export function UserManagement({ onUserDeleted }: { onUserDeleted?: () => void }) {
   const [users, setUsers] = useState<User[]>([]);
@@ -54,59 +55,11 @@ export function UserManagement({ onUserDeleted }: { onUserDeleted?: () => void }
       setIsLoading(true);
       console.log("Fetching all users...");
       
-      // Try to use admin RPC function first
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_all_users');
+      const profiles = await adminUtils.getAllUsers();
       
-      if (rpcError) {
-        console.warn("Error using RPC, falling back to direct query:", rpcError);
-        
-        // Fallback to direct query
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*');
-        
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          console.log(`Found ${data.length} users with direct query`);
-          const formattedUsers: User[] = data.map(profile => ({
-            id: profile.id,
-            name: profile.name || '',
-            email: profile.email || '',
-            username: profile.username || '',
-            balance: profile.balance || 0,
-            totalInvested: profile.total_invested || 0,
-            totalWithdrawn: profile.total_withdrawn || 0,
-            referralBonus: profile.referral_bonus || 0,
-            referralCode: profile.referral_code || '',
-            trc20Address: profile.trc20_address || '',
-            withdrawalPassword: profile.withdrawal_password || '',
-            role: profile.role === 'admin' ? 'admin' : 'user',
-            createdAt: new Date(profile.created_at || Date.now())
-          }));
-          
-          setUsers(formattedUsers);
-        }
-      } else if (rpcData) {
-        console.log(`Found ${rpcData.length} users with RPC`);
-        const formattedUsers: User[] = rpcData.map(profile => ({
-          id: profile.id,
-          name: profile.name || '',
-          email: profile.email || '',
-          username: profile.username || '',
-          balance: profile.balance || 0,
-          totalInvested: profile.total_invested || 0,
-          totalWithdrawn: profile.total_withdrawn || 0,
-          referralBonus: profile.referral_bonus || 0,
-          referralCode: profile.referral_code || '',
-          trc20Address: profile.trc20_address || '',
-          withdrawalPassword: profile.withdrawal_password || '',
-          role: profile.role === 'admin' ? 'admin' : 'user',
-          createdAt: new Date(profile.created_at || Date.now())
-        }));
-        
+      if (profiles) {
+        console.log(`Found ${profiles.length} users`);
+        const formattedUsers: User[] = profiles.map(profile => mapProfileToUser(profile));
         setUsers(formattedUsers);
       }
     } catch (error) {

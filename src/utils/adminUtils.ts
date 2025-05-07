@@ -10,17 +10,7 @@ export const adminUtils = {
    */
   getAllUsers: async () => {
     try {
-      // Try using the Edge Function if available
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('admin', {
-        body: { action: 'get_all_users' }
-      });
-      
-      if (!functionError && functionData?.success) {
-        return functionData.data;
-      }
-      
-      // Fall back to direct database query
-      console.log("Falling back to direct query for getAllUsers");
+      // Use direct database query instead of RPC
       const { data, error } = await supabase
         .from('profiles')
         .select('*');
@@ -38,17 +28,7 @@ export const adminUtils = {
    */
   getPendingDeposits: async () => {
     try {
-      // Try using the Edge Function if available
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('admin', {
-        body: { action: 'get_pending_deposits' }
-      });
-      
-      if (!functionError && functionData?.success) {
-        return functionData.data;
-      }
-      
-      // Fall back to direct database query
-      console.log("Falling back to direct query for getPendingDeposits");
+      // Use direct database query instead of RPC
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
@@ -68,17 +48,7 @@ export const adminUtils = {
    */
   getAdminPlans: async () => {
     try {
-      // Try using the Edge Function if available
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('admin', {
-        body: { action: 'get_admin_plans' }
-      });
-      
-      if (!functionError && functionData?.success) {
-        return functionData.data;
-      }
-      
-      // Fall back to direct database query
-      console.log("Falling back to direct query for getAdminPlans");
+      // Use direct database query instead of RPC
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -88,6 +58,33 @@ export const adminUtils = {
       return data;
     } catch (error) {
       console.error("Error getting admin plans:", error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Get pending withdrawals with user info (admin only)
+   */
+  getPendingWithdrawals: async () => {
+    try {
+      // Use direct database query instead of RPC
+      const { data, error } = await supabase
+        .from('withdrawal_requests')
+        .select(`
+          *,
+          profiles:user_id (
+            name,
+            email,
+            username
+          )
+        `)
+        .eq('status', 'pending')
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error getting pending withdrawals:", error);
       throw error;
     }
   }

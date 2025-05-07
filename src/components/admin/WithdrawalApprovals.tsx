@@ -1,6 +1,4 @@
-
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { WithdrawalRequest } from "@/types";
 import { 
   Table, 
@@ -24,6 +22,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { incrementValue } from "@/utils/supabaseUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { adminUtils } from "@/utils/adminUtils";
 
 interface WithdrawalApprovalsProps {
   onStatusChange?: () => void;
@@ -58,51 +58,11 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
       setIsLoading(true);
       console.log("Fetching pending withdrawals...");
       
-      // Try with RPC function
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_pending_withdrawals');
+      const withdrawalRequests = await adminUtils.getPendingWithdrawals();
       
-      if (rpcError) {
-        console.warn("Error using RPC, falling back to direct query:", rpcError);
-        
-        // Fetch with join to get user info
-        const { data, error } = await supabase
-          .from('withdrawal_requests')
-          .select(`
-            *,
-            profiles:user_id (
-              name,
-              email,
-              username
-            )
-          `)
-          .eq('status', 'pending')
-          .order('date', { ascending: false });
-        
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          console.log(`Found ${data.length} pending withdrawals with direct query`);
-          const formattedWithdrawals: WithdrawalRequest[] = data.map(wr => ({
-            id: wr.id,
-            userId: wr.user_id,
-            amount: wr.amount,
-            status: wr.status as 'pending' | 'approved' | 'rejected',
-            date: new Date(wr.date || Date.now()),
-            trc20Address: wr.trc20_address,
-            txHash: wr.tx_hash,
-            rejectionReason: wr.rejection_reason,
-            userName: wr.profiles?.name || 'Unknown',
-            userEmail: wr.profiles?.email || 'Unknown',
-            username: wr.profiles?.username || 'Unknown'
-          }));
-          
-          setWithdrawals(formattedWithdrawals);
-        }
-      } else if (rpcData) {
-        console.log(`Found ${rpcData.length} pending withdrawals with RPC`);
-        const formattedWithdrawals: WithdrawalRequest[] = rpcData.map(wr => ({
+      if (withdrawalRequests) {
+        console.log(`Found ${withdrawalRequests.length} pending withdrawals`);
+        const formattedWithdrawals: WithdrawalRequest[] = withdrawalRequests.map(wr => ({
           id: wr.id,
           userId: wr.user_id,
           amount: wr.amount,
@@ -111,9 +71,9 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
           trc20Address: wr.trc20_address,
           txHash: wr.tx_hash,
           rejectionReason: wr.rejection_reason,
-          userName: wr.name || 'Unknown',
-          userEmail: wr.email || 'Unknown',
-          username: wr.username || 'Unknown'
+          userName: wr.profiles?.name || 'Unknown',
+          userEmail: wr.profiles?.email || 'Unknown',
+          username: wr.profiles?.username || 'Unknown'
         }));
         
         setWithdrawals(formattedWithdrawals);
