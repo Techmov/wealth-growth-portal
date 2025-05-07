@@ -1,13 +1,15 @@
 
 import { Offer } from "@/types/content";
 import { OfferCard } from "./OfferCard";
+import { AlertCircle } from "lucide-react";
 
 interface OffersSectionProps {
   offers: Offer[];
   isLoading: boolean;
+  useMockData?: boolean;
 }
 
-export function OffersSection({ offers, isLoading }: OffersSectionProps) {
+export function OffersSection({ offers, isLoading, useMockData = false }: OffersSectionProps) {
   if (isLoading) {
     return (
       <div className="py-12 bg-white">
@@ -48,6 +50,13 @@ export function OffersSection({ offers, isLoading }: OffersSectionProps) {
           <p className="text-gray-600 max-w-2xl mx-auto">
             Limited-time investment opportunities with exclusive terms and benefits.
           </p>
+          
+          {useMockData && (
+            <div className="flex items-center justify-center mt-2 text-amber-600 text-sm">
+              <AlertCircle size={16} className="mr-1" />
+              <span>Showing example offers</span>
+            </div>
+          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

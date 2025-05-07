@@ -2,15 +2,16 @@
 import { Feature } from "@/types/content";
 import { FeatureCard } from "./FeatureCard";
 import * as LucideIcons from "lucide-react";
-import { Star } from "lucide-react";
+import { AlertCircle, Star } from "lucide-react";
 
 interface FeaturesSectionProps {
   features: Feature[];
   isLoading: boolean;
   isAuthenticated?: boolean;
+  useMockData?: boolean;
 }
 
-export function FeaturesSection({ features, isLoading, isAuthenticated = false }: FeaturesSectionProps) {
+export function FeaturesSection({ features, isLoading, isAuthenticated = false, useMockData = false }: FeaturesSectionProps) {
   if (isLoading) {
     return (
       <div className="mt-16 grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
@@ -33,31 +34,47 @@ export function FeaturesSection({ features, isLoading, isAuthenticated = false }
   // For authenticated users, we show a different layout
   if (isAuthenticated) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        {features.map((feature) => (
-          <div key={feature.id} className="group">
-            <div className="bg-gray-50 hover:bg-wealth-primary/5 border border-gray-200 rounded-lg p-6 text-center transition-all group-hover:border-wealth-primary">
-              <div className="w-16 h-16 bg-wealth-primary/10 text-wealth-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-wealth-primary group-hover:text-white transition-all">
-                {feature.icon_name && ((LucideIcons as any)[feature.icon_name] ? 
-                  ((LucideIcons as any)[feature.icon_name]({ size: 28 })) : 
-                  <Star size={28} />
-                )}
-              </div>
-              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-              <p className="text-sm text-gray-500">{feature.description}</p>
-            </div>
+      <div>
+        {useMockData && (
+          <div className="flex items-center justify-center mb-4 text-amber-600 text-sm">
+            <AlertCircle size={16} className="mr-1" />
+            <span>Showing example features</span>
           </div>
-        ))}
+        )}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {features.map((feature) => (
+            <div key={feature.id} className="group">
+              <div className="bg-gray-50 hover:bg-wealth-primary/5 border border-gray-200 rounded-lg p-6 text-center transition-all group-hover:border-wealth-primary">
+                <div className="w-16 h-16 bg-wealth-primary/10 text-wealth-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-wealth-primary group-hover:text-white transition-all">
+                  {feature.icon_name && ((LucideIcons as any)[feature.icon_name] ? 
+                    ((LucideIcons as any)[feature.icon_name]({ size: 28 })) : 
+                    <Star size={28} />
+                  )}
+                </div>
+                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <p className="text-sm text-gray-500">{feature.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   // For non-authenticated users
   return (
-    <div className="mt-16 grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
-      {features.map((feature) => (
-        <FeatureCard key={feature.id} feature={feature} />
-      ))}
+    <div className="mt-16">
+      {useMockData && (
+        <div className="flex items-center justify-center mb-4 text-amber-600 text-sm">
+          <AlertCircle size={16} className="mr-1" />
+          <span>Showing example features</span>
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
+        {features.map((feature) => (
+          <FeatureCard key={feature.id} feature={feature} />
+        ))}
+      </div>
     </div>
   );
 }

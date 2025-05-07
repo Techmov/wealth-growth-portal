@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserLayout } from "@/components/UserLayout";
@@ -10,6 +9,10 @@ import { StatCard } from "@/components/StatCard";
 import { TransactionsList } from "@/components/TransactionsList";
 import { Transaction, Investment } from "@/types";
 import { ActiveInvestmentCard } from "@/components/ActiveInvestmentCard";
+import { useHomeContent } from "@/hooks/useHomeContent";
+import { PromotionsSection } from "@/components/home/PromotionsSection";
+import { OffersSection } from "@/components/home/OffersSection";
+import { FeaturesSection } from "@/components/home/FeaturesSection";
 import {
   Wallet,
   ArrowDown,
@@ -24,6 +27,7 @@ import {
 const Dashboard = () => {
   const { user, isLoading: authLoading } = useAuth();
   const { products, userInvestments, transactions, isLoading: investmentLoading } = useInvestment();
+  const { promotions, offers, features, isLoading: contentLoading, useMockData } = useHomeContent();
   const navigate = useNavigate();
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
@@ -250,6 +254,28 @@ const Dashboard = () => {
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Display promotions, offers, and features section */}
+        <div className="mt-8">
+          <PromotionsSection 
+            promotions={promotions} 
+            isLoading={contentLoading} 
+            useMockData={useMockData} 
+          />
+          
+          <OffersSection 
+            offers={offers} 
+            isLoading={contentLoading} 
+            useMockData={useMockData} 
+          />
+          
+          <FeaturesSection 
+            features={features} 
+            isLoading={contentLoading} 
+            isAuthenticated={true}
+            useMockData={useMockData} 
+          />
         </div>
       </div>
     </UserLayout>

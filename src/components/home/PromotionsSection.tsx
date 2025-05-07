@@ -1,13 +1,15 @@
 
 import { Promotion } from "@/types/content";
 import { PromotionCard } from "./PromotionCard";
+import { AlertCircle } from "lucide-react";
 
 interface PromotionsSectionProps {
   promotions: Promotion[];
   isLoading: boolean;
+  useMockData?: boolean;
 }
 
-export function PromotionsSection({ promotions, isLoading }: PromotionsSectionProps) {
+export function PromotionsSection({ promotions, isLoading, useMockData = false }: PromotionsSectionProps) {
   if (isLoading) {
     return (
       <div className="py-16 bg-gray-50">
@@ -46,6 +48,13 @@ export function PromotionsSection({ promotions, isLoading }: PromotionsSectionPr
           <p className="text-gray-600 max-w-2xl mx-auto">
             Take advantage of these limited-time opportunities to maximize your investment potential.
           </p>
+          
+          {useMockData && (
+            <div className="flex items-center justify-center mt-2 text-amber-600 text-sm">
+              <AlertCircle size={16} className="mr-1" />
+              <span>Showing example promotions</span>
+            </div>
+          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
