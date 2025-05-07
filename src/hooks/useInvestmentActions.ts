@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Product } from "@/types";
+import { User, Product, Downline } from "@/types";
 
 export function useInvestmentActions(user: User | null) {
   const invest = async (productId: string) => {
@@ -131,7 +131,7 @@ export function useInvestmentActions(user: User | null) {
   };
 
   // Get user's downlines (referred users) with real data from Supabase
-  const getUserDownlines = async () => {
+  const getUserDownlines = async (): Promise<Downline[]> => {
     if (!user) return [];
 
     try {

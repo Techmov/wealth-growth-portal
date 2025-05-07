@@ -18,7 +18,7 @@ type InvestmentContextType = {
   claimProfit: (investmentId: string) => Promise<any>;
   getClaimableProfit: (investmentId: string) => Promise<number>;
   getReferralBonus: (referralCode: string) => Promise<void>;
-  getUserDownlines: () => Downline[];
+  getUserDownlines: () => Promise<Downline[]>;
 };
 
 const InvestmentContext = createContext<InvestmentContextType | undefined>(undefined);

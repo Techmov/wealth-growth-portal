@@ -5,7 +5,7 @@ import { Heading } from "@/components/ui/heading";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Users, Link, BarChart, TrendingUp, Share } from "lucide-react";
+import { Copy, Users, Link, BarChart, TrendingUp, Share, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useInvestment } from "@/context/InvestmentContext";
