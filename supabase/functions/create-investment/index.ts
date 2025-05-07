@@ -17,6 +17,20 @@ serve(async (req) => {
     // Get the request body
     const { userId, productId } = await req.json();
     
+    // Validate input parameters
+    if (!userId || !productId) {
+      console.error("Missing required parameters:", { userId, productId });
+      return new Response(
+        JSON.stringify({ error: 'Missing required parameters' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
+    console.log("Creating investment with parameters:", { userId, productId });
+    
     // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -50,6 +64,8 @@ serve(async (req) => {
         }
       );
     }
+
+    console.log("Investment created successfully:", data);
 
     return new Response(
       JSON.stringify(data),
