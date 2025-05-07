@@ -3,6 +3,7 @@ import { Feature } from "@/types/content";
 import { FeatureCard } from "./FeatureCard";
 import * as LucideIcons from "lucide-react";
 import { AlertCircle, Star } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
 interface FeaturesSectionProps {
   features: Feature[];
@@ -11,11 +12,13 @@ interface FeaturesSectionProps {
   useMockData?: boolean;
 }
 
-// Helper function to safely get icon component
-const getIconComponent = (iconName: string) => {
-  // Check if the icon name exists in Lucide Icons and is a valid component
-  if (iconName && typeof LucideIcons[iconName as keyof typeof LucideIcons] === 'function') {
-    return LucideIcons[iconName as keyof typeof LucideIcons];
+// Helper function to safely get icon component with proper typing
+const getIconComponent = (iconName: string): LucideIcon => {
+  if (iconName) {
+    const selectedIcon = LucideIcons[iconName as keyof typeof LucideIcons];
+    if (typeof selectedIcon === 'function') {
+      return selectedIcon as LucideIcon;
+    }
   }
   // Return Star as fallback icon
   return Star;
@@ -53,13 +56,13 @@ export function FeaturesSection({ features, isLoading, isAuthenticated = false, 
         )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {features.map((feature) => {
-            const IconComponent = getIconComponent(feature.icon_name);
+            const IconComp = getIconComponent(feature.icon_name);
             
             return (
               <div key={feature.id} className="group">
                 <div className="bg-gray-50 hover:bg-wealth-primary/5 border border-gray-200 rounded-lg p-6 text-center transition-all group-hover:border-wealth-primary">
                   <div className="w-16 h-16 bg-wealth-primary/10 text-wealth-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-wealth-primary group-hover:text-white transition-all">
-                    <IconComponent size={28} />
+                    <IconComp size={28} />
                   </div>
                   <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
                   <p className="text-sm text-gray-500">{feature.description}</p>

@@ -2,6 +2,7 @@
 import { Feature } from "@/types/content";
 import * as LucideIcons from "lucide-react";
 import { Star } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
 interface FeatureCardProps {
   feature: Feature;
@@ -9,11 +10,14 @@ interface FeatureCardProps {
 }
 
 export function FeatureCard({ feature, className = "" }: FeatureCardProps) {
-  // Safe icon component selection
-  let IconComponent = Star; // Default fallback
+  // Safe icon component selection with proper typing
+  let IconComponent: LucideIcon = Star; // Default fallback
   
-  if (feature.icon_name && typeof LucideIcons[feature.icon_name as keyof typeof LucideIcons] === 'function') {
-    IconComponent = LucideIcons[feature.icon_name as keyof typeof LucideIcons];
+  if (feature.icon_name) {
+    const selectedIcon = LucideIcons[feature.icon_name as keyof typeof LucideIcons];
+    if (typeof selectedIcon === 'function') {
+      IconComponent = selectedIcon as LucideIcon;
+    }
   }
   
   return (
