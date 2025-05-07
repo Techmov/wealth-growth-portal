@@ -11,35 +11,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { Check, X } from "lucide-react";
-import { AdminLoader } from "../shared/AdminLoader";
-import { EmptyState } from "../shared/EmptyState";
 
 interface WithdrawalsTableProps {
   withdrawals: WithdrawalRequest[];
-  isLoading: boolean;
   onApprove: (withdrawal: WithdrawalRequest) => void;
   onReject: (withdrawalId: string) => void;
 }
 
 export function WithdrawalsTable({
   withdrawals,
-  isLoading,
   onApprove,
   onReject
 }: WithdrawalsTableProps) {
-  if (isLoading) {
-    return <AdminLoader message="Loading withdrawals..." />;
-  }
-
-  if (withdrawals.length === 0) {
-    return (
-      <EmptyState
-        icon={<Check className="h-6 w-6 text-muted-foreground" />}
-        message="No pending withdrawals to approve"
-      />
-    );
-  }
-
   return (
     <Table>
       <TableHeader>
