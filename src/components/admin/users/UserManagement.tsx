@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { adminUtils } from "@/utils/adminUtils";
 import { mapProfileToUser } from "@/utils/authMappers";
 import { UsersList } from "./UsersList";
+import { Button } from "@/components/ui/button";
 
 export function UserManagement({ onUserDeleted }: { onUserDeleted?: () => void }) {
   const [users, setUsers] = useState<User[]>([]);
@@ -33,9 +34,16 @@ export function UserManagement({ onUserDeleted }: { onUserDeleted?: () => void }
       .channel('admin-profiles-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'profiles' },
-        () => fetchUsers()
+        (payload) => {
+          console.log("Profile change detected in UserManagement:", payload);
+          fetchUsers();
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log("✅ UserManagement connected to Supabase realtime");
+        }
+      });
     
     return () => {
       supabase.removeChannel(channel);
@@ -47,12 +55,29 @@ export function UserManagement({ onUserDeleted }: { onUserDeleted?: () => void }
       setIsLoading(true);
       console.log("Fetching all users...");
       
-      const profiles = await adminUtils.getAllUsers();
+      // Try direct database query first
+      let profiles = await adminUtils.getAllUsers();
       
-      if (profiles) {
+      if (!profiles || profiles.length === 0) {
+        // Fallback to direct query if RPC fails
+        console.log("Fallback: Using direct query to fetch users");
+        const { data, error } = await supabase.from('profiles').select('*');
+        
+        if (error) {
+          throw error;
+        }
+        
+        profiles = data;
+      }
+      
+      if (profiles && profiles.length > 0) {
         console.log(`Found ${profiles.length} users`);
         const formattedUsers: User[] = profiles.map(profile => mapProfileToUser(profile));
         setUsers(formattedUsers);
+      } else {
+        console.log("No users found or could not access user data");
+        setUsers([]);
+        toast.error("No users found or permission denied");
       }
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -101,16 +126,24 @@ export function UserManagement({ onUserDeleted }: { onUserDeleted?: () => void }
     }
   };
 
+  const handleRefresh = () => {
+    fetchUsers();
+    toast.success("User data refreshed");
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 w-full max-w-sm">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search users by name, email, or username..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1"
-        />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 w-full max-w-sm">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search users by name, email, or username..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1"
+          />
+        </div>
+        <Button variant="outline" onClick={handleRefresh}>Refresh</Button>
       </div>
       
       <div className="border rounded-md overflow-hidden">

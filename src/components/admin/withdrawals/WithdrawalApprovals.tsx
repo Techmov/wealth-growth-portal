@@ -9,7 +9,8 @@ import { WithdrawalsTable } from "./WithdrawalsTable";
 import { ApprovalDialog } from "./ApprovalDialog";
 import { AdminLoader } from "../shared/AdminLoader";
 import { EmptyState } from "../shared/EmptyState";
-import { Check } from "lucide-react";
+import { Check, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface WithdrawalApprovalsProps {
   onStatusChange?: () => void;
@@ -29,9 +30,16 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
       .channel('admin-withdrawals-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'withdrawal_requests' },
-        () => fetchPendingWithdrawals()
+        (payload) => {
+          console.log("Withdrawal change detected:", payload);
+          fetchPendingWithdrawals();
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log("✅ WithdrawalApprovals connected to Supabase realtime");
+        }
+      });
     
     return () => {
       supabase.removeChannel(channel);
@@ -45,28 +53,51 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
       
       const withdrawalRequests = await adminUtils.getPendingWithdrawals();
       
-      if (withdrawalRequests) {
+      if (withdrawalRequests && withdrawalRequests.length > 0) {
         console.log(`Found ${withdrawalRequests.length} pending withdrawals`);
-        const formattedWithdrawals: WithdrawalRequest[] = withdrawalRequests.map(wr => ({
-          id: wr.id,
-          userId: wr.user_id,
-          amount: wr.amount,
-          status: wr.status as 'pending' | 'approved' | 'rejected',
-          date: new Date(wr.date || Date.now()),
-          trc20Address: wr.trc20_address,
-          txHash: wr.tx_hash,
-          rejectionReason: wr.rejection_reason,
-          // Fix: Properly access the profile properties
-          userName: wr.profiles?.name || 'Unknown',
-          userEmail: wr.profiles?.email || 'Unknown',
-          username: wr.profiles?.username || 'Unknown'
-        }));
+        const formattedWithdrawals: WithdrawalRequest[] = withdrawalRequests.map(wr => {
+          // Handle both nested profile data structure and flat structure
+          let userName, userEmail, username;
+          
+          if (wr.profiles) {
+            userName = wr.profiles.name;
+            userEmail = wr.profiles.email;
+            username = wr.profiles.username;
+          } else if (wr.name) {
+            // If data comes from the RPC function in flattened form
+            userName = wr.name;
+            userEmail = wr.email;
+            username = wr.username;
+          } else {
+            userName = 'Unknown';
+            userEmail = 'Unknown';
+            username = 'Unknown';
+          }
+          
+          return {
+            id: wr.id,
+            userId: wr.user_id,
+            amount: wr.amount,
+            status: wr.status as 'pending' | 'approved' | 'rejected',
+            date: new Date(wr.date || Date.now()),
+            trc20Address: wr.trc20_address,
+            txHash: wr.tx_hash,
+            rejectionReason: wr.rejection_reason,
+            userName,
+            userEmail,
+            username
+          };
+        });
         
         setWithdrawals(formattedWithdrawals);
+      } else {
+        console.log("No pending withdrawals found");
+        setWithdrawals([]);
       }
     } catch (error) {
       console.error("Error fetching pending withdrawals:", error);
       toast.error("Failed to load pending withdrawals");
+      setWithdrawals([]);
     } finally {
       setIsLoading(false);
     }
@@ -168,22 +199,40 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
     }
   };
 
+  const handleRefresh = () => {
+    fetchPendingWithdrawals();
+    toast.success("Withdrawal data refreshed");
+  };
+
   if (isLoading) {
     return <AdminLoader message="Loading withdrawal requests..." />;
   }
 
   if (withdrawals.length === 0) {
     return (
-      <EmptyState
-        icon={<Check className="h-6 w-6 text-muted-foreground" />}
-        message="No pending withdrawals to approve"
-      />
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium">Pending Withdrawals (0)</h3>
+          <Button variant="outline" size="sm" onClick={handleRefresh} className="flex items-center gap-1">
+            <RefreshCw className="h-4 w-4" /> Refresh
+          </Button>
+        </div>
+        <EmptyState
+          icon={<Check className="h-6 w-6 text-muted-foreground" />}
+          message="No pending withdrawals to approve"
+        />
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium">Pending Withdrawals ({withdrawals.length})</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">Pending Withdrawals ({withdrawals.length})</h3>
+        <Button variant="outline" size="sm" onClick={handleRefresh} className="flex items-center gap-1">
+          <RefreshCw className="h-4 w-4" /> Refresh
+        </Button>
+      </div>
       
       <div className="border rounded-md overflow-x-auto">
         <WithdrawalsTable

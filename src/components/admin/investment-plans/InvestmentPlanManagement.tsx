@@ -5,7 +5,7 @@ import { Product } from "@/types";
 import { Button } from "@/components/ui/button";
 import { InvestmentPlanForm } from "../InvestmentPlanForm";
 import { InvestmentPlanList } from "./InvestmentPlanList";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,12 +35,19 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
     
     // Set up real-time subscription for products
     const channel = supabase
-      .channel('products-changes')
+      .channel('admin-products-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'products' },
-        () => fetchPlans()
+        (payload) => {
+          console.log("Product change detected in InvestmentPlanManagement:", payload);
+          fetchPlans();
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log("✅ InvestmentPlanManagement connected to Supabase realtime");
+        }
+      });
     
     return () => {
       supabase.removeChannel(channel);
@@ -54,7 +61,7 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
       
       const plans = await adminUtils.getAdminPlans();
       
-      if (plans) {
+      if (plans && plans.length > 0) {
         console.log(`Found ${plans.length} investment plans`);
         const formattedPlans: Product[] = plans.map(plan => ({
           id: plan.id,
@@ -67,10 +74,14 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
           active: plan.active
         }));
         setPlans(formattedPlans);
+      } else {
+        console.log("No investment plans found");
+        setPlans([]);
       }
     } catch (error: any) {
       console.error("Error fetching plans:", error);
       toast.error(error.message || "Failed to load investment plans");
+      setPlans([]);
     } finally {
       setIsLoading(false);
     }
@@ -126,6 +137,11 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
     setSelectedPlan(null);
   };
 
+  const handleRefresh = () => {
+    fetchPlans();
+    toast.success("Investment plan data refreshed");
+  };
+
   if (isFormOpen) {
     return (
       <InvestmentPlanForm 
@@ -140,9 +156,14 @@ export function InvestmentPlanManagement({ onStatusChange }: InvestmentPlanManag
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Investment Plans</h2>
-        <Button onClick={() => setIsFormOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add New Plan
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefresh} className="flex items-center gap-1">
+            <RefreshCw className="h-4 w-4" /> Refresh
+          </Button>
+          <Button onClick={() => setIsFormOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Add New Plan
+          </Button>
+        </div>
       </div>
 
       <InvestmentPlanList 

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface AdminComponentProps {
   onUserDeleted?: () => void;
@@ -42,14 +43,15 @@ const AdminDashboard = () => {
     pendingWithdrawals: 0,
     totalUsers: 0,
   });
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const updateStats = async () => {
     try {
-      if (!user) return;
+      if (!user || !isAdmin) return;
       
       console.log("Fetching admin stats...");
 
-      // Get total deposits
+      // Get total deposits with better error handling
       const { data: depositsData, error: depositsError } = await supabase
         .from('transactions')
         .select('amount')
@@ -58,13 +60,14 @@ const AdminDashboard = () => {
 
       if (depositsError) {
         console.error("Error fetching deposits:", depositsError);
+        toast.error("Failed to load deposit stats");
       } else {
-        const totalDeposits = depositsData.reduce((sum, tx) => sum + tx.amount, 0);
+        const totalDeposits = depositsData?.reduce((sum, tx) => sum + (tx.amount || 0), 0) || 0;
         console.log("Total deposits:", totalDeposits);
         setStats(prev => ({ ...prev, totalDeposits }));
       }
 
-      // Get total withdrawals
+      // Get total withdrawals with better error handling
       const { data: withdrawalsData, error: withdrawalsError } = await supabase
         .from('transactions')
         .select('amount')
@@ -73,8 +76,9 @@ const AdminDashboard = () => {
 
       if (withdrawalsError) {
         console.error("Error fetching withdrawals:", withdrawalsError);
+        toast.error("Failed to load withdrawal stats");
       } else {
-        const totalWithdrawals = withdrawalsData.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+        const totalWithdrawals = withdrawalsData?.reduce((sum, tx) => sum + Math.abs(tx.amount || 0), 0) || 0;
         console.log("Total withdrawals:", totalWithdrawals);
         setStats(prev => ({ ...prev, totalWithdrawals }));
       }
@@ -88,9 +92,11 @@ const AdminDashboard = () => {
 
       if (pendingDepositsError) {
         console.error("Error fetching pending deposits:", pendingDepositsError);
+        toast.error("Failed to load pending deposit stats");
       } else {
-        console.log("Pending deposits:", pendingDeposits.length);
-        setStats(prev => ({ ...prev, pendingDeposits: pendingDeposits.length }));
+        const pendingDepositsCount = pendingDeposits?.length || 0;
+        console.log("Pending deposits:", pendingDepositsCount);
+        setStats(prev => ({ ...prev, pendingDeposits: pendingDepositsCount }));
       }
 
       // Get pending withdrawals count
@@ -101,9 +107,11 @@ const AdminDashboard = () => {
 
       if (pendingWithdrawalsError) {
         console.error("Error fetching pending withdrawals:", pendingWithdrawalsError);
+        toast.error("Failed to load pending withdrawal stats");
       } else {
-        console.log("Pending withdrawals:", pendingWithdrawals.length);
-        setStats(prev => ({ ...prev, pendingWithdrawals: pendingWithdrawals.length }));
+        const pendingWithdrawalsCount = pendingWithdrawals?.length || 0;
+        console.log("Pending withdrawals:", pendingWithdrawalsCount);
+        setStats(prev => ({ ...prev, pendingWithdrawals: pendingWithdrawalsCount }));
       }
 
       // Get total referral bonuses
@@ -113,9 +121,10 @@ const AdminDashboard = () => {
 
       if (referralError) {
         console.error("Error fetching referral bonuses:", referralError);
+        toast.error("Failed to load referral stats");
       } else {
-        const totalReferralBonus = referralData.reduce((sum, profile) => 
-          sum + (profile.referral_bonus || 0), 0);
+        const totalReferralBonus = referralData?.reduce((sum, profile) => 
+          sum + (profile.referral_bonus || 0), 0) || 0;
         console.log("Total referral bonus:", totalReferralBonus);
         setStats(prev => ({ ...prev, totalReferralBonus }));
       }
@@ -127,12 +136,15 @@ const AdminDashboard = () => {
 
       if (usersError) {
         console.error("Error fetching users:", usersError);
+        toast.error("Failed to load user stats");
       } else {
-        console.log("Total users:", usersData.length);
-        setStats(prev => ({ ...prev, totalUsers: usersData.length }));
+        const totalUsers = usersData?.length || 0;
+        console.log("Total users:", totalUsers);
+        setStats(prev => ({ ...prev, totalUsers: totalUsers }));
       }
     } catch (error) {
       console.error("Error updating admin stats:", error);
+      toast.error("Failed to update dashboard stats");
     }
   };
   
@@ -141,9 +153,9 @@ const AdminDashboard = () => {
     if (user && isAdmin) {
       updateStats();
       
-      // Set up real-time subscriptions for relevant tables
-      const transactionsChannel = supabase
-        .channel('admin-transactions-changes')
+      // Set up real-time subscriptions for relevant tables with consistent naming
+      const channel = supabase
+        .channel('admin-dashboard-changes')
         .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'transactions' },
           () => {
@@ -151,10 +163,6 @@ const AdminDashboard = () => {
             updateStats();
           }
         )
-        .subscribe();
-        
-      const withdrawalsChannel = supabase
-        .channel('admin-withdrawals-changes')
         .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'withdrawal_requests' },
           () => {
@@ -162,10 +170,6 @@ const AdminDashboard = () => {
             updateStats();
           }
         )
-        .subscribe();
-        
-      const profilesChannel = supabase
-        .channel('admin-profiles-changes')
         .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'profiles' },
           () => {
@@ -173,19 +177,42 @@ const AdminDashboard = () => {
             updateStats();
           }
         )
-        .subscribe();
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'products' },
+          () => {
+            console.log("Product change detected, updating stats");
+            updateStats();
+          }
+        )
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'investments' },
+          () => {
+            console.log("Investment change detected, updating stats");
+            updateStats();
+          }
+        )
+        .subscribe((status) => {
+          console.log("Realtime subscription status:", status);
+          if (status === 'SUBSCRIBED') {
+            console.log("✅ Connected to Supabase realtime");
+          }
+        });
       
       // Set an interval to refresh stats every minute
       const interval = setInterval(updateStats, 60000);
       
       return () => {
-        supabase.removeChannel(transactionsChannel);
-        supabase.removeChannel(withdrawalsChannel);
-        supabase.removeChannel(profilesChannel);
+        supabase.removeChannel(channel);
         clearInterval(interval);
       };
     }
-  }, [user, isAdmin]);
+  }, [user, isAdmin, refreshTrigger]);
+
+  const triggerRefresh = () => {
+    console.log("Manually triggering refresh");
+    setRefreshTrigger(prev => prev + 1);
+    updateStats();
+  };
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">
@@ -195,8 +222,11 @@ const AdminDashboard = () => {
 
   // Check if user is admin
   if (!user || !isAdmin) {
+    console.log("User is not admin, redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
+
+  console.log("Rendering admin dashboard for admin user:", user.email);
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
@@ -207,9 +237,14 @@ const AdminDashboard = () => {
             <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
             <p className="text-muted-foreground">Welcome back, {user.name}</p>
           </div>
-          <Button variant="outline" onClick={logout} className="flex items-center gap-2">
-            <LogOut className="h-4 w-4" /> Logout
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={triggerRefresh} className="flex items-center gap-2">
+              Refresh Data
+            </Button>
+            <Button variant="outline" onClick={logout} className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" /> Logout
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 mb-8">
@@ -266,25 +301,25 @@ const AdminDashboard = () => {
             
             <TabsContent value="users">
               {withAdminProps(UserManagement, { 
-                onUserDeleted: () => updateStats() 
+                onUserDeleted: triggerRefresh
               })}
             </TabsContent>
             
             <TabsContent value="deposits">
               {withAdminProps(DepositApprovals, { 
-                onStatusChange: () => updateStats() 
+                onStatusChange: triggerRefresh 
               })}
             </TabsContent>
             
             <TabsContent value="withdrawals">
               {withAdminProps(WithdrawalApprovals, { 
-                onStatusChange: () => updateStats() 
+                onStatusChange: triggerRefresh
               })}
             </TabsContent>
             
             <TabsContent value="plans">
               {withAdminProps(InvestmentPlanManagement, { 
-                onStatusChange: () => updateStats() 
+                onStatusChange: triggerRefresh
               })}
             </TabsContent>
           </Tabs>

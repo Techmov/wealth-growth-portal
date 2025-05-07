@@ -12,6 +12,8 @@ import { incrementValue } from "@/utils/supabaseUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { adminUtils } from "@/utils/adminUtils";
 import { DepositsTable } from "./DepositsTable";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 interface DepositApprovalsProps {
   onStatusChange?: () => void;
@@ -27,15 +29,19 @@ export function DepositApprovals({ onStatusChange }: DepositApprovalsProps) {
     
     // Set up real-time subscription for transactions
     const channel = supabase
-      .channel('admin-transactions-changes')
+      .channel('admin-deposits-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'transactions' },
         (payload) => {
-          console.log("Transaction change detected:", payload);
+          console.log("Transaction change detected in DepositApprovals:", payload);
           fetchPendingDeposits();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log("✅ DepositApprovals connected to Supabase realtime");
+        }
+      });
     
     return () => {
       supabase.removeChannel(channel);
@@ -49,7 +55,7 @@ export function DepositApprovals({ onStatusChange }: DepositApprovalsProps) {
       
       const pendingDeposits = await adminUtils.getPendingDeposits();
       
-      if (pendingDeposits) {
+      if (pendingDeposits && pendingDeposits.length > 0) {
         console.log(`Found ${pendingDeposits.length} pending deposits`);
         const formattedDeposits: Transaction[] = pendingDeposits.map(tx => ({
           id: tx.id,
@@ -66,10 +72,14 @@ export function DepositApprovals({ onStatusChange }: DepositApprovalsProps) {
         }));
         
         setDeposits(formattedDeposits);
+      } else {
+        console.log("No pending deposits found");
+        setDeposits([]);
       }
     } catch (error) {
       console.error("Error fetching pending deposits:", error);
       toast.error("Failed to load pending deposits");
+      setDeposits([]);
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +89,10 @@ export function DepositApprovals({ onStatusChange }: DepositApprovalsProps) {
     try {
       // Find the deposit to approve
       const deposit = deposits.find(d => d.id === depositId);
-      if (!deposit) return;
+      if (!deposit) {
+        toast.error("Deposit not found");
+        return;
+      }
 
       // Update transaction status
       const { error: transactionError } = await supabase
@@ -139,9 +152,19 @@ export function DepositApprovals({ onStatusChange }: DepositApprovalsProps) {
     }
   };
 
+  const handleRefresh = () => {
+    fetchPendingDeposits();
+    toast.success("Deposit data refreshed");
+  };
+
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium">Pending Deposits ({deposits.length})</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">Pending Deposits ({deposits.length})</h3>
+        <Button variant="outline" size="sm" onClick={handleRefresh} className="flex items-center gap-1">
+          <RefreshCw className="h-4 w-4" /> Refresh
+        </Button>
+      </div>
       
       <div className="border rounded-md overflow-x-auto">
         <DepositsTable 

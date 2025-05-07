@@ -22,6 +22,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { useAuth } from "./context/AuthContext";
+import { initializeRealtimeSubscriptions } from "./integrations/supabase/realtime";
+import { toast } from "sonner";
 
 // Create separate components for protected routes to avoid hook issues
 const ProtectedRoute = () => {
@@ -45,6 +47,7 @@ const AdminRoute = () => {
   
   if (!isAdmin) {
     console.log("AdminRoute: Not admin, redirecting to dashboard");
+    toast.error("Access denied: Admin privileges required");
     return <Navigate to="/dashboard" replace />;
   }
   
@@ -70,6 +73,7 @@ const AdminRedirect = () => {
 
 function App() {
   const [initializing, setInitializing] = useState(true);
+  const [realtimeSub, setRealtimeSub] = useState<{cleanup: () => void} | null>(null);
 
   useEffect(() => {
     // Check for initial session
@@ -78,10 +82,23 @@ function App() {
     }).catch(() => {
       setInitializing(false);
     });
+
+    // Initialize realtime subscriptions
+    const subscription = initializeRealtimeSubscriptions();
+    setRealtimeSub(subscription);
+
+    return () => {
+      // Clean up subscriptions when the app unmounts
+      if (realtimeSub) {
+        realtimeSub.cleanup();
+      }
+    };
   }, []);
 
   if (initializing) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
+    </div>;
   }
 
   return (
