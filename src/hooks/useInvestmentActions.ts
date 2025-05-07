@@ -11,23 +11,25 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // Use the server-side procedure to handle investment creation
-      const { data, error } = await supabase.rpc('create_investment', {
-        p_user_id: user.id,
-        p_product_id: productId,
-        p_amount: 0, // Will be determined by the procedure based on product
-        p_end_date: new Date(), // Will be calculated by the procedure
-        p_starting_value: 0, // Will be determined by the procedure
-        p_current_value: 0, // Will be determined by the procedure
-        p_final_value: 0 // Will be determined by the procedure
-      });
+      // Instead of using RPC, we'll use an insert directly
+      const { data, error } = await supabase
+        .from('investments')
+        .insert({
+          user_id: user.id,
+          product_id: productId,
+          status: 'active'
+          // The database trigger will handle the other fields
+        })
+        .select()
+        .single();
 
       if (error) {
         throw new Error(error.message || "Failed to create investment");
       }
 
       toast.success(`Successfully invested in this product`);
-      return data;
+      // Return void to match the expected return type
+      return;
     } catch (error: any) {
       toast.error(error.message || "Investment failed");
       throw error;
@@ -50,7 +52,13 @@ export function useInvestmentActions(user: User | null) {
         throw new Error(error.message || "Failed to claim profit");
       }
 
-      toast.success(`Successfully claimed $${data.amount.toFixed(2)} profit`);
+      // Safely access the amount property with type checking
+      let claimedAmount = 0;
+      if (data && typeof data === 'object' && 'amount' in data) {
+        claimedAmount = typeof data.amount === 'number' ? data.amount : 0;
+      }
+
+      toast.success(`Successfully claimed $${claimedAmount.toFixed(2)} profit`);
       return data;
     } catch (error: any) {
       toast.error(error.message || "Failed to claim profit");
