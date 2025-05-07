@@ -1,4 +1,3 @@
-
 export type User = {
   id: string;
   name: string;
@@ -29,15 +28,7 @@ export type Investment = {
   status: 'active' | 'completed' | 'cancelled';
 };
 
-export type Product = {
-  id: string;
-  name: string;
-  description: string;
-  amount: number; // Changed from minAmount to fixed amount
-  duration: number; // in days
-  growthRate: number; // percentage
-  risk: 'low' | 'medium' | 'high';
-};
+// Removing duplicate Product type definition as it's now defined in src/types/index.ts
 
 export type Transaction = {
   id: string;

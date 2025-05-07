@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { WithdrawalRequest } from "@/types";
@@ -131,11 +130,11 @@ export function WithdrawalApprovals() {
 
       if (transactionError) throw transactionError;
 
-      // Update user total_withdrawn amount
+      // Update user total_withdrawn amount using the utils function
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          total_withdrawn: supabase.rpc('increment', { row_id: withdrawal.userId, amount: withdrawal.amount }),
+          total_withdrawn: withdrawal.amount + (user.totalWithdrawn || 0),
         })
         .eq('id', withdrawal.userId);
 
@@ -196,7 +195,7 @@ export function WithdrawalApprovals() {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          balance: supabase.rpc('increment', { row_id: withdrawal.userId, amount: withdrawal.amount }),
+          balance: withdrawal.amount + (user.balance || 0),
         })
         .eq('id', withdrawal.userId);
 

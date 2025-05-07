@@ -62,7 +62,7 @@ export function WithdrawalForm() {
         </div>
 
         {!user.trc20Address && (
-          <Alert variant="warning" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+          <Alert variant="destructive" className="bg-yellow-50 text-yellow-800 border-yellow-200">
             <AlertDescription>
               Please set your TRC20 address in your profile before requesting a withdrawal.
             </AlertDescription>

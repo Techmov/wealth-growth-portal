@@ -1,12 +1,12 @@
 
 import { createContext, useContext, useEffect, ReactNode } from "react";
 import { useAuthController } from "@/hooks/useAuthController";
-import { UserProfile } from "@/types";
+import { User } from "@/types";
 import { Session } from "@supabase/supabase-js";
 
 // Define the type for the authentication context
 interface AuthContextType {
-  user: UserProfile | null;
+  user: User | null;
   session: Session | null;
   isLoading: boolean;
   isAdmin: boolean;

@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 type InvestmentContextType = {
   products: Product[];
   userInvestments: Investment[];
+  investments: Investment[]; // Adding this alias for backward compatibility
   transactions: Transaction[];
   withdrawalRequests: WithdrawalRequest[];
   platformTrc20Address: string;
@@ -366,6 +367,7 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
     <InvestmentContext.Provider value={{ 
       products, 
       userInvestments, 
+      investments: userInvestments, // Adding this alias for backward compatibility
       transactions, 
       withdrawalRequests,
       platformTrc20Address,

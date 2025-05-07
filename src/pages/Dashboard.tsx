@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserLayout } from "@/components/UserLayout";
@@ -24,7 +23,7 @@ import {
 
 const Dashboard = () => {
   const { user, isLoading } = useAuth();
-  const { products, investments, transactions } = useInvestment();
+  const { products, userInvestments: investments, transactions } = useInvestment();
   const navigate = useNavigate();
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
@@ -82,7 +81,6 @@ const Dashboard = () => {
             value={`$${user.balance.toFixed(2)}`}
             description="Ready to invest"
             icon={<Wallet className="h-5 w-5 text-primary" />}
-            actionLabel="Manage"
             onAction={() => navigate("/transactions")}
           />
           <StatCard
@@ -90,7 +88,6 @@ const Dashboard = () => {
             value={`$${user.totalInvested.toFixed(2)}`}
             description={`${activeInvestments.length} active investments`}
             icon={<TrendingUp className="h-5 w-5 text-green-600" />}
-            actionLabel="View"
             onAction={() => navigate("/investments")}
           />
           <StatCard
@@ -104,7 +101,6 @@ const Dashboard = () => {
             value={`$${user.referralBonus.toFixed(2)}`}
             description="From referrals"
             icon={<Gift className="h-5 w-5 text-purple-600" />}
-            actionLabel="Share"
             onAction={() => navigate("/referrals")}
           />
         </div>
