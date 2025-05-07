@@ -85,8 +85,8 @@ const TransactionsPage = () => {
     
     try {
       setIsProcessing(true);
-      // Fix: Pass the TRC20 address as second parameter
-      await requestWithdrawal(withdrawalAmount, user.trc20Address);
+      // Update: Add the withdrawal source parameter (defaulting to 'profit')
+      await requestWithdrawal(withdrawalAmount, user.trc20Address, 'profit');
       setAmount("");
       toast.success("Withdrawal request submitted. It will be processed by an admin.");
     } catch (error: any) {
