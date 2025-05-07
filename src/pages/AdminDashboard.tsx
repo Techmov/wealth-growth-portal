@@ -7,10 +7,10 @@ import { Footer } from "@/components/Footer";
 import { StatCard } from "@/components/StatCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminStats } from "@/types";
-import { UserManagement } from "@/components/admin/UserManagement";
-import { DepositApprovals } from "@/components/admin/DepositApprovals";
-import { WithdrawalApprovals } from "@/components/admin/WithdrawalApprovals";
-import { InvestmentPlanManagement } from "@/components/admin/InvestmentPlanManagement";
+import { UserManagement } from "@/components/admin/users/UserManagement";
+import { DepositApprovals } from "@/components/admin/deposits/DepositApprovals";
+import { WithdrawalApprovals } from "@/components/admin/withdrawals/WithdrawalApprovals";
+import { InvestmentPlanManagement } from "@/components/admin/investment-plans/InvestmentPlanManagement";
 import { 
   CircleDollarSign, 
   LogOut, 
@@ -18,7 +18,6 @@ import {
   ArrowDown, 
   ArrowUp, 
   Gift, 
-  BarChart2 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";

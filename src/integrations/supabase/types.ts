@@ -257,9 +257,74 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_admin_plans: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active: boolean
+          amount: number
+          created_at: string | null
+          description: string
+          duration: number
+          growth_rate: number
+          id: string
+          name: string
+          risk: string
+        }[]
+      }
+      get_all_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          balance: number
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          referral_bonus: number
+          referral_code: string
+          referred_by: string | null
+          role: string
+          total_invested: number
+          total_withdrawn: number
+          trc20_address: string | null
+          username: string
+          withdrawal_password: string | null
+        }[]
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_pending_deposits: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          amount: number
+          date: string | null
+          deposit_screenshot: string | null
+          description: string | null
+          id: string
+          rejection_reason: string | null
+          status: string
+          trc20_address: string | null
+          tx_hash: string | null
+          type: string
+          user_id: string
+        }[]
+      }
+      get_pending_withdrawals: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          user_id: string
+          amount: number
+          status: string
+          date: string
+          trc20_address: string
+          tx_hash: string
+          rejection_reason: string
+          name: string
+          email: string
+          username: string
+        }[]
       }
       get_user_profile: {
         Args: { user_id: string }

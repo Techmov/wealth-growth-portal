@@ -92,7 +92,8 @@ serve(async (req) => {
               username
             )
           `)
-          .eq("status", "pending");
+          .eq("status", "pending")
+          .order("date", { ascending: false });
         
         if (withdrawalsError) {
           throw withdrawalsError;
