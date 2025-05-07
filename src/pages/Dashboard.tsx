@@ -49,8 +49,8 @@ const Dashboard = () => {
     return null;
   }
 
-  // Find active investments
-  const activeInvestments = investments.filter(inv => inv.status === 'active');
+  // Guard against undefined investments array
+  const activeInvestments = investments?.filter(inv => inv.status === 'active') || [];
   
   // Calculate total invested amount
   const totalInvested = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
@@ -138,7 +138,7 @@ const Dashboard = () => {
               {activeInvestments.length > 0 ? (
                 <div className="space-y-4">
                   {activeInvestments.slice(0, 2).map(investment => {
-                    const product = products.find(p => p.id === investment.productId);
+                    const product = products?.find(p => p.id === investment.productId);
                     return (
                       <InvestmentCard 
                         key={investment.id} 
