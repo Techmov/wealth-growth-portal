@@ -8,49 +8,27 @@ import {
   CheckCircle,
   ChevronDown,
   ArrowUp,
-  Landmark,
   Shield,
   Users,
   TrendingUp,
   Clock,
-  BarChart3
+  BarChart3,
+  Star
 } from "lucide-react";
 import { useState } from "react";
+import { useHomeContent } from "@/hooks/useHomeContent";
+import { FeaturesSection } from "@/components/home/FeaturesSection";
+import { PromotionsSection } from "@/components/home/PromotionsSection";
+import { OffersSection } from "@/components/home/OffersSection";
 
 const Index = () => {
   const { user } = useAuth();
   const [activeQuestion, setActiveQuestion] = useState<number | null>(null);
+  const { promotions, offers, features, isLoading } = useHomeContent();
   
   const toggleQuestion = (index: number) => {
     setActiveQuestion(activeQuestion === index ? null : index);
   };
-
-  const investmentPlans = [
-    {
-      name: "Starter Growth",
-      amount: "$100",
-      duration: "15 days",
-      profit: "100%",
-      risk: "Low",
-      features: ["Daily ROI updates", "Beginner-friendly", "24/7 Support"]
-    },
-    {
-      name: "Premium Growth",
-      amount: "$500",
-      duration: "20 days",
-      profit: "120%",
-      risk: "Medium",
-      features: ["Higher returns", "Priority Support", "Investment Guidance"]
-    },
-    {
-      name: "Elite Growth",
-      amount: "$1,000+",
-      duration: "30 days",
-      profit: "200%",
-      risk: "Medium-High",
-      features: ["Maximum returns", "VIP Support", "Personal Investment Manager"]
-    }
-  ];
 
   const faqs = [
     {
@@ -120,29 +98,11 @@ const Index = () => {
                     </Link>
                   </div>
 
-                  <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                      <div className="w-12 h-12 bg-yellow-500 text-black rounded-full flex items-center justify-center mx-auto mb-4">
-                        <TrendingUp size={24} />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">Manage Portfolio</h3>
-                      <p className="text-white/70">Track and manage your active investments</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                      <div className="w-12 h-12 bg-yellow-500 text-black rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Shield size={24} />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">Account Security</h3>
-                      <p className="text-white/70">Update your profile and security settings</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                      <div className="w-12 h-12 bg-yellow-500 text-black rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Users size={24} />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">Refer Friends</h3>
-                      <p className="text-white/70">Share your referral code to earn bonuses</p>
-                    </div>
-                  </div>
+                  <FeaturesSection 
+                    features={features} 
+                    isLoading={isLoading} 
+                    isAuthenticated={false}
+                  />
                 </>
               ) : (
                 <>
@@ -176,29 +136,10 @@ const Index = () => {
                     </Link>
                   </div>
 
-                  <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                      <div className="w-12 h-12 bg-yellow-500 text-black rounded-full flex items-center justify-center mx-auto mb-4">
-                        <TrendingUp size={24} />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">High Returns</h3>
-                      <p className="text-white/70">Up to 200% profit in just 30 days</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                      <div className="w-12 h-12 bg-yellow-500 text-black rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Shield size={24} />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">Secure Platform</h3>
-                      <p className="text-white/70">Bank-grade security protecting your investments</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                      <div className="w-12 h-12 bg-yellow-500 text-black rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Users size={24} />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">Referral Rewards</h3>
-                      <p className="text-white/70">Earn bonuses by inviting others</p>
-                    </div>
-                  </div>
+                  <FeaturesSection 
+                    features={features} 
+                    isLoading={isLoading} 
+                  />
                 </>
               )}
             </div>
@@ -213,61 +154,11 @@ const Index = () => {
         {/* Rest of the content - conditionally displayed if user is not authenticated */}
         {!user ? (
           <>
-            {/* Investment Plans Showcase */}
-            <section className="py-20 bg-white">
-              <div className="container px-4 mx-auto">
-                <div className="text-center mb-16">
-                  <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Investment Plans</h2>
-                  <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                    Choose the investment plan that suits your financial goals and risk tolerance.
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {investmentPlans.map((plan, index) => (
-                    <div key={index} className={`rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-2xl border ${index === 1 ? 'border-wealth-primary transform scale-105' : 'border-gray-100'}`}>
-                      <div className={`p-8 ${index === 1 ? 'bg-wealth-primary text-white' : 'bg-white'}`}>
-                        <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                        <div className="flex items-end gap-1 mb-6">
-                          <span className="text-4xl font-bold">{plan.amount}</span>
-                          <span className="text-lg text-gray-500">minimum</span>
-                        </div>
-                        
-                        <div className="space-y-4 mb-8">
-                          <div className="flex justify-between items-center pb-2 border-b border-gray-200">
-                            <span className={`text-sm ${index === 1 ? 'text-white/70' : 'text-gray-500'}`}>Duration:</span>
-                            <span className="font-semibold">{plan.duration}</span>
-                          </div>
-                          <div className="flex justify-between items-center pb-2 border-b border-gray-200">
-                            <span className={`text-sm ${index === 1 ? 'text-white/70' : 'text-gray-500'}`}>Return:</span>
-                            <span className="font-semibold text-green-600">{plan.profit}</span>
-                          </div>
-                          <div className="flex justify-between items-center pb-2 border-b border-gray-200">
-                            <span className={`text-sm ${index === 1 ? 'text-white/70' : 'text-gray-500'}`}>Risk Level:</span>
-                            <span className="font-semibold">{plan.risk}</span>
-                          </div>
-                        </div>
-                        
-                        <ul className="mb-8 space-y-3">
-                          {plan.features.map((feature, i) => (
-                            <li key={i} className="flex items-center gap-3">
-                              <CheckCircle className={`w-5 h-5 ${index === 1 ? 'text-green-300' : 'text-green-500'}`} />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        
-                        <Link to="/signup">
-                          <Button className={`w-full py-6 ${index === 1 ? 'bg-white text-wealth-primary hover:bg-gray-100' : ''}`}>
-                            Start Investing
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
+            {/* Dynamic Promotions Section */}
+            <PromotionsSection promotions={promotions} isLoading={isLoading} />
+
+            {/* Dynamic Offers Section */}
+            <OffersSection offers={offers} isLoading={isLoading} />
 
             {/* About Section */}
             <section className="py-20 bg-gray-50">
@@ -428,47 +319,11 @@ const Index = () => {
                 <p className="text-gray-600 max-w-2xl mx-auto">Access your most important investment functions</p>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <Link to="/deposit" className="group">
-                  <div className="bg-gray-50 hover:bg-wealth-primary/5 border border-gray-200 rounded-lg p-6 text-center transition-all group-hover:border-wealth-primary">
-                    <div className="w-16 h-16 bg-wealth-primary/10 text-wealth-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-wealth-primary group-hover:text-white transition-all">
-                      <ArrowUp size={28} />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">Deposit</h3>
-                    <p className="text-sm text-gray-500">Add funds to your account</p>
-                  </div>
-                </Link>
-                
-                <Link to="/investments" className="group">
-                  <div className="bg-gray-50 hover:bg-wealth-primary/5 border border-gray-200 rounded-lg p-6 text-center transition-all group-hover:border-wealth-primary">
-                    <div className="w-16 h-16 bg-wealth-primary/10 text-wealth-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-wealth-primary group-hover:text-white transition-all">
-                      <TrendingUp size={28} />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">Invest</h3>
-                    <p className="text-sm text-gray-500">Create new investments</p>
-                  </div>
-                </Link>
-                
-                <Link to="/withdraw" className="group">
-                  <div className="bg-gray-50 hover:bg-wealth-primary/5 border border-gray-200 rounded-lg p-6 text-center transition-all group-hover:border-wealth-primary">
-                    <div className="w-16 h-16 bg-wealth-primary/10 text-wealth-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-wealth-primary group-hover:text-white transition-all">
-                      <ArrowUp size={28} className="rotate-180" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">Withdraw</h3>
-                    <p className="text-sm text-gray-500">Cash out your earnings</p>
-                  </div>
-                </Link>
-                
-                <Link to="/referrals" className="group">
-                  <div className="bg-gray-50 hover:bg-wealth-primary/5 border border-gray-200 rounded-lg p-6 text-center transition-all group-hover:border-wealth-primary">
-                    <div className="w-16 h-16 bg-wealth-primary/10 text-wealth-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-wealth-primary group-hover:text-white transition-all">
-                      <Users size={28} />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">Refer</h3>
-                    <p className="text-sm text-gray-500">Invite friends & earn</p>
-                  </div>
-                </Link>
-              </div>
+              <FeaturesSection
+                features={features}
+                isLoading={isLoading}
+                isAuthenticated={true}
+              />
               
               <div className="mt-10 text-center">
                 <Link to="/dashboard">

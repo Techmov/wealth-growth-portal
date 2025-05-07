@@ -26,6 +26,7 @@ import NotFound from "./pages/NotFound";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { useAuth } from "./context/AuthContext";
 import { initializeRealtimeSubscriptions } from "./integrations/supabase/realtime";
+import { toast } from "sonner";
 
 // Create separate components for protected routes to avoid hook issues
 const ProtectedRoute = () => {
@@ -49,7 +50,7 @@ const AdminRoute = () => {
   
   if (!isAdmin) {
     console.log("AdminRoute: Not admin, redirecting to dashboard");
-    // Import toast from sonner at the top of the file, don't use it directly here
+    toast.error("You don't have permission to access the admin area");
     return <Navigate to="/dashboard" replace />;
   }
   
