@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
@@ -10,8 +11,7 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // Call the database function directly using a raw query instead of rpc
-      // This avoids the TypeScript error since it's not checking against a predefined list
+      // Call the Edge Function instead of directly using RPC
       const { data, error } = await supabase.functions.invoke('create-investment', {
         body: { 
           userId: user.id,

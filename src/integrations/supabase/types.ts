@@ -464,6 +464,18 @@ export type Database = {
         Args: { p_investment_id: string }
         Returns: Json
       }
+      create_investment: {
+        Args: {
+          p_user_id: string
+          p_product_id: string
+          p_amount: number
+          p_end_date: string
+          p_starting_value: number
+          p_current_value: number
+          p_final_value: number
+        }
+        Returns: Json
+      }
       get_admin_plans: {
         Args: Record<PropertyKey, never>
         Returns: {
