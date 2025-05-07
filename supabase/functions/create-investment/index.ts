@@ -44,7 +44,6 @@ serve(async (req) => {
     );
 
     // Call the database function with proper parameter handling
-    // Pass productId as-is, the database function will handle it
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
       p_product_id: productId,
