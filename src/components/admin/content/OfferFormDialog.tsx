@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -59,6 +58,9 @@ export function OfferFormDialog({ open, onClose, offer }: OfferFormDialogProps) 
       // Format dates for database
       const formattedData = {
         ...values,
+        // Ensure title and description are explicitly included and not optional
+        title: values.title,
+        description: values.description,
         start_date: values.start_date ? new Date(values.start_date).toISOString() : null,
         end_date: values.end_date ? new Date(values.end_date).toISOString() : null,
       };
