@@ -21,14 +21,12 @@ export function OffersSection({ offers, isLoading, useMockData = false }: Offers
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
               <div key={i} className="rounded-lg overflow-hidden border border-gray-200">
-                <div className="h-32 bg-gray-200 animate-pulse"></div>
                 <div className="p-5">
                   <div className="flex justify-between">
                     <div className="h-6 bg-gray-200 rounded w-1/2 animate-pulse"></div>
                     <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
                   </div>
                   <div className="h-4 bg-gray-200 rounded w-full animate-pulse mt-4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse mt-2"></div>
                 </div>
               </div>
             ))}
@@ -59,7 +57,7 @@ export function OffersSection({ offers, isLoading, useMockData = false }: Offers
           )}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full md:w-[90%] mx-auto">
           {offers.map((offer) => (
             <OfferCard key={offer.id} offer={offer} />
           ))}

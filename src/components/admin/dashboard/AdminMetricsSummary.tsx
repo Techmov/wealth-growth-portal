@@ -1,12 +1,13 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { ChartContainer } from "@/components/ui/chart";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function AdminMetricsSummary() {
+  const isMobile = useIsMobile();
+  
   // Fetch investment plan distribution data
   const { data: planDistribution, isLoading: planLoading } = useQuery({
     queryKey: ["plan-distribution"],
@@ -40,7 +41,7 @@ export function AdminMetricsSummary() {
         <CardDescription>Key metrics and health indicators</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full md:w-[90%] mx-auto">
           {/* System Health */}
           <div className="space-y-4">
             <h3 className="text-sm font-medium">System Health</h3>
@@ -78,29 +79,31 @@ export function AdminMetricsSummary() {
             </div>
           </div>
           
-          {/* Investment Plan Distribution */}
-          <div className="h-[200px]">
-            <h3 className="text-sm font-medium mb-4">Investment Plan Distribution</h3>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={planDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}%`}
-                >
-                  {planDistribution?.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          {/* Investment Plan Distribution - hide on mobile */}
+          {!isMobile && (
+            <div className="h-[200px]">
+              <h3 className="text-sm font-medium mb-4">Investment Plan Distribution</h3>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={planDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}%`}
+                  >
+                    {planDistribution?.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

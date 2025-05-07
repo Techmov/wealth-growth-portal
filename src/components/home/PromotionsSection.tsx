@@ -16,16 +16,14 @@ export function PromotionsSection({ promotions, isLoading, useMockData = false }
         <div className="container px-4 mx-auto">
           <div className="text-center mb-8">
             <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mx-auto"></div>
-            <div className="h-4 w-96 bg-gray-200 rounded animate-pulse mx-auto mt-4"></div>
+            <div className="h-4 w-72 bg-gray-200 rounded animate-pulse mx-auto mt-4"></div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[1, 2].map((i) => (
               <div key={i} className="rounded-lg overflow-hidden shadow border border-gray-100">
-                <div className="h-48 bg-gray-200 animate-pulse"></div>
                 <div className="p-6">
                   <div className="h-6 bg-gray-200 rounded w-3/4 animate-pulse"></div>
                   <div className="h-4 bg-gray-200 rounded w-full animate-pulse mt-4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3 animate-pulse mt-2"></div>
                   <div className="h-10 bg-gray-200 rounded animate-pulse mt-6"></div>
                 </div>
               </div>
@@ -57,7 +55,7 @@ export function PromotionsSection({ promotions, isLoading, useMockData = false }
           )}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full md:w-[90%] mx-auto">
           {promotions.map((promotion) => (
             <PromotionCard key={promotion.id} promotion={promotion} />
           ))}

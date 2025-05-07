@@ -2,12 +2,14 @@
 import { Offer } from "@/types/content";
 import { formatDistance } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface OfferCardProps {
   offer: Offer;
 }
 
 export function OfferCard({ offer }: OfferCardProps) {
+  const isMobile = useIsMobile();
   const hasEnded = offer.end_date && new Date(offer.end_date) < new Date();
   const isExpiringSoon = offer.end_date && 
     new Date(offer.end_date) > new Date() && 
@@ -15,7 +17,7 @@ export function OfferCard({ offer }: OfferCardProps) {
   
   return (
     <div className={`rounded-lg overflow-hidden border transition-all ${hasEnded ? 'border-gray-200 bg-gray-50 opacity-70' : 'border-wealth-primary/30 bg-wealth-primary/5 shadow-md hover:shadow-lg'}`}>
-      {offer.image_url && (
+      {offer.image_url && !isMobile && (
         <div className="h-32 overflow-hidden">
           <img 
             src={offer.image_url} 

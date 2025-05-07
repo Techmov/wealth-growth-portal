@@ -2,15 +2,18 @@
 import { Link } from "react-router-dom";
 import { Promotion } from "@/types/content";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PromotionCardProps {
   promotion: Promotion;
 }
 
 export function PromotionCard({ promotion }: PromotionCardProps) {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="rounded-lg overflow-hidden shadow-lg border border-gray-100 transition-all hover:shadow-xl">
-      {promotion.image_url && (
+      {promotion.image_url && !isMobile && (
         <div className="h-48 overflow-hidden">
           <img 
             src={promotion.image_url} 
