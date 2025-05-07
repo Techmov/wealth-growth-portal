@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Product } from "@/types";
+import { Product, Investment } from "@/types";
 import { useInvestment } from "@/context/InvestmentContext";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
@@ -10,9 +10,10 @@ import { Loader2 } from "lucide-react";
 
 interface InvestmentCardProps {
   product: Product;
+  investment?: Investment;
 }
 
-export function InvestmentCard({ product }: InvestmentCardProps) {
+export function InvestmentCard({ product, investment }: InvestmentCardProps) {
   const [isInvesting, setIsInvesting] = useState(false);
   const { invest } = useInvestment();
   const { user } = useAuth();

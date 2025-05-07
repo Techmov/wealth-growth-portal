@@ -36,17 +36,20 @@ const InvestmentsPage = () => {
         }
 
         // Format products
-        const formattedProducts: Product[] = data.map(product => ({
-          id: product.id,
-          name: product.name,
-          description: product.description,
-          amount: product.amount,
-          duration: product.duration,
-          growthRate: product.growth_rate,
-          risk: product.risk as 'low' | 'medium' | 'high'
-        }));
+        if (data) {
+          const formattedProducts: Product[] = data.map(product => ({
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            amount: product.amount,
+            duration: product.duration,
+            growthRate: product.growth_rate,
+            risk: product.risk as 'low' | 'medium' | 'high',
+            active: product.active
+          }));
 
-        setProducts(formattedProducts);
+          setProducts(formattedProducts);
+        }
       } catch (error) {
         console.error("Unexpected error fetching products:", error);
       } finally {

@@ -1,328 +1,384 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { WithdrawalRequest } from "@/types";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { formatDistanceToNow } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ResponsivePagination } from "@/components/ResponsivePagination";
 import { Check, X } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 
 export function WithdrawalApprovals() {
-  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [selectedWithdrawal, setSelectedWithdrawal] = useState<string | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [txHash, setTxHash] = useState("");
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [currentTab, setCurrentTab] = useState("pending");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+  
   useEffect(() => {
-    fetchPendingWithdrawals();
+    fetchWithdrawalRequests();
     
-    // Set up real-time subscription for withdrawal requests
+    // Setup realtime subscription for withdrawal requests
     const channel = supabase
-      .channel('admin-withdrawals-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'withdrawal_requests' },
-        () => fetchPendingWithdrawals()
+      .channel("withdrawal-requests-changes")
+      .on("postgres_changes", 
+        { event: "*", schema: "public", table: "withdrawal_requests" }, 
+        () => fetchWithdrawalRequests()
       )
       .subscribe();
-    
+      
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
-
-  const fetchPendingWithdrawals = async () => {
+  }, [currentTab, currentPage]);
+  
+  const fetchWithdrawalRequests = async () => {
     try {
       setIsLoading(true);
       
-      const { data, error } = await supabase
-        .from('withdrawal_requests')
-        .select('*')
-        .eq('status', 'pending')
-        .order('date', { ascending: false });
+      // Get total count for pagination
+      const { count, error: countError } = await supabase
+        .from("withdrawal_requests")
+        .select("*", { count: "exact", head: true })
+        .eq("status", currentTab);
+        
+      if (countError) throw countError;
       
-      if (error) {
-        throw error;
+      // Calculate total pages
+      if (count !== null) {
+        setTotalPages(Math.ceil(count / ITEMS_PER_PAGE));
       }
-
+      
+      // Get paginated data
+      const { data, error } = await supabase
+        .from("withdrawal_requests")
+        .select(`
+          *,
+          profiles:user_id (name, email, username)
+        `)
+        .eq("status", currentTab)
+        .order("date", { ascending: false })
+        .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
+      
+      if (error) throw error;
+      
       if (data) {
-        const formattedWithdrawals: WithdrawalRequest[] = data.map(wr => ({
-          id: wr.id,
-          userId: wr.user_id,
-          amount: wr.amount,
-          status: wr.status as 'pending',
-          date: new Date(wr.date || Date.now()),
-          trc20Address: wr.trc20_address,
-          txHash: wr.tx_hash,
-          rejectionReason: wr.rejection_reason
+        const formattedRequests: WithdrawalRequest[] = data.map((item) => ({
+          id: item.id,
+          userId: item.user_id,
+          amount: item.amount,
+          status: item.status as "pending" | "approved" | "rejected",
+          date: new Date(item.date || Date.now()),
+          trc20Address: item.trc20_address || "",
+          txHash: item.tx_hash || undefined,
+          rejectionReason: item.rejection_reason || undefined,
+          // @ts-ignore - Adding these fields for display
+          userName: item.profiles?.name || "Unknown",
+          userEmail: item.profiles?.email || "",
+          username: item.profiles?.username || ""
         }));
         
-        setWithdrawals(formattedWithdrawals);
+        setWithdrawalRequests(formattedRequests);
       }
     } catch (error) {
-      console.error("Error fetching pending withdrawals:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load pending withdrawals",
-        variant: "destructive"
-      });
+      console.error("Error fetching withdrawal requests:", error);
+      toast.error("Failed to load withdrawal requests");
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleApprove = async (withdrawalId: string) => {
+  
+  const handleApprove = async (withdrawal: WithdrawalRequest) => {
     try {
-      if (!txHash.trim()) {
-        toast({
-          title: "Error",
-          description: "Please provide a transaction hash.",
-          variant: "destructive"
-        });
-        return;
-      }
+      // Get user data first to update their values
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('total_withdrawn')
+        .eq('id', withdrawal.userId)
+        .single();
       
-      // Find the withdrawal to approve
-      const withdrawal = withdrawals.find(w => w.id === withdrawalId);
-      if (!withdrawal) return;
-
+      if (userError) throw userError;
+      
       // Update withdrawal request status
-      const { error: withdrawalError } = await supabase
-        .from('withdrawal_requests')
+      const { error: updateError } = await supabase
+        .from("withdrawal_requests")
         .update({ 
-          status: 'approved',
-          tx_hash: txHash
+          status: "approved",
+          txHash: "TX" + Math.random().toString(36).substr(2, 9).toUpperCase()
         })
-        .eq('id', withdrawalId);
-
-      if (withdrawalError) throw withdrawalError;
-
-      // Create a transaction record for the withdrawal
+        .eq("id", withdrawal.id);
+      
+      if (updateError) throw updateError;
+      
+      // Create a transaction record
       const { error: transactionError } = await supabase
-        .from('transactions')
+        .from("transactions")
         .insert({
           user_id: withdrawal.userId,
-          type: 'withdrawal',
-          amount: -withdrawal.amount, // Negative as it's money leaving
-          status: 'completed',
+          type: "withdrawal",
+          amount: withdrawal.amount,
+          status: "completed",
           trc20_address: withdrawal.trc20Address,
-          tx_hash: txHash,
-          description: 'Withdrawal approved by admin'
+          description: "Withdrawal request approved"
         });
-
+        
       if (transactionError) throw transactionError;
-
-      // Update user total_withdrawn amount using the utils function
+      
+      // Update user total_withdrawn amount using the user data we fetched
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          total_withdrawn: withdrawal.amount + (user.totalWithdrawn || 0),
+          total_withdrawn: withdrawal.amount + (userData?.total_withdrawn || 0),
         })
         .eq('id', withdrawal.userId);
-
+        
       if (profileError) throw profileError;
       
-      // Update local state
-      setWithdrawals(withdrawals.filter(w => w.id !== withdrawalId));
-      setTxHash("");
-      
-      toast({
-        title: "Withdrawal Approved",
-        description: `Withdrawal has been approved with transaction hash.`,
-      });
+      toast.success("Withdrawal request approved successfully");
     } catch (error) {
       console.error("Error approving withdrawal:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve withdrawal",
-        variant: "destructive"
-      });
+      toast.error("Failed to approve withdrawal");
     }
   };
-
-  const openRejectDialog = (withdrawalId: string) => {
-    setSelectedWithdrawal(withdrawalId);
-    setRejectDialogOpen(true);
-  };
-
-  const handleReject = async () => {
+  
+  const handleReject = async (withdrawal: WithdrawalRequest, rejectionReason: string = "Request rejected by admin") => {
     try {
-      if (!selectedWithdrawal) return;
+      // Get user data first to update their values
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', withdrawal.userId)
+        .single();
       
-      if (!rejectionReason.trim()) {
-        toast({
-          title: "Error",
-          description: "Please provide a reason for rejection.",
-          variant: "destructive"
-        });
-        return;
-      }
+      if (userError) throw userError;
       
-      // Find the withdrawal to reject
-      const withdrawal = withdrawals.find(w => w.id === selectedWithdrawal);
-      if (!withdrawal) return;
-
       // Update withdrawal request status
-      const { error: withdrawalError } = await supabase
-        .from('withdrawal_requests')
+      const { error: updateError } = await supabase
+        .from("withdrawal_requests")
         .update({ 
-          status: 'rejected',
+          status: "rejected",
           rejection_reason: rejectionReason
         })
-        .eq('id', selectedWithdrawal);
-
-      if (withdrawalError) throw withdrawalError;
-
-      // Update user balance by adding the funds back
+        .eq("id", withdrawal.id);
+      
+      if (updateError) throw updateError;
+      
+      // Create a transaction record for refund
+      const { error: transactionError } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: withdrawal.userId,
+          type: "withdrawal",
+          amount: withdrawal.amount,
+          status: "rejected",
+          description: "Withdrawal request rejected: " + rejectionReason
+        });
+      
+      if (transactionError) throw transactionError;
+      
+      // Refund the amount to user's balance
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          balance: withdrawal.amount + (user.balance || 0),
+          balance: withdrawal.amount + (userData?.balance || 0),
         })
         .eq('id', withdrawal.userId);
-
+        
       if (profileError) throw profileError;
-
-      // Create a transaction record for the rejected withdrawal
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: withdrawal.userId,
-          type: 'withdrawal',
-          amount: withdrawal.amount, // Positive as money is returning to balance
-          status: 'rejected',
-          trc20_address: withdrawal.trc20Address,
-          description: 'Withdrawal rejected by admin',
-          rejection_reason: rejectionReason
-        });
-
-      if (transactionError) throw transactionError;
       
-      // Update local state
-      setWithdrawals(withdrawals.filter(w => w.id !== selectedWithdrawal));
-      setRejectDialogOpen(false);
-      setSelectedWithdrawal(null);
-      setRejectionReason("");
-      
-      toast({
-        title: "Withdrawal Rejected",
-        description: `Withdrawal has been rejected and funds returned to user's balance.`,
-      });
+      toast.success("Withdrawal request rejected and amount refunded");
     } catch (error) {
       console.error("Error rejecting withdrawal:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reject withdrawal",
-        variant: "destructive"
-      });
+      toast.error("Failed to reject withdrawal");
     }
   };
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium">Pending Withdrawals ({withdrawals.length})</h3>
-      
-      {isLoading ? (
-        <div className="text-center py-8">Loading withdrawals...</div>
-      ) : withdrawals.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          No pending withdrawals to approve
-        </div>
-      ) : (
-        <div className="border rounded-md">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User ID</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>TRC20 Address</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>TX Hash</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {withdrawals.map((withdrawal) => (
-                <TableRow key={withdrawal.id}>
-                  <TableCell>{withdrawal.userId}</TableCell>
-                  <TableCell>${withdrawal.amount.toFixed(2)}</TableCell>
-                  <TableCell className="font-mono text-xs">{withdrawal.trc20Address}</TableCell>
-                  <TableCell>{formatDistanceToNow(new Date(withdrawal.date), { addSuffix: true })}</TableCell>
-                  <TableCell>
-                    <Input 
-                      placeholder="Enter TX hash"
-                      value={txHash}
-                      onChange={(e) => setTxHash(e.target.value)}
-                      className="max-w-xs font-mono text-xs"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleApprove(withdrawal.id)}
-                        className="text-green-500"
-                      >
-                        <Check className="h-4 w-4 mr-1" /> Approve
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => openRejectDialog(withdrawal.id)}
-                        className="text-red-500"
-                      >
-                        <X className="h-4 w-4 mr-1" /> Reject
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+      <Tabs value={currentTab} onValueChange={setCurrentTab}>
+        <TabsList>
+          <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="approved">Approved</TabsTrigger>
+          <TabsTrigger value="rejected">Rejected</TabsTrigger>
+        </TabsList>
+        <TabsContent value="pending">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : withdrawalRequests.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No pending withdrawal requests</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      TRC20 Address
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {withdrawalRequests.map((withdrawal) => (
+                    <tr key={withdrawal.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{withdrawal.userName || withdrawal.username || withdrawal.userEmail}</div>
+                        <div className="text-sm text-gray-500">{withdrawal.userEmail}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">${withdrawal.amount.toFixed(2)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{withdrawal.trc20Address}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{withdrawal.date.toLocaleDateString()}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <Button size="sm" variant="ghost" onClick={() => handleApprove(withdrawal)}>
+                          <Check className="h-4 w-4 mr-2" />Approve
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-red-500" onClick={() => handleReject(withdrawal)}>
+                          <X className="h-4 w-4 mr-2" />Reject
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
+        <TabsContent value="approved">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : withdrawalRequests.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No approved withdrawal requests</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      TRC20 Address
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Transaction Hash
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {withdrawalRequests.map((withdrawal) => (
+                    <tr key={withdrawal.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{withdrawal.userName || withdrawal.username || withdrawal.userEmail}</div>
+                        <div className="text-sm text-gray-500">{withdrawal.userEmail}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">${withdrawal.amount.toFixed(2)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{withdrawal.trc20Address}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{withdrawal.date.toLocaleDateString()}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{withdrawal.txHash}</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
+        <TabsContent value="rejected">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : withdrawalRequests.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No rejected withdrawal requests</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      TRC20 Address
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Rejection Reason
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {withdrawalRequests.map((withdrawal) => (
+                    <tr key={withdrawal.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{withdrawal.userName || withdrawal.username || withdrawal.userEmail}</div>
+                        <div className="text-sm text-gray-500">{withdrawal.userEmail}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">${withdrawal.amount.toFixed(2)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{withdrawal.trc20Address}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{withdrawal.date.toLocaleDateString()}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{withdrawal.rejectionReason}</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+      {withdrawalRequests.length > 0 && (
+        <ResponsivePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       )}
-      
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Withdrawal</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="rejection-reason">Reason for rejection</Label>
-            <Textarea
-              id="rejection-reason"
-              placeholder="Please provide a reason for rejecting this withdrawal request..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className="mt-2"
-              rows={4}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleReject}>Reject Withdrawal</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

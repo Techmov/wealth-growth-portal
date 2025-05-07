@@ -13,6 +13,7 @@ interface StatCardProps {
   className?: string;
   valueClassName?: string;
   isGrowing?: boolean;
+  onAction?: () => void; // Adding onAction prop
 }
 
 export function StatCard({
@@ -24,10 +25,11 @@ export function StatCard({
   trendValue,
   className,
   valueClassName,
-  isGrowing = false
+  isGrowing = false,
+  onAction
 }: StatCardProps) {
   return (
-    <Card className={cn("overflow-hidden", className)}>
+    <Card className={cn("overflow-hidden", className, onAction && "cursor-pointer")} onClick={onAction}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {icon && <div className="text-muted-foreground">{icon}</div>}

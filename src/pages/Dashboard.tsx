@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserLayout } from "@/components/UserLayout";
@@ -134,13 +135,33 @@ const Dashboard = () => {
               {activeInvestments.length > 0 ? (
                 <div className="space-y-4">
                   {activeInvestments.slice(0, 2).map(investment => {
-                    const product = products?.find(p => p.id === investment.productId);
+                    // Find matching product for this investment
+                    const investmentProduct = products?.find(p => p.id === investment.productId);
+                    if (!investmentProduct) return null;
+                    
                     return (
-                      <InvestmentCard 
-                        key={investment.id} 
-                        investment={investment} 
-                        product={product} 
-                      />
+                      <div key={investment.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between mb-2">
+                          <h3 className="font-medium">{investmentProduct.name}</h3>
+                          <span className="text-sm bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                            Active
+                          </span>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Invested Amount:</span>
+                            <span>${investment.amount.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Current Value:</span>
+                            <span>${investment.currentValue.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">End Date:</span>
+                            <span>{new Date(investment.endDate).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
                     );
                   })}
                   

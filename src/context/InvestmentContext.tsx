@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { toast } from "sonner";
 import { useAuth } from "./AuthContext";
@@ -54,7 +55,8 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
             amount: prod.amount,
             duration: prod.duration,
             growthRate: prod.growth_rate,
-            risk: prod.risk as 'low' | 'medium' | 'high'
+            risk: prod.risk as 'low' | 'medium' | 'high',
+            active: prod.active
           }));
           
           setProducts(mappedProducts);

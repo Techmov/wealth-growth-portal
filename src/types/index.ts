@@ -85,12 +85,9 @@ export type User = {
   totalInvested: number;
   totalWithdrawn: number;
   referralBonus: number;
-  trc20Address: string;
-  withdrawalPassword: string;
-  role: 'user' | 'admin';
+  trc20Address?: string;
+  withdrawalPassword?: string;
+  role?: 'user' | 'admin';
   createdAt: Date;
-  username: string;
+  username?: string;
 };
-
-// Authentication types
-export type UserProfile = User;
