@@ -7,6 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { adminUtils } from "@/utils/adminUtils";
 import { WithdrawalsTable } from "./WithdrawalsTable";
 import { ApprovalDialog } from "./ApprovalDialog";
+import { AdminLoader } from "../shared/AdminLoader";
+import { EmptyState } from "../shared/EmptyState";
+import { Check } from "lucide-react";
 
 interface WithdrawalApprovalsProps {
   onStatusChange?: () => void;
@@ -53,9 +56,10 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
           trc20Address: wr.trc20_address,
           txHash: wr.tx_hash,
           rejectionReason: wr.rejection_reason,
-          userName: wr.name || 'Unknown',
-          userEmail: wr.email || 'Unknown',
-          username: wr.username || 'Unknown'
+          // Fix: Properly access the profile properties
+          userName: wr.profiles?.name || 'Unknown',
+          userEmail: wr.profiles?.email || 'Unknown',
+          username: wr.profiles?.username || 'Unknown'
         }));
         
         setWithdrawals(formattedWithdrawals);
@@ -164,6 +168,19 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
     }
   };
 
+  if (isLoading) {
+    return <AdminLoader message="Loading withdrawal requests..." />;
+  }
+
+  if (withdrawals.length === 0) {
+    return (
+      <EmptyState
+        icon={<Check className="h-6 w-6 text-muted-foreground" />}
+        message="No pending withdrawals to approve"
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Pending Withdrawals ({withdrawals.length})</h3>
@@ -171,7 +188,6 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
       <div className="border rounded-md overflow-x-auto">
         <WithdrawalsTable
           withdrawals={withdrawals}
-          isLoading={isLoading}
           onApprove={handleApprovalDialogOpen}
           onReject={handleReject}
         />

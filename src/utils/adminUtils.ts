@@ -67,7 +67,7 @@ export const adminUtils = {
    */
   getPendingWithdrawals: async () => {
     try {
-      // Use direct database query instead of RPC
+      // Use direct database query instead of RPC, with nested profiles selection
       const { data, error } = await supabase
         .from('withdrawal_requests')
         .select(`
