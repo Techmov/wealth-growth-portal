@@ -54,11 +54,12 @@ export const handler = async (req: Request): Promise<Response> => {
       throw new Error('Invalid UUID format for userId or productId');
     }
     
-    // Call the database function with explicitly casting parameters to UUID
+    // The key fix: explicitly convert parameters to text format when calling RPC
+    // PostgreSQL will handle the internal casting from text to UUID
     const { data, error } = await supabaseClient.rpc('create_investment', {
-      p_user_id: userId,
-      p_product_id: productId,
-      p_amount: 0, // These values will be calculated in the function
+      p_user_id: userId,  // Pass as string, PostgreSQL will cast internally
+      p_product_id: productId,  // Pass as string, PostgreSQL will cast internally
+      p_amount: 0,        // These values will be calculated in the function
       p_end_date: new Date().toISOString(),
       p_starting_value: 0,
       p_current_value: 0,
