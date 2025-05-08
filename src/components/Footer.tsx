@@ -55,7 +55,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/disclaimer" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
                   Risk Disclaimer
                 </Link>
               </li>
@@ -72,7 +72,7 @@ export function Footer() {
               </li>
               <li>
                 <a href="https://t.me/+SRZ--KW2-YllNjE0" className="text-muted-foreground hover:text-foreground transition-colors">
-                  WEALTHGROWTH SUPPORT
+                  WealthGrowth Support
                 </a>
               </li>
             </ul>
