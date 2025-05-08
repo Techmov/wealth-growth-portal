@@ -479,6 +479,10 @@ export type Database = {
         }
         Returns: Json
       }
+      debug_uuid_conversion: {
+        Args: { input_value: string }
+        Returns: string
+      }
       get_admin_plans: {
         Args: Record<PropertyKey, never>
         Returns: {

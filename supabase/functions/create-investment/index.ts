@@ -46,17 +46,9 @@ export const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    // Ensure productId is a valid UUID
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(productId)) {
-      console.error("Invalid product ID format:", productId);
-      throw new Error('Invalid product ID format: must be a valid UUID');
-    }
-
     console.log("About to call create_investment with userId:", userId, "productId:", productId);
     
-    // Important: We need to cast the productId as a UUID for Postgres
-    // Call the database function that expects UUID types
+    // Call the database function - both parameters are already UUID types
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
       p_product_id: productId,
@@ -69,7 +61,16 @@ export const handler = async (req: Request): Promise<Response> => {
 
     if (error) {
       console.error("Error in create_investment:", error);
-      throw error;
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        {
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json' 
+          },
+          status: 400,
+        }
+      );
     }
 
     console.log("Investment created successfully:", data);
@@ -85,7 +86,7 @@ export const handler = async (req: Request): Promise<Response> => {
         status: 200,
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Investment function error:", error.message);
     
     // Return the error response
