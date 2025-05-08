@@ -49,8 +49,12 @@ export const handler = async (req: Request): Promise<Response> => {
 
     console.log("About to call create_investment with userId:", userId, "productId:", productId);
     
-    // Call the database function with parameters explicitly passed as strings
-    // The database function will handle the UUID conversion
+    // First, verify that the UUIDs are valid
+    if (!isValidUUID(userId) || !isValidUUID(productId)) {
+      throw new Error('Invalid UUID format for userId or productId');
+    }
+    
+    // Call the database function with explicitly casting parameters to UUID
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
       p_product_id: productId,
@@ -106,5 +110,11 @@ export const handler = async (req: Request): Promise<Response> => {
     );
   }
 };
+
+// Helper function to validate UUID format
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
 
 Deno.serve(handler);
