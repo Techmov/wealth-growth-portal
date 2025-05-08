@@ -24,7 +24,8 @@ export const handler = async (req: Request): Promise<Response> => {
     }
 
     // Parse the request body
-    const { userId, productId } = await req.json();
+    const requestData = await req.json();
+    const { userId, productId } = requestData;
     
     console.log("Creating investment with parameters:", {
       userId,
@@ -48,7 +49,8 @@ export const handler = async (req: Request): Promise<Response> => {
 
     console.log("About to call create_investment with userId:", userId, "productId:", productId);
     
-    // Call the database function with proper UUID parameters
+    // Call the database function with parameters explicitly passed as strings
+    // The database function will handle the UUID conversion
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
       p_product_id: productId,
@@ -60,7 +62,7 @@ export const handler = async (req: Request): Promise<Response> => {
     });
 
     if (error) {
-      console.error("Error in create_investment:", error);
+      console.error("Error in create_investment RPC call:", error);
       
       // Return a proper error response
       return new Response(
@@ -79,7 +81,7 @@ export const handler = async (req: Request): Promise<Response> => {
 
     // Return the successful response
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify({ success: true, data }),
       {
         headers: { 
           ...corsHeaders,
