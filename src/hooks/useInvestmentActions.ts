@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
@@ -10,13 +11,14 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // Make sure we're passing productId as a string consistently
+      // Ensure productId is being passed as a proper string
       console.log("Investing with product ID:", productId);
       
+      // Make API call to the edge function
       const { data, error } = await supabase.functions.invoke('create-investment', {
         body: { 
           userId: user.id,
-          productId: productId
+          productId: productId // Ensure this is passed as a string, which will be validated in the edge function
         }
       });
 
@@ -28,6 +30,7 @@ export function useInvestmentActions(user: User | null) {
       toast.success(`Successfully invested in this product`);
       return data;
     } catch (error: any) {
+      console.error("Investment failed with error:", error);
       toast.error(error.message || "Investment failed");
       throw error;
     }

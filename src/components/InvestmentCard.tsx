@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,13 +31,21 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
     
     try {
       setIsInvesting(true);
-      // Pass productId consistently as a string
-      console.log("Investing in product:", product.id);
+      console.log("Investing in product with ID:", product.id, "Type:", typeof product.id);
+      
       await invest(product.id);
       toast.success(`Successfully invested in ${product.name}!`);
     } catch (error: any) {
       console.error("Investment failed:", error);
-      toast.error(error.message || "Failed to process investment. Please try again.");
+      let errorMessage = "Failed to process investment. Please try again.";
+      
+      if (error.message && error.message.includes("uuid")) {
+        errorMessage = "Error with product information. Please contact support.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsInvesting(false);
     }
