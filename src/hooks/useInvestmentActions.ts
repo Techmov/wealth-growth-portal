@@ -15,16 +15,21 @@ export function useInvestmentActions(user: User | null) {
       console.log("Investing with product ID:", productId);
       
       // Make API call to the edge function
-      const { data, error } = await supabase.functions.invoke('create-investment', {
+      const { data, error, status } = await supabase.functions.invoke('create-investment', {
         body: { 
           userId: user.id,
-          productId: productId // Ensure this is passed as a string, which will be validated in the edge function
+          productId: productId 
         }
       });
 
       if (error) {
         console.error("Investment error:", error);
         throw new Error(error.message || "Failed to create investment");
+      }
+
+      if (status !== 200) {
+        console.error("Investment request failed with status:", status);
+        throw new Error("Failed to process investment request");
       }
 
       toast.success(`Successfully invested in this product`);

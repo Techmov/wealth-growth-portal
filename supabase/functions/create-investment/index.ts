@@ -55,6 +55,7 @@ export const handler = async (req: Request): Promise<Response> => {
 
     console.log("About to call create_investment with userId:", userId, "productId:", productId);
     
+    // Important: We need to cast the productId as a UUID for Postgres
     // Call the database function that expects UUID types
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
