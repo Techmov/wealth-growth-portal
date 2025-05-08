@@ -9,7 +9,7 @@ export function Footer() {
       <div className="container">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="flex flex-col">
-            <h4 className="text-lg font-semibold mb-4">WealthGrow</h4>
+            <h4 className="text-lg font-semibold mb-4">WealthGrowth</h4>
             <p className="text-muted-foreground text-sm">
               Growing your wealth with innovative investment solutions. Double your investments in as little as 15 days.
             </p>
