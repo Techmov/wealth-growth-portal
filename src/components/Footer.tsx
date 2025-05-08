@@ -66,13 +66,13 @@ export function Footer() {
             <h4 className="text-md font-semibold mb-4">Support</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="mailto:support@wealthgrow.com" className="text-muted-foreground hover:text-foreground transition-colors">
-                  support@wealthgrow.com
+                <a href="mailto:support@wealthgrowth.com" className="text-muted-foreground hover:text-foreground transition-colors">
+                  support@wealthgrowth.com
                 </a>
               </li>
               <li>
-                <a href="tel:+11234567890" className="text-muted-foreground hover:text-foreground transition-colors">
-                  +1 (123) 456-7890
+                <a href="https://t.me/+SRZ--KW2-YllNjE0" className="text-muted-foreground hover:text-foreground transition-colors">
+                  WEALTHGROWTH SUPPORT
                 </a>
               </li>
             </ul>
@@ -80,7 +80,7 @@ export function Footer() {
         </div>
         
         <div className="mt-8 pt-6 border-t text-center text-sm text-muted-foreground">
-          <p>© {currentYear} WealthGrow. All rights reserved.</p>
+          <p>© {currentYear} WealthGrowth. All rights reserved.</p>
           <p className="mt-1">
             DISCLAIMER: Investments involve risk and are not guaranteed. Past performance is not indicative of future results.
           </p>
