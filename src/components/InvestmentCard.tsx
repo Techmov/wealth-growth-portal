@@ -31,21 +31,13 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
     
     try {
       setIsInvesting(true);
-      console.log("Investing in product with ID:", product.id, "Type:", typeof product.id);
+      console.log("Investing in product with ID:", product.id);
       
       await invest(product.id);
       toast.success(`Successfully invested in ${product.name}!`);
     } catch (error: any) {
       console.error("Investment failed:", error);
-      let errorMessage = "Failed to process investment. Please try again.";
-      
-      if (error.message && error.message.includes("uuid")) {
-        errorMessage = "Error with product information. Please contact support.";
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      toast.error(errorMessage);
+      toast.error(error.message || "Failed to process investment");
     } finally {
       setIsInvesting(false);
     }

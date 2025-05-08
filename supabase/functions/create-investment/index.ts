@@ -48,12 +48,12 @@ export const handler = async (req: Request): Promise<Response> => {
 
     console.log("About to call create_investment with userId:", userId, "productId:", productId);
     
-    // Ensure both parameters are treated as proper UUID types
+    // Call the database function with proper UUID parameters
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
       p_product_id: productId,
       p_amount: 0, // These values will be calculated in the function
-      p_end_date: new Date(), 
+      p_end_date: new Date().toISOString(),
       p_starting_value: 0,
       p_current_value: 0,
       p_final_value: 0
@@ -61,6 +61,8 @@ export const handler = async (req: Request): Promise<Response> => {
 
     if (error) {
       console.error("Error in create_investment:", error);
+      
+      // Return a proper error response
       return new Response(
         JSON.stringify({ error: error.message }),
         {
@@ -89,7 +91,7 @@ export const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Investment function error:", error.message);
     
-    // Return the error response
+    // Return a proper error response
     return new Response(
       JSON.stringify({ error: error.message }),
       {

@@ -11,8 +11,8 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // Ensure productId is being passed as a proper string
-      console.log("Investing with product ID:", productId);
+      // Log the investment attempt
+      console.log("Investing in product with ID:", productId);
       
       // Make API call to the edge function
       const { data, error } = await supabase.functions.invoke('create-investment', {
@@ -27,7 +27,7 @@ export function useInvestmentActions(user: User | null) {
         throw new Error(error.message || "Failed to create investment");
       }
 
-      // Check if the response contains an error
+      // Handle error response from the function
       if (data && typeof data === 'object' && 'error' in data) {
         console.error("Investment request failed:", data.error);
         throw new Error(typeof data.error === 'string' ? data.error : "Failed to process investment request");
