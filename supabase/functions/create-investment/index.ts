@@ -27,13 +27,18 @@ export const handler = async (req: Request): Promise<Response> => {
     const requestData = await req.json();
     const { userId, productId } = requestData;
     
-    console.log("Creating investment with parameters:", {
+    console.log("Received request with parameters:", {
       userId,
       productId
     });
 
     if (!userId || !productId) {
       throw new Error('Missing required parameters: userId and productId are required');
+    }
+
+    // Validate UUIDs
+    if (!isValidUUID(userId) || !isValidUUID(productId)) {
+      throw new Error('Invalid UUID format for userId or productId');
     }
 
     // Create Supabase client
@@ -46,20 +51,36 @@ export const handler = async (req: Request): Promise<Response> => {
         },
       }
     );
-
-    console.log("About to call create_investment with userId:", userId, "productId:", productId);
     
-    // First, verify that the UUIDs are valid
-    if (!isValidUUID(userId) || !isValidUUID(productId)) {
-      throw new Error('Invalid UUID format for userId or productId');
+    // First verify that the product exists in the database
+    const { data: productData, error: productError } = await supabaseClient
+      .from('products')
+      .select('id, name, amount')
+      .eq('id', productId)
+      .single();
+    
+    if (productError || !productData) {
+      console.error("Product not found:", { productId, error: productError });
+      return new Response(
+        JSON.stringify({ error: 'Product not found or inactive' }),
+        {
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json' 
+          },
+          status: 400,
+        }
+      );
     }
     
-    // The key fix: explicitly convert parameters to text format when calling RPC
-    // PostgreSQL will handle the internal casting from text to UUID
+    console.log("Product found:", productData);
+    console.log("About to call create_investment with userId:", userId, "productId:", productId);
+    
+    // Call the RPC function with explicit type casting through the payload
     const { data, error } = await supabaseClient.rpc('create_investment', {
-      p_user_id: userId,  // Pass as string, PostgreSQL will cast internally
-      p_product_id: productId,  // Pass as string, PostgreSQL will cast internally
-      p_amount: 0,        // These values will be calculated in the function
+      p_user_id: userId,
+      p_product_id: productId,
+      p_amount: 0,  // These values will be calculated in the function
       p_end_date: new Date().toISOString(),
       p_starting_value: 0,
       p_current_value: 0,
