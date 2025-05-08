@@ -48,7 +48,7 @@ export const handler = async (req: Request): Promise<Response> => {
 
     console.log("About to call create_investment with userId:", userId, "productId:", productId);
     
-    // Call the database function - both parameters are already UUID types
+    // Ensure both parameters are treated as proper UUID types
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
       p_product_id: productId,

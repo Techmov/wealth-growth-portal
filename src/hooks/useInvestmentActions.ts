@@ -27,10 +27,10 @@ export function useInvestmentActions(user: User | null) {
         throw new Error(error.message || "Failed to create investment");
       }
 
-      // Check if the response indicates success
-      if (!data || (data as any).error) {
-        console.error("Investment request failed:", (data as any).error || "Unknown error");
-        throw new Error((data as any).error?.message || "Failed to process investment request");
+      // Check if the response contains an error
+      if (data && typeof data === 'object' && 'error' in data) {
+        console.error("Investment request failed:", data.error);
+        throw new Error(typeof data.error === 'string' ? data.error : "Failed to process investment request");
       }
 
       toast.success(`Successfully invested in this product`);
