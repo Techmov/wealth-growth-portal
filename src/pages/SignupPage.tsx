@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
@@ -16,21 +16,11 @@ const SignupPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [referralCode, setReferralCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   
   const { signup, user } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  // Extract referral code from URL if present
-  useEffect(() => {
-    const refCode = searchParams.get('ref');
-    if (refCode) {
-      setReferralCode(refCode);
-    }
-  }, [searchParams]);
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
@@ -61,7 +51,7 @@ const SignupPage = () => {
     
     try {
       setIsSubmitting(true);
-      await signup(name, email, password, referralCode);
+      await signup(name, email, password);
       toast.success("Account created! Please check your email for verification.");
       // Show a toast message informing the user about the verification email
       toast.info("Please verify your email before logging in.");
@@ -142,24 +132,6 @@ const SignupPage = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               autoComplete="new-password"
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="referral">Referral Code {referralCode && "(Auto-filled)"}</Label>
-            <Input
-              id="referral"
-              type="text"
-              value={referralCode}
-              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-              placeholder="Enter referral code"
-              className={referralCode ? "bg-gray-50 border-green-200" : ""}
-              readOnly={!!searchParams.get('ref')}
-            />
-            {referralCode && (
-              <p className="text-xs text-green-600 mt-1">
-                You were referred by someone! This code will earn them a bonus when you make your first deposit.
-              </p>
-            )}
           </div>
           
           <SubmitButton 

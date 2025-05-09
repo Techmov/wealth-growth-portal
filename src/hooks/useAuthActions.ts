@@ -68,11 +68,11 @@ export const useAuthActions = ({
     }
   };
 
-  // Wrapper for signup to match the expected signature
-  const signup = async (name: string, email: string, password: string, referralCode?: string) => {
+  // Wrapper for signup to match the expected signature - removed referralCode
+  const signup = async (name: string, email: string, password: string) => {
     try {
       setIsLoading(true);
-      await authService.signup({ name, email, password, referralCode });
+      await authService.signup({ name, email, password });
       toast.success("Signup successful!", {
         description: "Please check your email to confirm your account."
       });

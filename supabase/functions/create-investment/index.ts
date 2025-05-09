@@ -76,8 +76,15 @@ export const handler = async (req: Request): Promise<Response> => {
     console.log("Product found:", productData);
     console.log("About to call create_investment with userId:", userId, "productId:", productId);
     
-    // Call the RPC function with explicit UUID parameters
-    // The key fix here is to pass the parameters directly, PostgreSQL will handle the UUID conversion
+    // Debug raw values before RPC call
+    console.log("Raw p_user_id value:", userId);
+    console.log("Raw p_product_id value:", productId);
+    console.log("Value types:", {
+      userIdType: typeof userId,
+      productIdType: typeof productId
+    });
+    
+    // Call the RPC function with parameters - remove any string template formatting
     const { data, error } = await supabaseClient.rpc('create_investment', {
       p_user_id: userId,
       p_product_id: productId,

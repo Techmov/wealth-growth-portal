@@ -8,7 +8,6 @@ export interface AuthSignupData {
   name: string;
   email: string;
   password: string;
-  referralCode?: string;
 }
 
 export interface AuthLoginData {

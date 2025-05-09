@@ -7,7 +7,7 @@ const WITHDRAWAL_FEE = 3;
 
 // Sign up with email and password
 export const signup = async (credentials: SignupCredentials) => {
-  const { email, password, name, referralCode } = credentials;
+  const { email, password, name } = credentials;
   
   try {
     // Create user with Supabase auth
@@ -17,7 +17,6 @@ export const signup = async (credentials: SignupCredentials) => {
       options: {
         data: {
           name,
-          referred_by: referralCode || null,
         },
       },
     });
