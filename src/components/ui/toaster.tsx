@@ -1,4 +1,6 @@
+
 import { useToast } from "@/hooks/use-toast"
+import { toast as sonnerToast } from "sonner"
 import {
   Toast,
   ToastClose,
@@ -9,7 +11,10 @@ import {
 } from "@/components/ui/toast"
 
 export function Toaster() {
-  const { toasts } = useToast()
+  const { toast } = useToast()
+  
+  // Get toasts from Sonner API
+  const toasts = sonnerToast.list()
 
   return (
     <ToastProvider>
