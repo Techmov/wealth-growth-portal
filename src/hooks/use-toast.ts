@@ -1,5 +1,5 @@
 
-import { toast, type Toast } from "sonner";
+import { toast, type ToastT } from "sonner";
 
 // Export toast directly
 export { toast } from "sonner";
