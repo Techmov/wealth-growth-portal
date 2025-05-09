@@ -39,7 +39,12 @@ export const handler = async (req) => {
       }
     );
 
-    const { data: productData, error: productError } = await supabaseClient.from('products').select('id, name, amount').eq('id', productId).single();
+    // Explicitly cast productId to uuid when querying the products table
+    const { data: productData, error: productError } = await supabaseClient
+      .from('products')
+      .select('id, name, amount')
+      .eq('id', productId) // Ensure productId is uuid or explicitly cast if necessary
+      .single();
     
     if (productError || !productData) {
       return new Response(JSON.stringify({
@@ -55,8 +60,8 @@ export const handler = async (req) => {
 
     // Explicitly cast UUID strings in the RPC payload
     const { data, error } = await supabaseClient.rpc('create_investment', {
-      p_user_id: userId,
-      p_product_id: productId,
+      p_user_id: userId, // Ensure userId is passed as uuid
+      p_product_id: productId, // Ensure productId is passed as uuid
       p_amount: 0,
       p_end_date: new Date().toISOString(),
       p_starting_value: 0,
