@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { OfferFormDialog } from "./OfferFormDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,7 +43,6 @@ export function AdminOffersManagement() {
       toast({
         title: "Status Updated",
         description: `Offer has been ${data.isActive ? 'activated' : 'deactivated'}.`,
-        variant: "default"
       });
     },
     onError: (error) => {
@@ -68,7 +66,6 @@ export function AdminOffersManagement() {
       toast({
         title: "Offer Deleted",
         description: "The offer has been successfully deleted.",
-        variant: "default"
       });
     },
     onError: (error) => {
