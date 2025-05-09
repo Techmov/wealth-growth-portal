@@ -18,7 +18,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (userData: any) => Promise<void>;
   updateTrc20Address: (address: string, withdrawalPassword?: string) => Promise<void>;
-  requestWithdrawal: (amount: number, trc20Address: string, withdrawalSource: 'profit' | 'referral_bonus', withdrawalPassword?: string) => Promise<any>;
+  requestWithdrawal: (amount: number, trc20Address: string, withdrawalSource?: 'profit' | 'referral_bonus', withdrawalPassword?: string) => Promise<any>;
   deposit: (amount: number, txHash: string) => Promise<void>;
   loginSuccess: boolean;
   resetLoginSuccess: () => void;

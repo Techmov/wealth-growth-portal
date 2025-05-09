@@ -12,11 +12,11 @@ export interface AuthContextType {
   loginSuccess: boolean;
   resetLoginSuccess: () => void;
   login: (email: string, password: string) => Promise<{ success: boolean; session?: Session }>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, password: string, referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
   updateTrc20Address: (address: string, withdrawalPassword?: string) => Promise<void>;
-  requestWithdrawal: (amount: number, trc20Address: string, withdrawalPassword?: string) => Promise<string>;
+  requestWithdrawal: (amount: number, trc20Address: string, withdrawalSource?: 'profit' | 'referral_bonus', withdrawalPassword?: string) => Promise<string>;
   fetchProfile: (userId: string) => Promise<void>;
   deposit: (amount: number, txHash: string) => Promise<void>;
 }
@@ -32,6 +32,7 @@ export interface SignupCredentials {
   name: string;
   email: string;
   password: string;
+  referralCode?: string;
 }
 
 // App user type (extended from Supabase user)
@@ -42,6 +43,8 @@ export interface User {
   balance: number;
   totalInvested: number;
   totalWithdrawn: number;
+  referralCode: string;
+  referralBonus: number;
   trc20Address?: string;
   withdrawalPassword?: string;
   createdAt: Date;

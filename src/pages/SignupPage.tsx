@@ -16,6 +16,7 @@ const SignupPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   
@@ -28,6 +29,15 @@ const SignupPage = () => {
       navigate("/dashboard");
     }
   }, [user, navigate]);
+
+  // Extract referral code from URL if present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +61,7 @@ const SignupPage = () => {
     
     try {
       setIsSubmitting(true);
-      await signup(name, email, password);
+      await signup(name, email, password, referralCode);
       toast.success("Account created! Please check your email for verification.");
       // Show a toast message informing the user about the verification email
       toast.info("Please verify your email before logging in.");
@@ -131,6 +141,17 @@ const SignupPage = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               autoComplete="new-password"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="referral-code">Referral Code (Optional)</Label>
+            <Input
+              id="referral-code"
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+              placeholder="Enter referral code if you have one"
             />
           </div>
           

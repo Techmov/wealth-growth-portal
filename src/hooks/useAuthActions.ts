@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService"; 
@@ -68,11 +67,11 @@ export const useAuthActions = ({
     }
   };
 
-  // Wrapper for signup to match the expected signature - removed referralCode
-  const signup = async (name: string, email: string, password: string) => {
+  // Wrapper for signup to include referralCode
+  const signup = async (name: string, email: string, password: string, referralCode?: string) => {
     try {
       setIsLoading(true);
-      await authService.signup({ name, email, password });
+      await authService.signup({ name, email, password, referralCode });
       toast.success("Signup successful!", {
         description: "Please check your email to confirm your account."
       });
@@ -265,8 +264,8 @@ export const useAuthActions = ({
     }
   };
 
-  // Updated request withdrawal function to work with fees
-  const requestWithdrawal = async (amount: number, trc20Address: string, withdrawalSource: 'profit' | 'referral_bonus', withdrawalPassword?: string) => {
+  // Updated request withdrawal function to work with fees and referral bonus
+  const requestWithdrawal = async (amount: number, trc20Address: string, withdrawalSource: 'profit' | 'referral_bonus' = 'profit', withdrawalPassword?: string) => {
     if (!user) {
       toast.error("User not authenticated");
       return Promise.reject(new Error("User not authenticated"));
