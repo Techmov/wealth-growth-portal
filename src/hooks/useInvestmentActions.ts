@@ -10,54 +10,86 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // Log the investment attempt
-      console.log("Investing in product with ID:", productId);
-      
-      // Make API call to the edge function
-      const { data, error } = await supabase.functions.invoke('create-investment', {
-        body: { 
-          userId: user.id,
-          productId: productId 
-        }
+      console.log("Attempting investment for product:", productId);
+
+      // Step 1: Fetch product to get investment amount
+      const { data: productData, error: productError } = await supabase
+        .from("products")
+        .select("amount")
+        .eq("id", productId)
+        .single();
+
+      if (productError || !productData) {
+        throw new Error("Failed to fetch product information");
+      }
+
+      const investmentAmount = productData.amount;
+
+      // Step 2: Check user's current balance and total_invested
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("balance, total_invested")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError || !profileData) {
+        throw new Error("Failed to fetch user profile");
+      }
+
+      if (profileData.balance < investmentAmount) {
+        toast.error("Insufficient balance to invest");
+        return;
+      }
+
+      // Step 3: Create investment via Edge Function
+      const response = await supabase.functions.invoke("create-investment", {
+        body: { userId: user.id, productId },
       });
 
-      // Check for errors
-      if (error) {
-        console.error("Investment error:", error);
-        throw new Error(error.message || "Failed to create investment");
-      }
-      
-      // Check if the response contains an error message
-      if (data && typeof data === 'object' && 'error' in data) {
-        console.error("Investment request failed:", data.error);
-        const errorMessage = typeof data.error === 'string' ? data.error : "Failed to process investment request";
-        
-        // If we have more details from the server, log them
-        if ('details' in data) {
-          console.error("Error details:", data.details);
-        }
-        
-        if ('hint' in data) {
-          console.error("Error hint:", data.hint);
-        }
-        
-        if ('code' in data) {
-          console.error("Error code:", data.code);
-        }
-        
-        throw new Error(errorMessage);
+      const { data, error, status } = response;
+
+      if (status < 200 || status >= 300) {
+        console.error("Edge Function error response:", response);
+        const message =
+          (data && typeof data === "object" && data.error) ||
+          error?.message ||
+          "Investment failed";
+        throw new Error(message);
       }
 
-      toast.success(`Successfully invested in this product`);
+      // Step 4: Deduct balance and update total_invested
+      const newBalance = profileData.balance - investmentAmount;
+      const newTotalInvested =
+        (profileData.total_invested || 0) + investmentAmount;
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          balance: newBalance,
+          total_invested: newTotalInvested,
+        })
+        .eq("id", user.id);
+
+      if (updateError) {
+        console.warn(
+          "Investment succeeded, but failed to update balance/investment:",
+          updateError
+        );
+        toast.warning("Investment succeeded, but profile update failed.");
+      } else {
+        toast.success(
+          "Investment successful — balance and total invested updated"
+        );
+      }
+
       return data;
     } catch (error: any) {
-      console.error("Investment failed with error:", error);
+      console.error("Investment failed:", error);
       toast.error(error.message || "Investment failed");
       throw error;
     }
   };
 
-  // New function to claim profit from an investment
   const claimProfit = async (investmentId: string) => {
     if (!user) {
       toast.error("You must be logged in to claim profit");
@@ -65,35 +97,30 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      const { data, error } = await supabase.rpc('claim_investment_profit', {
-        p_investment_id: investmentId
+      const { data, error } = await supabase.rpc("claim_investment_profit", {
+        p_investment_id: investmentId,
       });
 
       if (error) {
         throw new Error(error.message || "Failed to claim profit");
       }
 
-      // Safely access the amount property with type checking
-      let claimedAmount = 0;
-      if (data && typeof data === 'object' && 'amount' in data) {
-        claimedAmount = typeof data.amount === 'number' ? data.amount : 0;
-      }
-
-      toast.success(`Successfully claimed $${claimedAmount.toFixed(2)} profit`);
+      const amount = typeof data?.amount === "number" ? data.amount : 0;
+      toast.success(`Successfully claimed $${amount.toFixed(2)} profit`);
       return data;
     } catch (error: any) {
+      console.error("Claim profit error:", error);
       toast.error(error.message || "Failed to claim profit");
       throw error;
     }
   };
 
-  // Calculate claimable profit amount (for display/preview)
   const getClaimableProfit = async (investmentId: string) => {
     if (!user) return 0;
 
     try {
-      const { data, error } = await supabase.rpc('calculate_claimable_profit', {
-        p_investment_id: investmentId
+      const { data, error } = await supabase.rpc("calculate_claimable_profit", {
+        p_investment_id: investmentId,
       });
 
       if (error) {
@@ -101,14 +128,13 @@ export function useInvestmentActions(user: User | null) {
         return 0;
       }
 
-      return data || 0;
+      return typeof data === "number" ? data : 0;
     } catch (error) {
       console.error("Unexpected error calculating profit:", error);
       return 0;
     }
   };
 
-  // Enhanced function to handle referral bonuses
   const getReferralBonus = async (referralCode: string) => {
     if (!user) {
       toast.error("You must be logged in to claim referral bonus");
@@ -116,49 +142,43 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // In a real app, we'd verify this code against the database
       if (referralCode && referralCode !== user.referralCode) {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // This function now just notifies user that bonuses are automatically added
-        toast.info("Referral bonuses are automatically added to your account when a referred user makes a deposit.");
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        toast.info(
+          "Referral bonuses are automatically added when referrals invest."
+        );
       } else {
         toast.error("Invalid referral code");
       }
     } catch (error) {
+      console.error("Referral bonus error:", error);
       toast.error("Failed to process referral code");
     }
   };
 
-  // Enhanced function to get user's downlines with better error handling and querying
   const getUserDownlines = async (): Promise<Downline[]> => {
     if (!user) return [];
 
     try {
-      console.log("Fetching downlines for user with referral code:", user.referralCode);
-      
-      // Fetch users who were referred by the current user
+      console.log("Fetching downlines for:", user.referralCode);
+
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, total_invested, referral_bonus, created_at')
-        .eq('referred_by', user.referralCode)
-        .order('created_at', { ascending: false });
+        .from("profiles")
+        .select("id, username, total_invested, referral_bonus, created_at")
+        .eq("referred_by", user.referralCode)
+        .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Error fetching downlines:", error);
         return [];
       }
 
-      console.log("Fetched downlines data:", data);
-
-      // Map the database response to our Downline type
-      return data.map(profile => ({
+      return (data || []).map((profile) => ({
         id: profile.id,
-        username: profile.username || 'Anonymous',
+        username: profile.username || "Anonymous",
         totalInvested: profile.total_invested || 0,
-        bonusGenerated: profile.total_invested ? profile.total_invested * 0.05 : 0, // 5% referral bonus
-        date: new Date(profile.created_at || Date.now())
+        bonusGenerated: (profile.total_invested || 0) * 0.05,
+        date: new Date(profile.created_at || Date.now()),
       }));
     } catch (error) {
       console.error("Unexpected error fetching downlines:", error);
@@ -171,6 +191,6 @@ export function useInvestmentActions(user: User | null) {
     claimProfit,
     getClaimableProfit,
     getReferralBonus,
-    getUserDownlines
+    getUserDownlines,
   };
-}
+      }
