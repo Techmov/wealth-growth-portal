@@ -468,16 +468,26 @@ export type Database = {
         Returns: Json
       }
       create_investment: {
-        Args: {
-          p_user_id: string
-          p_product_id: string
-          p_amount: number
-          p_end_date: string
-          p_starting_value: number
-          p_current_value: number
-          p_final_value: number
-        }
-        Returns: Json
+        Args:
+          | {
+              p_user_id: string
+              p_product_id: string
+              p_amount: number
+              p_end_date: string
+              p_starting_value: number
+              p_current_value: number
+              p_final_value: number
+            }
+          | {
+              p_user_id: string
+              p_product_id: string
+              p_amount: number
+              p_end_date: string
+              p_starting_value: number
+              p_current_value: number
+              p_final_value: number
+            }
+        Returns: string
       }
       debug_uuid_conversion: {
         Args: { input_value: string }
