@@ -45,8 +45,8 @@ export const handler = async (req) => {
     // Explicitly cast productId to uuid when querying the products table
     const { data: productData, error: productError } = await supabaseClient
       .from('products')
-      .select('id, name, amount')
-      .eq('id', productId) // UUID comparison is handled by Supabase client
+      .select('id, name, amount, duration')
+      .eq('id', productId)
       .single();
     
     if (productError) {
@@ -77,31 +77,70 @@ export const handler = async (req) => {
 
     console.log("Found product:", JSON.stringify(productData));
 
-    // Call the RPC with direct parameters - PostgreSQL will handle the UUID conversion
-    // This is critical: Pass the values directly, don't try to cast them in JavaScript
-    const { data, error } = await supabaseClient.rpc('create_investment', {
-      p_user_id: userId, 
-      p_product_id: productId, 
-      p_amount: productData.amount,
-      p_end_date: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)).toISOString(), // 30 days from now
-      p_starting_value: productData.amount,
-      p_current_value: productData.amount,
-      p_final_value: productData.amount * 2 // Double the investment amount
-    });
+    // Calculate end date based on product duration (in days)
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + (productData.duration || 30));
+    
+    console.log("Preparing to call create_investment with specific types");
+    
+    // Try calling the function directly with specific parameter names and types
+    const { data, error } = await supabaseClient.rpc(
+      'create_investment_with_types',  // Use a more specific function name to avoid overloading
+      { 
+        p_user_id: userId,
+        p_product_id: productId,
+        p_amount: productData.amount,
+        p_end_date: endDate.toISOString(),
+        p_starting_value: productData.amount,
+        p_current_value: productData.amount,
+        p_final_value: productData.amount * 2 // Double the investment amount
+      }
+    );
 
     if (error) {
       console.error("Error in create_investment RPC call:", JSON.stringify(error, null, 2));
+      
+      // If the specific function fails, try with the original function with explicit type hints
+      console.log("Trying fallback to original function...");
+      const { data: fallbackData, error: fallbackError } = await supabaseClient.rpc(
+        'create_investment',
+        {
+          p_user_id: userId,
+          p_product_id: productId,
+          p_amount: productData.amount,
+          p_end_date: endDate.toISOString(),
+          p_starting_value: productData.amount,
+          p_current_value: productData.amount,
+          p_final_value: productData.amount * 2
+        }
+      );
+      
+      if (fallbackError) {
+        console.error("Fallback also failed:", JSON.stringify(fallbackError, null, 2));
+        return new Response(JSON.stringify({
+          error: fallbackError.message,
+          details: fallbackError.details,
+          hint: fallbackError.hint,
+          code: fallbackError.code
+        }), {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          },
+          status: 400
+        });
+      }
+      
+      console.log("Fallback succeeded:", JSON.stringify(fallbackData));
       return new Response(JSON.stringify({
-        error: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
+        success: true,
+        data: fallbackData
       }), {
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json'
         },
-        status: 400
+        status: 200
       });
     }
 

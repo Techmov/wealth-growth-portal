@@ -23,17 +23,33 @@ export function useInvestmentActions(user: User | null) {
       });
 
       // Check for errors in the response
-      const { data, error } = response;
-      
-      if (error) {
-        console.error("Investment error:", error);
-        throw new Error(error.message || "Failed to create investment");
+      if (response.error) {
+        console.error("Investment error:", response.error);
+        throw new Error(response.error.message || "Failed to create investment");
       }
-
+      
+      // Extract data from response
+      const { data } = response;
+      
       // Check if the response contains an error message
       if (data && typeof data === 'object' && 'error' in data) {
         console.error("Investment request failed:", data.error);
-        throw new Error(typeof data.error === 'string' ? data.error : "Failed to process investment request");
+        const errorMessage = typeof data.error === 'string' ? data.error : "Failed to process investment request";
+        
+        // If we have more details from the server, log them
+        if ('details' in data) {
+          console.error("Error details:", data.details);
+        }
+        
+        if ('hint' in data) {
+          console.error("Error hint:", data.hint);
+        }
+        
+        if ('code' in data) {
+          console.error("Error code:", data.code);
+        }
+        
+        throw new Error(errorMessage);
       }
 
       toast.success(`Successfully invested in this product`);
