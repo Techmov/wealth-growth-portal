@@ -33,8 +33,8 @@ export function DepositForm() {
       return;
     }
     
-    if (depositAmount < 10) {
-      toast.error("Minimum deposit amount is 10 USDT");
+    if (depositAmount < 50) {
+      toast.error("Minimum deposit amount is 50 USDT");
       return;
     }
     
@@ -89,7 +89,7 @@ export function DepositForm() {
             <div className="flex items-start gap-2">
               <Info className="h-4 w-4 mt-0.5" />
               <span>
-                Send USDT (TRC20) to our address below, then enter the transaction details.
+                Send USDT (TRC20) to the address below, then enter the transaction details.
               </span>
             </div>
             <div className="mt-2 p-3 bg-blue-100 rounded-md relative">
