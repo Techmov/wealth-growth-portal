@@ -131,7 +131,7 @@ export function DepositForm() {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Minimum deposit amount: $10
+              Minimum deposit amount: $50
             </p>
           </div>
           
