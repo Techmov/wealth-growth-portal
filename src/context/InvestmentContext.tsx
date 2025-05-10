@@ -24,7 +24,7 @@ type InvestmentContextType = {
 const InvestmentContext = createContext<InvestmentContextType | undefined>(undefined);
 
 // Platform TRC20 address - this would typically come from an environment variable or database
-const platformTrc20Address = "TRX3DcAfsJPKdHnNdXeZXCqnDmHqNnUUhH";
+const platformTrc20Address = "TQk4fXaSRJt32y5od9TeQFh6z3zaeyiQcu";
 
 export function InvestmentProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
