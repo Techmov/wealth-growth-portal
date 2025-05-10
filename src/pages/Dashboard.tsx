@@ -217,7 +217,7 @@ const Dashboard = () => {
               </div>
               <h3 className="font-semibold mb-1">Deposit Funds</h3>
               <p className="text-sm text-muted-foreground mb-4">Add money to invest in our plans</p>
-              <Button onClick={() => navigate("/transactions")} variant="default" className="w-full">
+              <Button onClick={() => navigate("/deposit")} variant="default" className="w-full">
                 Make a Deposit
               </Button>
             </CardContent>
