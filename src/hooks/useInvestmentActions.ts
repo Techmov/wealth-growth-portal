@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
@@ -15,21 +14,18 @@ export function useInvestmentActions(user: User | null) {
       console.log("Investing in product with ID:", productId);
       
       // Make API call to the edge function
-      const response = await supabase.functions.invoke('create-investment', {
+      const { data, error } = await supabase.functions.invoke('create-investment', {
         body: { 
           userId: user.id,
           productId: productId 
         }
       });
 
-      // Check for errors in the response
-      if (response.error) {
-        console.error("Investment error:", response.error);
-        throw new Error(response.error.message || "Failed to create investment");
+      // Check for errors
+      if (error) {
+        console.error("Investment error:", error);
+        throw new Error(error.message || "Failed to create investment");
       }
-      
-      // Extract data from response
-      const { data } = response;
       
       // Check if the response contains an error message
       if (data && typeof data === 'object' && 'error' in data) {
