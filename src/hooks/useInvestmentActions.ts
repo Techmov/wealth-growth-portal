@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
@@ -58,15 +57,12 @@ export function useInvestmentActions(user: User | null) {
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + (fullProductData.duration || 30));
 
-      // Step 4: Insert investment directly using the database function
-      const { data, error } = await supabase.rpc("create_investment", {
-        p_user_id: user.id,
-        p_product_id: productId,
-        p_amount: investmentAmount,
-        p_end_date: endDate.toISOString(),
-        p_starting_value: investmentAmount,
-        p_current_value: investmentAmount,
-        p_final_value: investmentAmount * 2 // Double the investment amount
+      // Step 4: Call the edge function to create the investment
+      const { data, error } = await supabase.functions.invoke("create-investment", {
+        body: {
+          userId: user.id,
+          productId: productId
+        }
       });
 
       if (error) {

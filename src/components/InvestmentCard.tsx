@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +31,11 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
     try {
       setIsInvesting(true);
       console.log("Investing in product with ID:", product.id);
+      
+      // Make sure product.id is a valid UUID
+      if (!product.id) {
+        throw new Error("Invalid product ID");
+      }
       
       await invest(product.id);
       toast.success(`Successfully invested in ${product.name}!`);

@@ -1,10 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'; 
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
-};
+import { corsHeaders } from '../_shared/cors.ts';
 
 export const handler = async (req) => {
   if (req.method === 'OPTIONS') {
@@ -42,7 +38,7 @@ export const handler = async (req) => {
       }
     );
 
-    // Explicitly cast productId to uuid when querying the products table
+    // Fetch the product data
     const { data: productData, error: productError } = await supabaseClient
       .from('products')
       .select('id, name, amount, duration')
@@ -81,7 +77,7 @@ export const handler = async (req) => {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + (productData.duration || 30));
     
-    // Call the RPC directly with the original parameter names but use stringified UUIDs
+    // Call the RPC with properly typed parameters
     const { data, error } = await supabaseClient.rpc(
       'create_investment',
       { 
