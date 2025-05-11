@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Downline, User } from "@/types";
 import { toast } from "sonner";
+import { applyReferralCode } from "@/utils/referralUtils";
 
 export function useReferralSystem(user: User | null) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -67,6 +68,22 @@ export function useReferralSystem(user: User | null) {
           pendingBonuses: 0, // Would require additional logic to track pending bonuses
         });
       }
+
+      // Also fetch the user's current referral data directly to ensure accurate stats
+      if (user.id) {
+        const { data: userData, error: userError } = await supabase
+          .from("profiles")
+          .select("referral_bonus, total_referred_users")
+          .eq("id", user.id)
+          .single();
+        
+        if (!userError && userData) {
+          setReferralStats(prev => ({
+            ...prev,
+            totalReferrals: userData.total_referred_users || mappedDownlines.length || 0,
+          }));
+        }
+      }
     } catch (error: any) {
       console.error("Error fetching downlines:", error);
     } finally {
@@ -80,49 +97,6 @@ export function useReferralSystem(user: User | null) {
       toast.success("Referral link copied to clipboard");
     } catch (error) {
       toast.error("Failed to copy referral link");
-    }
-  };
-
-  const applyReferralCode = async (referralCode: string): Promise<boolean> => {
-    if (!user) {
-      toast.error("You need to be logged in to apply a referral code");
-      return false;
-    }
-    
-    try {
-      if (user.referralCode === referralCode) {
-        toast.error("You cannot refer yourself");
-        return false;
-      }
-      
-      // Check if the referral code exists
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("referral_code", referralCode)
-        .single();
-      
-      if (error || !data) {
-        toast.error("Invalid referral code");
-        return false;
-      }
-      
-      // Update the user's referred_by field
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ referred_by: referralCode })
-        .eq("id", user.id);
-      
-      if (updateError) {
-        throw new Error(updateError.message);
-      }
-      
-      toast.success("Referral code applied successfully");
-      return true;
-    } catch (error: any) {
-      console.error("Error applying referral code:", error);
-      toast.error(error.message || "Failed to apply referral code");
-      return false;
     }
   };
 

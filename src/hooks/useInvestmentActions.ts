@@ -43,22 +43,11 @@ export function useInvestmentActions(user: User | null) {
         return;
       }
 
-      // Step 3: Calculate end date based on product duration
-      const { data: fullProductData, error: fullProductError } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", productId)
-        .single();
-
-      if (fullProductError || !fullProductData) {
-        throw new Error("Failed to fetch complete product details");
-      }
-
-      // Step 4: Call the edge function to create the investment
+      // Step 3: Call the edge function to create the investment
       const { data, error } = await supabase.functions.invoke("create-investment", {
         body: {
           userId: user.id,
-          productId: productId
+          productId
         }
       });
 
@@ -81,16 +70,16 @@ export function useInvestmentActions(user: User | null) {
       toast.error("You must be logged in to claim profit");
       return;
     }
-
+  
     try {
       const { data, error } = await supabase.rpc("claim_investment_profit", {
         p_investment_id: investmentId,
       });
-
+  
       if (error) {
         throw new Error(error.message || "Failed to claim profit");
       }
-
+  
       // Safely handle the response data
       const responseData = typeof data === 'object' && data !== null ? data : {};
       
@@ -111,17 +100,17 @@ export function useInvestmentActions(user: User | null) {
 
   const getClaimableProfit = async (investmentId: string) => {
     if (!user) return 0;
-
+  
     try {
       const { data, error } = await supabase.rpc("calculate_claimable_profit", {
         p_investment_id: investmentId,
       });
-
+  
       if (error) {
         console.error("Error calculating claimable profit:", error);
         return 0;
       }
-
+  
       return typeof data === "number" ? data : 0;
     } catch (error) {
       console.error("Unexpected error calculating profit:", error);

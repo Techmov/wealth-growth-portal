@@ -8,10 +8,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Gift, Copy, Users, Coins, Share2, Clock, ArrowRight } from "lucide-react";
+import { Gift, Copy, Users, Coins, Share2, Clock, ArrowRight, RefreshCw } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 const ReferralsPage = () => {
   const { user } = useAuth();
@@ -22,22 +23,80 @@ const ReferralsPage = () => {
     downlines,
     isLoading,
     referralStats,
+    refreshDownlines
   } = useReferralSystem(user);
 
   const [referralCode, setReferralCode] = useState("");
+  const [isFetchingUpdates, setIsFetchingUpdates] = useState(false);
+  const [referralBonus, setReferralBonus] = useState(0);
 
   useEffect(() => {
     if (!user) {
       navigate("/login");
+      return;
     }
+    
+    // Set initial referral bonus from user object
+    if (user) {
+      setReferralBonus(user.referralBonus || 0);
+    }
+
+    // Get the latest referral bonus value
+    fetchLatestUserData();
   }, [user, navigate]);
+
+  const fetchLatestUserData = async () => {
+    if (!user?.id) return;
+    
+    setIsFetchingUpdates(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('referral_bonus, total_referred_users')
+        .eq('id', user.id)
+        .single();
+        
+      if (!error && data) {
+        setReferralBonus(data.referral_bonus || 0);
+      }
+    } catch (err) {
+      console.error("Error fetching user data:", err);
+    } finally {
+      setIsFetchingUpdates(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsFetchingUpdates(true);
+    try {
+      await fetchLatestUserData();
+      await refreshDownlines();
+      toast.success("Referral data refreshed");
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setIsFetchingUpdates(false);
+    }
+  };
 
   if (!user) return null;
 
   return (
     <UserLayout>
       <div className="container py-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Referral Program</h1>
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-3xl font-bold tracking-tight">Referral Program</h1>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh} 
+            disabled={isFetchingUpdates}
+            className="flex items-center gap-1"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetchingUpdates ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
         <p className="text-muted-foreground mb-8">
           Invite friends and earn 5% bonus on their investments
         </p>
@@ -58,7 +117,7 @@ const ReferralsPage = () => {
           />
           <StatCard
             title="Referral Balance"
-            value={`$${user.referralBonus.toFixed(2)}`}
+            value={`$${referralBonus.toFixed(2)}`}
             description="Available to withdraw"
             icon={<Gift className="h-5 w-5 text-purple-600" />}
           />
