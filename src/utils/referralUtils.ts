@@ -52,19 +52,24 @@ export const applyReferralCode = async (
       return false;
     }
 
-    // Try to increment the referrer's total_referred_users count using direct update
-    try {
+    // Increment the referrer's total_referred_users count directly
+    const { data: referrerProfile, error: referrerProfileError } = await supabase
+      .from("profiles")
+      .select("total_referred_users")
+      .eq("id", referrerData.id)
+      .single();
+    
+    if (!referrerProfileError && referrerProfile) {
+      const currentCount = referrerProfile.total_referred_users || 0;
+      
       const { error: incrementError } = await supabase
         .from("profiles")
-        .update({ total_referred_users: userData.total_referred_users + 1 })
+        .update({ total_referred_users: currentCount + 1 })
         .eq("id", referrerData.id);
         
       if (incrementError) {
         console.error("Failed to increment referrer stats:", incrementError);
       }
-    } catch (incrementError) {
-      // Don't fail the entire operation if this fails, just log it
-      console.error("Failed to increment referrer stats:", incrementError);
     }
 
     toast.success("Referral code applied successfully!");

@@ -9,25 +9,37 @@ import { supabase } from "@/integrations/supabase/client";
  * @param amount The amount to increment by
  */
 export async function incrementValue(
-  table: string, 
+  table: "profiles" | "investments" | "products" | "transactions" | "withdrawal_requests", 
   column: string, 
   rowId: string, 
   amount: number
 ): Promise<void> {
   try {
-    // Use the supabase API directly to update the column
-    const { error } = await supabase
+    // Get the current value
+    const { data: currentValueData, error: fetchError } = await supabase
       .from(table)
-      .update({ [column]: supabase.rpc('get_current_value', { 
-        p_table: table, 
-        p_column: column, 
-        p_id: rowId 
-      }).then(val => val + amount) })
+      .select(column)
+      .eq('id', rowId)
+      .single();
+    
+    if (fetchError || currentValueData === null) {
+      console.error(`Error fetching ${column} from ${table}:`, fetchError);
+      throw fetchError || new Error(`Record not found in ${table}`);
+    }
+    
+    // Calculate new value
+    const currentValue = currentValueData[column] || 0;
+    const newValue = currentValue + amount;
+    
+    // Update the value
+    const { error: updateError } = await supabase
+      .from(table)
+      .update({ [column]: newValue })
       .eq('id', rowId);
     
-    if (error) {
-      console.error(`Error incrementing ${column} in ${table}:`, error);
-      throw error;
+    if (updateError) {
+      console.error(`Error incrementing ${column} in ${table}:`, updateError);
+      throw updateError;
     }
   } catch (error) {
     console.error(`Error incrementing ${column} in ${table}:`, error);
