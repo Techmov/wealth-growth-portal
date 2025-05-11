@@ -15,16 +15,18 @@ export async function incrementValue(
   amount: number
 ): Promise<void> {
   try {
-    const { error } = await supabase.functions.invoke('increment', {
-      body: { 
-        row_id: rowId, 
-        table_name: table, 
-        column_name: column, 
-        value: amount 
-      }
-    });
+    // Use the supabase API directly to update the column
+    const { error } = await supabase
+      .from(table)
+      .update({ [column]: supabase.rpc('get_current_value', { 
+        p_table: table, 
+        p_column: column, 
+        p_id: rowId 
+      }).then(val => val + amount) })
+      .eq('id', rowId);
     
     if (error) {
+      console.error(`Error incrementing ${column} in ${table}:`, error);
       throw error;
     }
   } catch (error) {

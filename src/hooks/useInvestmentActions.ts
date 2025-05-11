@@ -98,12 +98,12 @@ export function useInvestmentActions(user: User | null) {
         throw new Error(error.message || "Failed to claim profit");
       }
 
-      // Safely handle the response data - first check if data is an object
+      // Safely handle the response data
       const responseData = typeof data === 'object' && data !== null ? data : {};
       
-      // Now extract the amount with proper type checking
+      // Extract amount with proper type checking
       let claimedAmount = 0;
-      if (responseData && 'amount' in responseData && typeof responseData.amount === 'number') {
+      if ('amount' in responseData && typeof responseData.amount === 'number') {
         claimedAmount = responseData.amount;
       }
       

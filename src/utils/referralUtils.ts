@@ -1,7 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { incrementValue } from "./supabaseUtils";
 
 export const applyReferralCode = async (
   userId: string,
@@ -53,9 +52,16 @@ export const applyReferralCode = async (
       return false;
     }
 
-    // Try to increment the referrer's total_referred_users count using our edge function
+    // Try to increment the referrer's total_referred_users count using direct update
     try {
-      await incrementValue('profiles', 'total_referred_users', referrerData.id, 1);
+      const { error: incrementError } = await supabase
+        .from("profiles")
+        .update({ total_referred_users: userData.total_referred_users + 1 })
+        .eq("id", referrerData.id);
+        
+      if (incrementError) {
+        console.error("Failed to increment referrer stats:", incrementError);
+      }
     } catch (incrementError) {
       // Don't fail the entire operation if this fails, just log it
       console.error("Failed to increment referrer stats:", incrementError);
