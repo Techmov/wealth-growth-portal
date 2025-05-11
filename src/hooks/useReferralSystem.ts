@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Downline, User } from "@/types";
@@ -17,66 +16,73 @@ export function useReferralSystem(user: User | null) {
 
   useEffect(() => {
     if (user?.referralCode) {
-      // Generate referral link based on current URL
       const baseUrl = window.location.origin;
       setReferralLink(`${baseUrl}/signup?ref=${user.referralCode}`);
-      
-      // Load downlines data
       fetchDownlines();
     }
   }, [user]);
 
   const fetchDownlines = async () => {
     if (!user || !user.referralCode) return;
-    
+
     try {
       setIsLoading(true);
-      
-      // Get users referred by this user's referral code
+
+      // Get the user's UUID from their referralCode
+      const { data: refUser, error: refError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("referral_code", user.referralCode)
+        .single();
+
+      if (refError || !refUser?.id) {
+        throw new Error("Invalid referral code or user not found");
+      }
+
+      const refUserId = refUser.id;
+
+      // Now fetch downlines using UUID
       const { data, error } = await supabase
         .from("profiles")
         .select("id, username, total_invested, referral_bonus, created_at")
-        .eq("referred_by", user.referralCode)
+        .eq("referred_by", refUserId)
         .order("created_at", { ascending: false });
-      
+
       if (error) {
         console.error("Error fetching downlines:", error);
         throw error;
       }
-      
-      // Map to downlines format
+
       const mappedDownlines: Downline[] = (data || []).map(profile => ({
         id: profile.id,
         username: profile.username || "Anonymous",
         totalInvested: profile.total_invested || 0,
-        bonusGenerated: (profile.total_invested || 0) * 0.05, // 5% bonus
+        bonusGenerated: (profile.total_invested || 0) * 0.05,
         date: new Date(profile.created_at || Date.now()),
       }));
-      
+
       setDownlines(mappedDownlines);
-      
-      // Calculate summary stats
+
       if (mappedDownlines.length > 0) {
         const totalBonusEarned = mappedDownlines.reduce(
-          (sum, downline) => sum + downline.bonusGenerated, 
+          (sum, d) => sum + d.bonusGenerated,
           0
         );
-        
+
         setReferralStats({
           totalReferrals: mappedDownlines.length,
           totalBonusEarned,
-          pendingBonuses: 0, // Would require additional logic to track pending bonuses
+          pendingBonuses: 0,
         });
       }
 
-      // Also fetch the user's current referral data directly to ensure accurate stats
       if (user.id) {
         const { data: userData, error: userError } = await supabase
           .from("profiles")
           .select("referral_bonus, total_referred_users")
           .eq("id", user.id)
           .single();
-        
+
         if (!userError && userData) {
           setReferralStats(prev => ({
             ...prev,
@@ -85,7 +91,7 @@ export function useReferralSystem(user: User | null) {
         }
       }
     } catch (error: any) {
-      console.error("Error fetching downlines:", error);
+      console.error("Error fetching downlines:", error.message);
     } finally {
       setIsLoading(false);
     }
