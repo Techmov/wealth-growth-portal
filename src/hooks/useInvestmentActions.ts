@@ -1,7 +1,6 @@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
-import { incrementValue } from "@/utils/supabaseUtils";
 
 export function useInvestmentActions(user: User | null) {
   const invest = async (productId: string) => {
@@ -13,10 +12,9 @@ export function useInvestmentActions(user: User | null) {
     try {
       console.log("Attempting investment for product:", productId);
 
-      // Step 1: Fetch product to get investment amount
       const { data: productData, error: productError } = await supabase
         .from("products")
-        .select("amount, name")
+        .select("amount")
         .eq("id", productId)
         .single();
 
@@ -25,12 +23,10 @@ export function useInvestmentActions(user: User | null) {
       }
 
       const investmentAmount = productData.amount;
-      const productName = productData.name;
 
-      // Step 2: Check user's current balance
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("balance")
+        .select("balance, total_invested")
         .eq("id", user.id)
         .single();
 
@@ -43,20 +39,45 @@ export function useInvestmentActions(user: User | null) {
         return;
       }
 
-      // Step 3: Call the edge function to create the investment
-      const { data, error } = await supabase.functions.invoke("create-investment", {
-        body: {
-          userId: user.id,
-          productId
-        }
+      const response = await supabase.functions.invoke("create-investment", {
+        body: { userId: user.id, productId },
       });
 
-      if (error) {
-        console.error("Investment creation error:", error);
-        throw new Error(error.message || "Failed to create investment");
+      const { data, error, status } = response;
+
+      if (status < 200 || status >= 300) {
+        console.error("Edge Function error response:", response);
+        const message =
+          (data && typeof data === "object" && data.error) ||
+          error?.message ||
+          "Investment failed";
+        throw new Error(message);
       }
 
-      toast.success(`Successfully invested in ${productName || 'investment product'}`);
+      const newBalance = profileData.balance - investmentAmount;
+      const newTotalInvested =
+        (profileData.total_invested || 0) + investmentAmount;
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          balance: newBalance,
+          total_invested: newTotalInvested,
+        })
+        .eq("id", user.id);
+
+      if (updateError) {
+        console.warn(
+          "Investment succeeded, but failed to update balance/investment:",
+          updateError
+        );
+        toast.warning("Investment succeeded, but profile update failed.");
+      } else {
+        toast.success(
+          "Investment successful — balance and total invested updated"
+        );
+      }
+
       return data;
     } catch (error: any) {
       console.error("Investment failed:", error);
@@ -70,27 +91,19 @@ export function useInvestmentActions(user: User | null) {
       toast.error("You must be logged in to claim profit");
       return;
     }
-  
+
     try {
       const { data, error } = await supabase.rpc("claim_investment_profit", {
         p_investment_id: investmentId,
       });
-  
+
       if (error) {
         throw new Error(error.message || "Failed to claim profit");
       }
-  
-      // Safely handle the response data
-      const responseData = typeof data === 'object' && data !== null ? data : {};
-      
-      // Extract amount with proper type checking
-      let claimedAmount = 0;
-      if ('amount' in responseData && typeof responseData.amount === 'number') {
-        claimedAmount = responseData.amount;
-      }
-      
-      toast.success(`Successfully claimed $${claimedAmount.toFixed(2)} profit`);
-      return responseData;
+
+      const amount = typeof data?.amount === "number" ? data.amount : 0;
+      toast.success(`Successfully claimed $${amount.toFixed(2)} profit`);
+      return data;
     } catch (error: any) {
       console.error("Claim profit error:", error);
       toast.error(error.message || "Failed to claim profit");
@@ -100,17 +113,17 @@ export function useInvestmentActions(user: User | null) {
 
   const getClaimableProfit = async (investmentId: string) => {
     if (!user) return 0;
-  
+
     try {
       const { data, error } = await supabase.rpc("calculate_claimable_profit", {
         p_investment_id: investmentId,
       });
-  
+
       if (error) {
         console.error("Error calculating claimable profit:", error);
         return 0;
       }
-  
+
       return typeof data === "number" ? data : 0;
     } catch (error) {
       console.error("Unexpected error calculating profit:", error);
@@ -125,43 +138,17 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      if (!referralCode) {
-        toast.error("Please enter a referral code");
-        return;
-      }
-      
-      // Check if referral code is valid
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("referral_code", referralCode.toUpperCase())
-        .single();
-        
-      if (error || !data) {
+      if (referralCode && referralCode !== user.referralCode) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        toast.info(
+          "Referral bonuses are automatically added when referrals invest."
+        );
+      } else {
         toast.error("Invalid referral code");
-        return;
       }
-      
-      // Check if user is trying to use own code
-      if (user.referralCode === referralCode.toUpperCase()) {
-        toast.error("You cannot use your own referral code");
-        return;
-      }
-      
-      // Update user's referred_by field
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ referred_by: referralCode.toUpperCase() })
-        .eq("id", user.id);
-        
-      if (updateError) {
-        throw new Error(updateError.message);
-      }
-      
-      toast.success("Referral code applied successfully");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Referral bonus error:", error);
-      toast.error(error.message || "Failed to process referral code");
+      toast.error("Failed to process referral code");
     }
   };
 
@@ -186,7 +173,7 @@ export function useInvestmentActions(user: User | null) {
         id: profile.id,
         username: profile.username || "Anonymous",
         totalInvested: profile.total_invested || 0,
-        bonusGenerated: (profile.total_invested || 0) * 0.05, // 5% of total invested
+        bonusGenerated: (profile.total_invested || 0) * 0.05,
         date: new Date(profile.created_at || Date.now()),
       }));
     } catch (error) {
