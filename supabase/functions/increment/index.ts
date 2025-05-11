@@ -1,77 +1,49 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { corsHeaders } from '../_shared/cors.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { row_id, amount, table = 'profiles', column = 'balance' } = await req.json()
+    const { row_id, table_name, column_name, value } = await req.json();
 
-    if (!row_id || amount === undefined) {
+    // Basic validation
+    if (!row_id || !table_name || !column_name || value === undefined) {
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters: row_id and amount are required' }),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 400 }
-      )
+        JSON.stringify({ error: 'Missing required parameters' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Create a Supabase client with the service role key
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
 
-    // Get current value
-    const { data: currentData, error: fetchError } = await supabase
-      .from(table)
-      .select(column)
+    // Construct the update query
+    const { data, error } = await supabaseClient
+      .from(table_name)
+      .update({ [column_name]: value })
       .eq('id', row_id)
-      .single()
+      .select(column_name);
 
-    if (fetchError) {
-      console.error('Error fetching current value:', fetchError)
-      return new Response(
-        JSON.stringify({ error: fetchError.message }),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 500 }
-      )
-    }
-
-    const currentValue = currentData[column] || 0
-    const newValue = currentValue + amount
-
-    // Update with new value
-    const updateData = {}
-    updateData[column] = newValue
-
-    const { data, error: updateError } = await supabase
-      .from(table)
-      .update(updateData)
-      .eq('id', row_id)
-      .select()
-
-    if (updateError) {
-      console.error('Error updating value:', updateError)
-      return new Response(
-        JSON.stringify({ error: updateError.message }),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 500 }
-      )
-    }
+    if (error) throw error;
 
     return new Response(
       JSON.stringify({ success: true, data }),
-      { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-    )
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    );
   } catch (error) {
-    console.error('Unexpected error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { headers: { 'Content-Type': 'application/json', ...corsHeaders }, status: 500 }
-    )
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+    );
   }
-})
+});

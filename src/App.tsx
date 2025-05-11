@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
@@ -27,6 +26,7 @@ import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { useAuth } from "./context/AuthContext";
 import { initializeRealtimeSubscriptions } from "./integrations/supabase/realtime";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import ReferralsPage from "./pages/ReferralsPage";
 
 // Add component for admin redirection
 const AdminRedirect = () => {
@@ -123,6 +123,16 @@ function App() {
                 } />
               </Route>
             </Route>
+            
+            {/* Add the ReferralsPage route */}
+            <Route 
+              path="/referrals" 
+              element={
+                <ProtectedRoute>
+                  <ReferralsPage />
+                </ProtectedRoute>
+              } 
+            />
             
             <Route path="*" element={<NotFound />} />
           </Routes>

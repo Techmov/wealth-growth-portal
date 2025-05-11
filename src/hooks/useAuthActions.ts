@@ -69,28 +69,63 @@ export const useAuthActions = ({
 
   // Wrapper for signup to include referralCode
   const signup = async (name: string, email: string, password: string, referralCode?: string) => {
+    setIsLoading(true);
+    
     try {
-      setIsLoading(true);
-      await authService.signup({ name, email, password, referralCode });
-      toast.success("Signup successful!", {
-        description: "Please check your email to confirm your account."
+      // Register the user with Supabase auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name,
+            username: generateUsername(name, email),
+          },
+        },
       });
-      return { user: null, session: null };
-    } catch (error: any) {
-      console.error("Signup error:", error);
-      
-      // Handle specific error codes
-      if (error.message?.includes("User already registered")) {
-        toast.error("This email is already registered", {
-          description: "Please use a different email or try logging in."
-        });
-      } else {
-        toast.error(error.message || "Failed to signup");
+
+      if (authError) {
+        throw authError;
       }
-      
-      throw error;
-    } finally {
+
+      // If we have a referral code, apply it after registration
+      if (referralCode && authData.user) {
+        // Set a short timeout to ensure the profile has been created
+        setTimeout(async () => {
+          try {
+            // Update the user's referred_by field
+            const { error } = await supabase
+              .from('profiles')
+              .update({ referred_by: referralCode.toUpperCase() })
+              .eq('id', authData.user?.id);
+            
+            if (error) {
+              console.error("Failed to apply referral code:", error);
+            }
+          } catch (err) {
+            console.error("Error applying referral code:", err);
+          }
+        }, 1000);
+      }
+
+      // Set the session and reload user data
+      if (authData.session) {
+        setSession(authData.session);
+        await fetchProfile(authData.session.user.id);
+        setLoginSuccess(true);
+        setIsLoading(false);
+        return authData;
+      } else {
+        // Email confirmation required
+        setIsLoading(false);
+        return {
+          message: "Check your email for the confirmation link.",
+        };
+      }
+    } catch (error) {
       setIsLoading(false);
+      console.error("Signup error:", error);
+      return { error };
     }
   };
 
@@ -344,4 +379,22 @@ export const useAuthActions = ({
     requestWithdrawal,
     deposit
   };
+};
+
+// Add this helper function inside useAuthActions.ts
+const generateUsername = (name: string, email: string): string => {
+  // Create a username from name or email
+  let baseUsername = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .substring(0, 10);
+
+  // If name doesn't produce a valid username, use email
+  if (baseUsername.length < 3) {
+    baseUsername = email.split('@')[0].substring(0, 10);
+  }
+
+  // Add random numbers for uniqueness
+  const randomNum = Math.floor(Math.random() * 10000);
+  return `${baseUsername}${randomNum}`;
 };

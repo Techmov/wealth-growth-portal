@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
@@ -15,7 +16,7 @@ export function useInvestmentActions(user: User | null) {
       // Step 1: Fetch product to get investment amount
       const { data: productData, error: productError } = await supabase
         .from("products")
-        .select("amount")
+        .select("amount, name")
         .eq("id", productId)
         .single();
 
@@ -24,11 +25,12 @@ export function useInvestmentActions(user: User | null) {
       }
 
       const investmentAmount = productData.amount;
+      const productName = productData.name;
 
-      // Step 2: Check user's current balance and total_invested
+      // Step 2: Check user's current balance
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("balance, total_invested")
+        .select("balance")
         .eq("id", user.id)
         .single();
 
@@ -41,47 +43,37 @@ export function useInvestmentActions(user: User | null) {
         return;
       }
 
-      // Step 3: Create investment via Edge Function
-      const response = await supabase.functions.invoke("create-investment", {
-        body: { userId: user.id, productId },
+      // Step 3: Calculate end date based on product duration
+      const { data: fullProductData, error: fullProductError } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", productId)
+        .single();
+
+      if (fullProductError || !fullProductData) {
+        throw new Error("Failed to fetch complete product details");
+      }
+
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + (fullProductData.duration || 30));
+
+      // Step 4: Insert investment directly using the database function
+      const { data, error } = await supabase.rpc("create_investment", {
+        p_user_id: user.id,
+        p_product_id: productId,
+        p_amount: investmentAmount,
+        p_end_date: endDate.toISOString(),
+        p_starting_value: investmentAmount,
+        p_current_value: investmentAmount,
+        p_final_value: investmentAmount * 2 // Double the investment amount
       });
 
-      const { data, error, status } = response;
-
-      if (status < 200 || status >= 300) {
-        console.error("Edge Function error response:", response);
-        const message =
-          (data && typeof data === "object" && data.error) ||
-          error?.message ||
-          "Investment failed";
-        throw new Error(message);
+      if (error) {
+        console.error("Investment creation error:", error);
+        throw new Error(error.message || "Failed to create investment");
       }
 
-      // Step 4: Deduct balance and update total_invested
-      const newBalance = profileData.balance - investmentAmount;
-      const newTotalInvested =
-        (profileData.total_invested || 0) + investmentAmount;
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          balance: newBalance,
-          total_invested: newTotalInvested,
-        })
-        .eq("id", user.id);
-
-      if (updateError) {
-        console.warn(
-          "Investment succeeded, but failed to update balance/investment:",
-          updateError
-        );
-        toast.warning("Investment succeeded, but profile update failed.");
-      } else {
-        toast.success(
-          "Investment successful — balance and total invested updated"
-        );
-      }
-
+      toast.success(`Successfully invested in ${productName || 'investment product'}`);
       return data;
     } catch (error: any) {
       console.error("Investment failed:", error);
@@ -142,17 +134,43 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      if (referralCode && referralCode !== user.referralCode) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        toast.info(
-          "Referral bonuses are automatically added when referrals invest."
-        );
-      } else {
-        toast.error("Invalid referral code");
+      if (!referralCode) {
+        toast.error("Please enter a referral code");
+        return;
       }
-    } catch (error) {
+      
+      // Check if referral code is valid
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("referral_code", referralCode.toUpperCase())
+        .single();
+        
+      if (error || !data) {
+        toast.error("Invalid referral code");
+        return;
+      }
+      
+      // Check if user is trying to use own code
+      if (user.referralCode === referralCode.toUpperCase()) {
+        toast.error("You cannot use your own referral code");
+        return;
+      }
+      
+      // Update user's referred_by field
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ referred_by: referralCode.toUpperCase() })
+        .eq("id", user.id);
+        
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+      
+      toast.success("Referral code applied successfully");
+    } catch (error: any) {
       console.error("Referral bonus error:", error);
-      toast.error("Failed to process referral code");
+      toast.error(error.message || "Failed to process referral code");
     }
   };
 
@@ -177,7 +195,7 @@ export function useInvestmentActions(user: User | null) {
         id: profile.id,
         username: profile.username || "Anonymous",
         totalInvested: profile.total_invested || 0,
-        bonusGenerated: (profile.total_invested || 0) * 0.05,
+        bonusGenerated: (profile.total_invested || 0) * 0.05, // 5% of total invested
         date: new Date(profile.created_at || Date.now()),
       }));
     } catch (error) {
@@ -193,4 +211,4 @@ export function useInvestmentActions(user: User | null) {
     getReferralBonus,
     getUserDownlines,
   };
-      }
+}
