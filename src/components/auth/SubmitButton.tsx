@@ -6,15 +6,17 @@ interface SubmitButtonProps {
   isSubmitting: boolean;
   submittingText: string;
   defaultText: string;
+  className?: string;
 }
 
 export function SubmitButton({
   isSubmitting,
   submittingText,
-  defaultText
+  defaultText,
+  className = "w-full"
 }: SubmitButtonProps) {
   return (
-    <Button type="submit" className="w-full" disabled={isSubmitting}>
+    <Button type="submit" className={className} disabled={isSubmitting}>
       {isSubmitting ? (
         <>
           <Loader2 size={16} className="mr-2 animate-spin" />

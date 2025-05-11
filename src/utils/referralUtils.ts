@@ -52,18 +52,15 @@ export const applyReferralCode = async (
       return false;
     }
 
-    // Increment the referrer's total_referred_users count
-    const { error: incrementError } = await supabase
-      .from("profiles")
-      .update({ 
-        total_referred_users: supabase.rpc('increment', { 
-          row_id: referrerData.id,
-          table_name: 'profiles',
-          column_name: 'total_referred_users',
-          value: 1 
-        })
-      })
-      .eq("id", referrerData.id);
+    // Increment the referrer's total_referred_users count using our edge function
+    const { error: incrementError } = await supabase.functions.invoke('increment', {
+      body: { 
+        row_id: referrerData.id,
+        table_name: 'profiles',
+        column_name: 'total_referred_users',
+        value: 1 
+      }
+    });
 
     if (incrementError) {
       console.error("Failed to increment referrer stats:", incrementError);

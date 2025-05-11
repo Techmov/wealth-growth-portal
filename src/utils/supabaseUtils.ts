@@ -16,7 +16,12 @@ export async function incrementValue(
 ): Promise<void> {
   try {
     const { error } = await supabase.functions.invoke('increment', {
-      body: { row_id: rowId, amount, table, column }
+      body: { 
+        row_id: rowId, 
+        table_name: table, 
+        column_name: column, 
+        value: amount 
+      }
     });
     
     if (error) {

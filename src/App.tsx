@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
@@ -104,6 +105,7 @@ function App() {
                 <Route path="/withdraw" element={<WithdrawalPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/change-password" element={<ChangePasswordPage />} />
+                <Route path="/referrals" element={<ReferralsPage />} />
                 
                 {/* Redirect old withdrawal route to the withdrawal page */}
                 <Route path="/withdrawal" element={<Navigate to="/withdraw" replace />} />
@@ -123,16 +125,6 @@ function App() {
                 } />
               </Route>
             </Route>
-            
-            {/* Add the ReferralsPage route */}
-            <Route 
-              path="/referrals" 
-              element={
-                <ProtectedRoute>
-                  <ReferralsPage />
-                </ProtectedRoute>
-              } 
-            />
             
             <Route path="*" element={<NotFound />} />
           </Routes>

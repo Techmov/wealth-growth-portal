@@ -112,7 +112,13 @@ export function SignupForm() {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <PasswordInput placeholder="Create a password" {...field} />
+                  <PasswordInput 
+                    id="password"
+                    placeholder="Create a password" 
+                    value={field.value} 
+                    onChange={field.onChange}
+                    required={true}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -146,14 +152,16 @@ export function SignupForm() {
             </div>
           )}
           
-          <SubmitButton className="w-full" isSubmitting={form.formState.isSubmitting}>
-            Create Account
-          </SubmitButton>
+          <SubmitButton
+            isSubmitting={form.formState.isSubmitting}
+            submittingText="Creating Account..."
+            defaultText="Create Account"
+          />
           
           <AuthFormFooter
             text="Already have an account?"
             linkText="Sign in"
-            linkHref="/login"
+            linkTo="/login"
           />
         </form>
       </Form>

@@ -97,9 +97,12 @@ export function useInvestmentActions(user: User | null) {
         throw new Error(error.message || "Failed to claim profit");
       }
 
-      const amount = typeof data?.amount === "number" ? data.amount : 0;
+      // Safely handle the response data
+      const responseData = typeof data === 'object' && data !== null ? data : {};
+      const amount = typeof responseData.amount === 'number' ? responseData.amount : 0;
+      
       toast.success(`Successfully claimed $${amount.toFixed(2)} profit`);
-      return data;
+      return responseData;
     } catch (error: any) {
       console.error("Claim profit error:", error);
       toast.error(error.message || "Failed to claim profit");
