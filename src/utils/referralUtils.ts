@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { incrementValue } from "./supabaseUtils";
 
 export const applyReferralCode = async (
   userId: string,
@@ -14,7 +15,7 @@ export const applyReferralCode = async (
     // Check if the referral code exists
     const { data: referrerData, error: referrerError } = await supabase
       .from("profiles")
-      .select("id, referral_code")
+      .select("id, referral_code, total_referred_users")
       .eq("referral_code", referralCode.toUpperCase())
       .single();
 
@@ -52,10 +53,14 @@ export const applyReferralCode = async (
       return false;
     }
 
-    // Increment the referrer's total_referred_users count using the typed incrementValue function
+    // Increment the referrer's total_referred_users count using the incrementValue function
+    // First ensure total_referred_users exists or default to 0
+    const currentReferredUsers = referrerData.total_referred_users || 0;
+    
+    // Update the referrer's total_referred_users count
     await supabase
       .from("profiles")
-      .update({ total_referred_users: (referrerData.total_referred_users || 0) + 1 })
+      .update({ total_referred_users: currentReferredUsers + 1 })
       .eq("id", referrerData.id);
 
     toast.success("Referral code applied successfully!");
