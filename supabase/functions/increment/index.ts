@@ -1,49 +1,84 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
 
-serve(async (req) => {
-  // Handle CORS preflight requests
+export const handler = async (req) => {
+  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { row_id, table_name, column_name, value } = await req.json();
-
-    // Basic validation
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) throw new Error('Missing Authorization header');
+    
+    const requestData = await req.json();
+    const { row_id, table_name, column_name, value } = requestData;
+    
     if (!row_id || !table_name || !column_name || value === undefined) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required parameters' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
+      throw new Error('Missing required parameters');
     }
 
-    // Create a Supabase client with the service role key
+    // Create Supabase client
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_URL') ?? '', 
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '', 
+      {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
     );
 
-    // Construct the update query
+    // Use SQL to increment the value (safer than multiple READ + UPDATE operations)
     const { data, error } = await supabaseClient
       .from(table_name)
-      .update({ [column_name]: value })
+      .update({ [column_name]: supabaseClient.rpc('get_current_value', { 
+        p_table: table_name, 
+        p_column: column_name, 
+        p_id: row_id 
+      }).then(val => val + value) })
       .eq('id', row_id)
-      .select(column_name);
+      .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Increment error:", error);
+      return new Response(JSON.stringify({
+        error: error.message
+      }), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
+        status: 400
+      });
+    }
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    );
+    return new Response(JSON.stringify({
+      success: true,
+      data
+    }), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      },
+      status: 200
+    });
+
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-    );
+    console.error("Increment function error:", error.message);
+    return new Response(JSON.stringify({
+      error: error.message
+    }), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      },
+      status: 400
+    });
   }
-});
+};
+
+Deno.serve(handler);
