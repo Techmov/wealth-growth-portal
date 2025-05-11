@@ -54,9 +54,6 @@ export function useInvestmentActions(user: User | null) {
         throw new Error("Failed to fetch complete product details");
       }
 
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + (fullProductData.duration || 30));
-
       // Step 4: Call the edge function to create the investment
       const { data, error } = await supabase.functions.invoke("create-investment", {
         body: {

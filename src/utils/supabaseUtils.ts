@@ -1,6 +1,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+type TableName = "profiles" | "investments" | "products" | "transactions" | "withdrawal_requests" | "offers" | "promotions" | "features";
+
 /**
  * Helper function to increment a numeric value in a table
  * @param table The table name
@@ -9,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
  * @param amount The amount to increment by
  */
 export async function incrementValue(
-  table: "profiles" | "investments" | "products" | "transactions" | "withdrawal_requests", 
+  table: TableName, 
   column: string, 
   rowId: string, 
   amount: number

@@ -26,7 +26,7 @@ export function useReferralSystem(user: User | null) {
   }, [user]);
 
   const fetchDownlines = async () => {
-    if (!user) return;
+    if (!user || !user.referralCode) return;
     
     try {
       setIsLoading(true);
@@ -39,7 +39,8 @@ export function useReferralSystem(user: User | null) {
         .order("created_at", { ascending: false });
       
       if (error) {
-        throw new Error(error.message);
+        console.error("Error fetching downlines:", error);
+        throw error;
       }
       
       // Map to downlines format

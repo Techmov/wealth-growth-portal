@@ -43,20 +43,17 @@ export function WithdrawalForm() {
       return;
     }
     
-    // Check if amount + fee exceeds available balance
-    const totalWithdrawal = withdrawalAmount + WITHDRAWAL_FEE;
-    
-    // Validate source-specific balance with fee
-    if (withdrawalSource === 'profit' && totalWithdrawal > stats.profitAmount) {
-      toast.error("Insufficient profit funds for withdrawal + fee", {
-        description: `Available: $${stats.profitAmount.toFixed(2)}, Required: $${totalWithdrawal.toFixed(2)}`
+    // Check if amount exceeds available balance (without considering fee)
+    if (withdrawalSource === 'profit' && withdrawalAmount > stats.profitAmount) {
+      toast.error("Insufficient profit funds for withdrawal", {
+        description: `Available: $${stats.profitAmount.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
       });
       return;
     }
     
-    if (withdrawalSource === 'referral_bonus' && totalWithdrawal > stats.referralBonus) {
-      toast.error("Insufficient referral bonus funds for withdrawal + fee", {
-        description: `Available: $${stats.referralBonus.toFixed(2)}, Required: $${totalWithdrawal.toFixed(2)}`
+    if (withdrawalSource === 'referral_bonus' && withdrawalAmount > stats.referralBonus) {
+      toast.error("Insufficient referral bonus funds for withdrawal", {
+        description: `Available: $${stats.referralBonus.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
       });
       return;
     }
@@ -97,13 +94,14 @@ export function WithdrawalForm() {
     statsLoading || 
     !amount ||
     parseFloat(amount) <= 0 ||
-    (withdrawalSource === 'profit' && parseFloat(amount) + WITHDRAWAL_FEE > stats.profitAmount) ||
-    (withdrawalSource === 'referral_bonus' && parseFloat(amount) + WITHDRAWAL_FEE > stats.referralBonus) ||
+    (withdrawalSource === 'profit' && parseFloat(amount) > stats.profitAmount) ||
+    (withdrawalSource === 'referral_bonus' && parseFloat(amount) > stats.referralBonus) ||
     (user.withdrawalPassword && !withdrawalPassword);
 
   // Calculate total amount including fee
   const amountValue = parseFloat(amount);
-  const totalAmount = !isNaN(amountValue) && amountValue > 0 ? amountValue + WITHDRAWAL_FEE : WITHDRAWAL_FEE;
+  const actualReceiveAmount = !isNaN(amountValue) && amountValue > 0 ? amountValue + WITHDRAWAL_FEE : 0;
+  const totalDeducted = !isNaN(amountValue) && amountValue > 0 ? amountValue : 0;
 
   return (
     <Card className="p-6">
@@ -204,7 +202,7 @@ export function WithdrawalForm() {
                 <div className="flex justify-between w-full items-center">
                   <span className="text-xs">You will receive:</span>
                   <span className="text-xs font-medium">
-                    ${!isNaN(amountValue) && amountValue > 0 ? amountValue.toFixed(2) : '0.00'}
+                    ${!isNaN(amountValue) && amountValue > 0 ? actualReceiveAmount.toFixed(2) : '0.00'}
                   </span>
                 </div>
               </div>
@@ -213,7 +211,7 @@ export function WithdrawalForm() {
                 <div className="flex justify-between w-full items-center">
                   <span className="text-xs">Total deducted:</span>
                   <span className="text-xs font-medium">
-                    ${!isNaN(totalAmount) ? totalAmount.toFixed(2) : '3.00'}
+                    ${!isNaN(totalDeducted) ? totalDeducted.toFixed(2) : '0.00'}
                   </span>
                 </div>
               </div>

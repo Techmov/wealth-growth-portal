@@ -14,7 +14,7 @@ export const applyReferralCode = async (
     // Check if the referral code exists
     const { data: referrerData, error: referrerError } = await supabase
       .from("profiles")
-      .select("id")
+      .select("id, referral_code")
       .eq("referral_code", referralCode.toUpperCase())
       .single();
 
@@ -52,25 +52,11 @@ export const applyReferralCode = async (
       return false;
     }
 
-    // Increment the referrer's total_referred_users count directly
-    const { data: referrerProfile, error: referrerProfileError } = await supabase
+    // Increment the referrer's total_referred_users count using the typed incrementValue function
+    await supabase
       .from("profiles")
-      .select("total_referred_users")
-      .eq("id", referrerData.id)
-      .single();
-    
-    if (!referrerProfileError && referrerProfile) {
-      const currentCount = referrerProfile.total_referred_users || 0;
-      
-      const { error: incrementError } = await supabase
-        .from("profiles")
-        .update({ total_referred_users: currentCount + 1 })
-        .eq("id", referrerData.id);
-        
-      if (incrementError) {
-        console.error("Failed to increment referrer stats:", incrementError);
-      }
-    }
+      .update({ total_referred_users: (referrerData.total_referred_users || 0) + 1 })
+      .eq("id", referrerData.id);
 
     toast.success("Referral code applied successfully!");
     return true;
