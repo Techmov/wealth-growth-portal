@@ -39,7 +39,9 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
       }
       
       await invest(product.id);
-      toast.success(`Successfully invested in ${product.name}!`);
+      
+      // Refresh the page after successful investment to update balances
+      window.location.reload();
     } catch (error: any) {
       console.error("Investment failed:", error);
       toast.error(error.message || "Failed to process investment. Please try again later.");

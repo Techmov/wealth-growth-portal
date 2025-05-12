@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
@@ -12,72 +13,23 @@ export function useInvestmentActions(user: User | null) {
     try {
       console.log("Attempting investment for product:", productId);
 
-      const { data: productData, error: productError } = await supabase
-        .from("products")
-        .select("amount")
-        .eq("id", productId)
-        .single();
-
-      if (productError || !productData) {
-        throw new Error("Failed to fetch product information");
-      }
-
-      const investmentAmount = productData.amount;
-
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("balance, total_invested")
-        .eq("id", user.id)
-        .single();
-
-      if (profileError || !profileData) {
-        throw new Error("Failed to fetch user profile");
-      }
-
-      if (profileData.balance < investmentAmount) {
-        toast.error("Insufficient balance to invest");
-        return;
-      }
-
-      const response = await supabase.functions.invoke("create-investment", {
-        body: { userId: user.id, productId },
+      // Use Supabase Edge Function to create the investment
+      const { data, error, status } = await supabase.functions.invoke("create-investment", {
+        body: { 
+          userId: user.id, 
+          productId: productId 
+        },
       });
 
-      const { data, error, status } = response;
-
-      if (status < 200 || status >= 300) {
-        console.error("Edge Function error response:", response);
-        const message =
-          (data && typeof data === "object" && data.error) ||
-          error?.message ||
-          "Investment failed";
-        throw new Error(message);
+      if (error || status >= 400 || !data || data.error) {
+        const errorMessage = data?.error || error?.message || "Investment creation failed";
+        console.error("Investment error:", errorMessage);
+        throw new Error(errorMessage);
       }
 
-      const newBalance = profileData.balance - investmentAmount;
-      const newTotalInvested =
-        (profileData.total_invested || 0) + investmentAmount;
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          balance: newBalance,
-          total_invested: newTotalInvested,
-        })
-        .eq("id", user.id);
-
-      if (updateError) {
-        console.warn(
-          "Investment succeeded, but failed to update balance/investment:",
-          updateError
-        );
-        toast.warning("Investment succeeded, but profile update failed.");
-      } else {
-        toast.success(
-          "Investment successful — balance and total invested updated"
-        );
-      }
-
+      console.log("Investment successful:", data);
+      toast.success("Investment successful! Your portfolio has been updated");
+      
       return data;
     } catch (error: any) {
       console.error("Investment failed:", error);
@@ -156,12 +108,25 @@ export function useInvestmentActions(user: User | null) {
     if (!user) return [];
 
     try {
-      console.log("Fetching downlines for:", user.referralCode);
+      console.log("Fetching downlines for:", user.id);
 
+      // First, get the user's referral code
+      const { data: userData, error: userError } = await supabase
+        .from("profiles")
+        .select("referral_code")
+        .eq("id", user.id)
+        .single();
+
+      if (userError || !userData?.referral_code) {
+        console.error("Error fetching user's referral code:", userError);
+        return [];
+      }
+
+      // Then fetch all users referred by this code
       const { data, error } = await supabase
         .from("profiles")
         .select("id, username, total_invested, referral_bonus, created_at")
-        .eq("referred_by", user.referralCode)
+        .eq("referred_by", userData.referral_code)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -173,7 +138,7 @@ export function useInvestmentActions(user: User | null) {
         id: profile.id,
         username: profile.username || "Anonymous",
         totalInvested: profile.total_invested || 0,
-        bonusGenerated: (profile.total_invested || 0) * 0.05,
+        bonusGenerated: (profile.total_invested || 0) * 0.05, // 5% referral bonus
         date: new Date(profile.created_at || Date.now()),
       }));
     } catch (error) {

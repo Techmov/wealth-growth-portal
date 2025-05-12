@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Downline, User } from "@/types";
@@ -27,25 +28,12 @@ export function useReferralSystem(user: User | null) {
 
     try {
       setIsLoading(true);
-
-      // Get the user's UUID from their referralCode
-      const { data: refUser, error: refError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("referral_code", user.referralCode)
-        .single();
-
-      if (refError || !refUser?.id) {
-        throw new Error("Invalid referral code or user not found");
-      }
-
-      const refUserId = refUser.id;
-
-      // Now fetch downlines using UUID
+      
+      // Fetch all users referred by this code
       const { data, error } = await supabase
         .from("profiles")
         .select("id, username, total_invested, referral_bonus, created_at")
-        .eq("referred_by", refUserId)
+        .eq("referred_by", user.referralCode)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -57,7 +45,7 @@ export function useReferralSystem(user: User | null) {
         id: profile.id,
         username: profile.username || "Anonymous",
         totalInvested: profile.total_invested || 0,
-        bonusGenerated: (profile.total_invested || 0) * 0.05,
+        bonusGenerated: (profile.total_invested || 0) * 0.05, // 5% referral bonus
         date: new Date(profile.created_at || Date.now()),
       }));
 
@@ -92,6 +80,7 @@ export function useReferralSystem(user: User | null) {
       }
     } catch (error: any) {
       console.error("Error fetching downlines:", error.message);
+      toast.error("Failed to load referral data");
     } finally {
       setIsLoading(false);
     }

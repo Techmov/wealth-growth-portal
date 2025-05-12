@@ -41,7 +41,7 @@ export const handler = async (req) => {
     // Fetch the product data
     const { data: productData, error: productError } = await supabaseClient
       .from('products')
-      .select('id, name, amount, duration')
+      .select('id, name, amount, duration, growth_rate')
       .eq('id', productId)
       .single();
     
@@ -77,7 +77,7 @@ export const handler = async (req) => {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + (productData.duration || 30));
     
-    // Call the RPC with properly typed parameters
+    // Call the create_investment database function
     const { data, error } = await supabaseClient.rpc(
       'create_investment',
       { 
@@ -94,21 +94,20 @@ export const handler = async (req) => {
     if (error) {
       console.error("Investment creation error:", JSON.stringify(error, null, 2));
       return new Response(JSON.stringify({
-        error: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
+        error: error.message || 'Error creating investment',
+        details: error
       }), {
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json'
         },
-        status: 400
+        status: 500
       });
     }
 
     console.log("Investment created successfully:", JSON.stringify(data));
 
+    // Return success response
     return new Response(JSON.stringify({
       success: true,
       data
@@ -123,13 +122,13 @@ export const handler = async (req) => {
   } catch (error) {
     console.error("Investment function error:", error.message, error.stack);
     return new Response(JSON.stringify({
-      error: error.message
+      error: error.message || 'Unknown error occurred'
     }), {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json'
       },
-      status: 400
+      status: 500
     });
   }
 };
