@@ -14,23 +14,31 @@ export function useInvestmentActions(user: User | null) {
       console.log("Attempting investment for product:", productId);
 
       // Use Supabase Edge Function to create the investment
-      const { data, error, status } = await supabase.functions.invoke("create-investment", {
+      const response = await supabase.functions.invoke("create-investment", {
         body: { 
           userId: user.id, 
           productId: productId 
         },
       });
-
-      if (error || status >= 400 || !data || data.error) {
-        const errorMessage = data?.error || error?.message || "Investment creation failed";
+      
+      // Check for errors in the response
+      if (response.error || !response.data) {
+        const errorMessage = response.error?.message || "Investment creation failed";
         console.error("Investment error:", errorMessage);
         throw new Error(errorMessage);
       }
 
-      console.log("Investment successful:", data);
+      // Check for error property in the data
+      if (response.data.error) {
+        const errorMessage = response.data.error || "Investment failed";
+        console.error("Investment error:", errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      console.log("Investment successful:", response.data);
       toast.success("Investment successful! Your portfolio has been updated");
       
-      return data;
+      return response.data;
     } catch (error: any) {
       console.error("Investment failed:", error);
       toast.error(error.message || "Investment failed");
@@ -53,7 +61,7 @@ export function useInvestmentActions(user: User | null) {
         throw new Error(error.message || "Failed to claim profit");
       }
 
-      const amount = typeof data?.amount === "number" ? data.amount : 0;
+      const amount = (data && typeof data === 'object' && 'amount' in data) ? Number(data.amount) : 0;
       toast.success(`Successfully claimed $${amount.toFixed(2)} profit`);
       return data;
     } catch (error: any) {

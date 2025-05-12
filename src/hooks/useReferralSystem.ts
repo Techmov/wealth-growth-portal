@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Downline, User } from "@/types";
 import { toast } from "sonner";
-import { applyReferralCode } from "@/utils/referralUtils";
+import { applyReferralCode, refreshReferralStats } from "@/utils/referralUtils";
 
 export function useReferralSystem(user: User | null) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -29,7 +29,10 @@ export function useReferralSystem(user: User | null) {
     try {
       setIsLoading(true);
       
-      // Fetch all users referred by this code
+      // First, refresh the user's referral stats to ensure latest data
+      await refreshReferralStats(user.id);
+      
+      // Fetch all users referred by this code with complete profile info
       const { data, error } = await supabase
         .from("profiles")
         .select("id, username, total_invested, referral_bonus, created_at")
@@ -51,31 +54,22 @@ export function useReferralSystem(user: User | null) {
 
       setDownlines(mappedDownlines);
 
-      if (mappedDownlines.length > 0) {
-        const totalBonusEarned = mappedDownlines.reduce(
-          (sum, d) => sum + d.bonusGenerated,
-          0
-        );
-
-        setReferralStats({
-          totalReferrals: mappedDownlines.length,
-          totalBonusEarned,
-          pendingBonuses: 0,
-        });
-      }
-
+      // Get the latest user stats from the database
       if (user.id) {
         const { data: userData, error: userError } = await supabase
           .from("profiles")
-          .select("referral_bonus, total_referred_users")
+          .select("referral_bonus, total_referred_users, total_referred_investments")
           .eq("id", user.id)
           .single();
 
-        if (!userError && userData) {
-          setReferralStats(prev => ({
-            ...prev,
-            totalReferrals: userData.total_referred_users || mappedDownlines.length || 0,
-          }));
+        if (userError) {
+          console.error("Error fetching user data:", userError);
+        } else if (userData) {
+          setReferralStats({
+            totalReferrals: userData.total_referred_users || 0,
+            totalBonusEarned: userData.referral_bonus || 0,
+            pendingBonuses: 0, // Currently not tracking pending separately
+          });
         }
       }
     } catch (error: any) {

@@ -20,6 +20,7 @@ export const handler = async (req) => {
       throw new Error('Missing required parameters: userId and productId are required');
     }
 
+    // Validate UUIDs
     if (!isValidUUID(userId) || !isValidUUID(productId)) {
       throw new Error('Invalid UUID format for userId or productId');
     }
