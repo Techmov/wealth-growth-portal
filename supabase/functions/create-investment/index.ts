@@ -22,6 +22,7 @@ export const handler = async (req) => {
 
     // Validate UUIDs
     if (!isValidUUID(userId) || !isValidUUID(productId)) {
+      console.error(`Invalid UUID format - userId: ${userId}, productId: ${productId}`);
       throw new Error('Invalid UUID format for userId or productId');
     }
 
@@ -44,7 +45,7 @@ export const handler = async (req) => {
       .from('products')
       .select('id, name, amount, duration, growth_rate')
       .eq('id', productId)
-      .single();
+      .maybeSingle();
     
     if (productError) {
       console.error("Product query error:", JSON.stringify(productError, null, 2));
@@ -61,6 +62,7 @@ export const handler = async (req) => {
     }
     
     if (!productData) {
+      console.error("No product found with ID:", productId);
       return new Response(JSON.stringify({
         error: 'Product not found or inactive'
       }), {
@@ -73,6 +75,40 @@ export const handler = async (req) => {
     }
 
     console.log("Found product:", JSON.stringify(productData));
+
+    // Check user balance before proceeding
+    const { data: userData, error: userError } = await supabaseClient
+      .from('profiles')
+      .select('balance')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (userError || !userData) {
+      console.error("User query error:", JSON.stringify(userError, null, 2));
+      return new Response(JSON.stringify({
+        error: 'User not found',
+        details: userError || 'No user data returned'
+      }), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
+        status: 400
+      });
+    }
+    
+    if (userData.balance < productData.amount) {
+      console.error(`Insufficient balance: ${userData.balance} < ${productData.amount}`);
+      return new Response(JSON.stringify({
+        error: 'Insufficient balance'
+      }), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
+        status: 400
+      });
+    }
 
     // Calculate end date based on product duration (in days)
     const endDate = new Date();
