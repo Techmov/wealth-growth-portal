@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
@@ -44,12 +43,15 @@ export function useInvestmentActions(user: User | null) {
         body: { userId: user.id, productId },
       });
 
-      const { data, error } = response;
+      const { data, error, status } = response;
 
-      if (error || !data) {
+      if (status < 200 || status >= 300) {
         console.error("Edge Function error response:", response);
-        const errorMessage = error?.message || "Investment failed";
-        throw new Error(errorMessage);
+        const message =
+          (data && typeof data === "object" && data.error) ||
+          error?.message ||
+          "Investment failed";
+        throw new Error(message);
       }
 
       const newBalance = profileData.balance - investmentAmount;
@@ -99,11 +101,7 @@ export function useInvestmentActions(user: User | null) {
         throw new Error(error.message || "Failed to claim profit");
       }
 
-      let amount = 0;
-      if (data && typeof data === 'object' && 'amount' in data) {
-        amount = typeof data.amount === 'number' ? data.amount : 0;
-      }
-      
+      const amount = typeof data?.amount === "number" ? data.amount : 0;
       toast.success(`Successfully claimed $${amount.toFixed(2)} profit`);
       return data;
     } catch (error: any) {
