@@ -21,7 +21,9 @@ export function useUserInvestmentData(user: User | null) {
     const fetchUserData = async () => {
       setIsLoading(true);
       try {
-        // Fetch user's investments - using user.id as string
+        console.log("Fetching investments for user:", user.id);
+        
+        // Fetch user's investments - treating IDs as strings in the query
         const { data: investmentsData, error: investmentsError } = await supabase
           .from('investments')
           .select('*')
@@ -30,18 +32,18 @@ export function useUserInvestmentData(user: User | null) {
         if (investmentsError) {
           console.error("Error fetching investments:", investmentsError);
         } else if (investmentsData) {
-          // Map Supabase data to our Investment type
+          // Map Supabase data to our Investment type, ensuring correct type conversion
           const mappedInvestments: Investment[] = investmentsData.map(inv => ({
-            id: inv.id,
-            userId: inv.user_id,
-            productId: inv.product_id,
-            amount: inv.amount,
+            id: String(inv.id),
+            userId: String(inv.user_id || ""),
+            productId: String(inv.product_id || ""),
+            amount: Number(inv.amount || 0),
             startDate: new Date(inv.start_date || inv.created_at),
-            endDate: new Date(inv.end_date),
-            startingValue: inv.starting_value,
-            currentValue: inv.current_value,
-            finalValue: inv.final_value,
-            status: inv.status as 'active' | 'completed' | 'cancelled',
+            endDate: new Date(inv.end_date || Date.now()),
+            startingValue: Number(inv.starting_value || 0),
+            currentValue: Number(inv.current_value || 0),
+            finalValue: Number(inv.final_value || 0),
+            status: (inv.status as 'active' | 'completed' | 'cancelled') || 'active',
             lastProfitClaimDate: inv.last_profit_claim_date ? new Date(inv.last_profit_claim_date) : undefined
           }));
           
