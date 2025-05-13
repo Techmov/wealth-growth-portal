@@ -43,13 +43,15 @@ export function useInvestmentActions(user: User | null) {
         body: { userId: user.id, productId },
       });
 
-      const { data, error, status } = response;
+      const { data, error } = response;
 
-      if (status < 200 || status >= 300) {
+      // Check for errors based on the response data structure
+      if (error || (data && typeof data === "object" && "error" in data)) {
         console.error("Edge Function error response:", response);
         const message =
-          (data && typeof data === "object" && data.error) ||
-          error?.message ||
+          (data && typeof data === "object" && "error" in data 
+            ? data.error 
+            : error?.message) || 
           "Investment failed";
         throw new Error(message);
       }
@@ -101,8 +103,13 @@ export function useInvestmentActions(user: User | null) {
         throw new Error(error.message || "Failed to claim profit");
       }
 
-      const amount = typeof data?.amount === "number" ? data.amount : 0;
-      toast.success(`Successfully claimed $${amount.toFixed(2)} profit`);
+      // Handle the returned data safely, ensuring amount is a number
+      let claimedAmount = 0;
+      if (data && typeof data === 'object' && 'amount' in data) {
+        claimedAmount = typeof data.amount === 'number' ? data.amount : 0;
+      }
+
+      toast.success(`Successfully claimed $${claimedAmount.toFixed(2)} profit`);
       return data;
     } catch (error: any) {
       console.error("Claim profit error:", error);
