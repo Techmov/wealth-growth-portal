@@ -13,7 +13,6 @@ import { StatCard } from "@/components/StatCard";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { Downline } from "@/types";
 
 const ReferralsPage = () => {
   const { user } = useAuth();
@@ -194,7 +193,7 @@ const ReferralsPage = () => {
                   <TableBody>
                     {downlines.map((downline) => (
                       <TableRow key={downline.id}>
-                        <TableCell>{downline.username || 'Anonymous'}</TableCell>
+                        <TableCell>{downline.username}</TableCell>
                         <TableCell>{format(downline.date, 'MMM dd, yyyy')}</TableCell>
                         <TableCell>${downline.totalInvested.toFixed(2)}</TableCell>
                         <TableCell className="text-green-600">

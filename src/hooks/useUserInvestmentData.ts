@@ -21,7 +21,7 @@ export function useUserInvestmentData(user: User | null) {
     const fetchUserData = async () => {
       setIsLoading(true);
       try {
-        // Fetch user's investments - intentionally not filtering by status to get all investments
+        // Fetch user's investments
         const { data: investmentsData, error: investmentsError } = await supabase
           .from('investments')
           .select('*')
@@ -32,9 +32,9 @@ export function useUserInvestmentData(user: User | null) {
         } else if (investmentsData) {
           // Map Supabase data to our Investment type
           const mappedInvestments: Investment[] = investmentsData.map(inv => ({
-            id: String(inv.id),
-            userId: String(inv.user_id),
-            productId: String(inv.product_id),
+            id: inv.id,
+            userId: inv.user_id,
+            productId: inv.product_id,
             amount: inv.amount,
             startDate: new Date(inv.start_date || inv.created_at),
             endDate: new Date(inv.end_date),
@@ -86,7 +86,7 @@ export function useUserInvestmentData(user: User | null) {
         if (withdrawalError) {
           console.error("Error fetching withdrawal requests:", withdrawalError);
         } else if (withdrawalData) {
-          // Map Supabase data to our WithdrawalRequest type - removing fields that don't exist
+          // Map Supabase data to our WithdrawalRequest type
           const mappedWithdrawals: WithdrawalRequest[] = withdrawalData.map(wr => ({
             id: wr.id,
             userId: wr.user_id,
@@ -95,9 +95,7 @@ export function useUserInvestmentData(user: User | null) {
             date: new Date(wr.date || Date.now()),
             trc20Address: wr.trc20_address,
             txHash: wr.tx_hash,
-            rejectionReason: wr.rejection_reason,
-            withdrawalSource: wr.withdrawal_source as 'profit' | 'referral_bonus',
-            feeAmount: wr.fee_amount
+            rejectionReason: wr.rejection_reason
           }));
           
           setWithdrawalRequests(mappedWithdrawals);

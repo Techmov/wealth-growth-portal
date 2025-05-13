@@ -44,48 +44,70 @@ export type Database = {
       }
       investments: {
         Row: {
-          amount: number | null
-          created_at: string
-          current_value: number | null
-          end_date: string | null
-          final_value: number | null
-          id: number
+          amount: number
+          created_at: string | null
+          current_value: number
+          end_date: string
+          final_value: number
+          id: string
           last_profit_claim_date: string | null
-          product_id: number | null
+          product_id: string
           start_date: string | null
-          starting_value: number | null
-          status: string | null
-          user_id: number | null
+          starting_value: number
+          status: string
+          user_id: string
         }
         Insert: {
-          amount?: number | null
-          created_at?: string
-          current_value?: number | null
-          end_date?: string | null
-          final_value?: number | null
-          id?: number
+          amount: number
+          created_at?: string | null
+          current_value: number
+          end_date: string
+          final_value: number
+          id?: string
           last_profit_claim_date?: string | null
-          product_id?: number | null
+          product_id: string
           start_date?: string | null
-          starting_value?: number | null
-          status?: string | null
-          user_id?: number | null
+          starting_value: number
+          status: string
+          user_id: string
         }
         Update: {
-          amount?: number | null
-          created_at?: string
-          current_value?: number | null
-          end_date?: string | null
-          final_value?: number | null
-          id?: number
+          amount?: number
+          created_at?: string | null
+          current_value?: number
+          end_date?: string
+          final_value?: number
+          id?: string
           last_profit_claim_date?: string | null
-          product_id?: number | null
+          product_id?: string
           start_date?: string | null
-          starting_value?: number | null
-          status?: string | null
-          user_id?: number | null
+          starting_value?: number
+          status?: string
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "investments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_withdrawal_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       offers: {
         Row: {
