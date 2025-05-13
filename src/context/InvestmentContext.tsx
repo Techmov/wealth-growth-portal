@@ -1,4 +1,3 @@
-
 import { createContext, useContext, ReactNode } from "react";
 import { Investment, Product, Transaction, WithdrawalRequest, Downline } from "@/types";
 import { useAuth } from "./AuthContext";
@@ -14,7 +13,16 @@ type InvestmentContextType = {
   withdrawalRequests: WithdrawalRequest[];
   platformTrc20Address: string;
   isLoading: boolean;
-  invest: (productId: string) => Promise<any>;
+  // Accepts an object with all investment data, not just productId
+  invest: (investmentData: {
+    userId: string;
+    productId: string;
+    amount: number;
+    startDate: string;
+    endDate: string;
+    status: string;
+    currentValue: number;
+  }) => Promise<any>;
   claimProfit: (investmentId: string) => Promise<any>;
   getClaimableProfit: (investmentId: string) => Promise<number>;
   getReferralBonus: (referralCode: string) => Promise<void>;
@@ -29,38 +37,40 @@ const platformTrc20Address = "TQk4fXaSRJt32y5od9TeQFh6z3zaeyiQcu";
 export function InvestmentProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { products, isLoading: productsLoading } = useProductsData();
-  const { 
-    userInvestments, 
-    transactions, 
-    withdrawalRequests, 
-    isLoading: userDataLoading 
+  const {
+    userInvestments,
+    transactions,
+    withdrawalRequests,
+    isLoading: userDataLoading,
   } = useUserInvestmentData(user);
-  const { 
-    invest, 
-    claimProfit, 
+  const {
+    invest,
+    claimProfit,
     getClaimableProfit,
-    getReferralBonus, 
-    getUserDownlines 
+    getReferralBonus,
+    getUserDownlines,
   } = useInvestmentActions(user);
 
   // Combine loading states
   const isLoading = productsLoading || userDataLoading;
 
   return (
-    <InvestmentContext.Provider value={{ 
-      products, 
-      userInvestments, 
-      investments: userInvestments, // Alias for backward compatibility
-      transactions, 
-      withdrawalRequests,
-      platformTrc20Address,
-      isLoading,
-      invest, 
-      claimProfit,
-      getClaimableProfit,
-      getReferralBonus,
-      getUserDownlines
-    }}>
+    <InvestmentContext.Provider
+      value={{
+        products,
+        userInvestments,
+        investments: userInvestments, // Alias for backward compatibility
+        transactions,
+        withdrawalRequests,
+        platformTrc20Address,
+        isLoading,
+        invest, // Now expects full investment data object
+        claimProfit,
+        getClaimableProfit,
+        getReferralBonus,
+        getUserDownlines,
+      }}
+    >
       {children}
     </InvestmentContext.Provider>
   );

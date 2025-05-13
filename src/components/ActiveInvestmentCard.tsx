@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -75,6 +74,29 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
   const daysRemaining = daysUntilMaturity();
   const dailyProfit = calculateDailyProfit();
 
+  const getCurrentValue = (investment) => {
+    if (
+      investment.starting_value == null ||
+      investment.daily_growth_rate == null ||
+      investment.start_date == null
+    ) return 0;
+
+    const start = new Date(investment.start_date);
+    const now = new Date();
+    const daysElapsed = Math.max(
+      Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)),
+      1
+    );
+    const startingValue = Number(investment.starting_value);
+    const dailyGrowthRate = Number(investment.daily_growth_rate);
+    const finalValue = Number(investment.final_value);
+
+    const totalValue =
+      startingValue + (startingValue * dailyGrowthRate / 100 * daysElapsed);
+
+    return Math.min(totalValue, finalValue);
+  };
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="bg-muted/20 pb-2">
@@ -99,7 +121,7 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Current Value:</span>
-            <span className="font-medium">${investment.currentValue.toFixed(2)}</span>
+            <span className="font-medium">${investment.starting_value != null ? Number(investment.starting_value).toFixed(2) : "0.00"}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Daily Profit:</span>
@@ -166,8 +188,62 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
             <span>Expected Return:</span>
           </div>
-          <span className="font-medium">${investment.finalValue.toFixed(2)}</span>
+          <span className="font-medium">
+            ${investment.starting_value != null ? Number(investment.starting_value).toFixed(2) : "0.00"}
+            <span>
+              +{investment.daily_growth_rate != null ? Number(investment.daily_growth_rate).toFixed(2) : "0.00"}%
+            </span>
+          </span>
         </div>
+        
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Created:</span>
+            <span>
+              {investment.startDate
+                ? new Date(investment.startDate).toLocaleString()
+                : "N/A"}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">End Date:</span>
+            <span>
+              {investment.endDate
+                ? new Date(investment.endDate).toLocaleString()
+                : "N/A"}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Starting Amount:</span>
+            <span>
+              ${investment.starting_value != null
+                ? Number(investment.starting_value).toFixed(2)
+                : investment.amount != null
+                ? Number(investment.amount).toFixed(2)
+                : "0.00"}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Current Value:</span>
+            <span>
+              {investment.starting_value != null && investment.daily_growth_rate != null && investment.startDate
+                ? `$${getCurrentValue(investment).toFixed(2)}`
+                : "$0.00"}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Daily Growth Rate:</span>
+            <span>
+              +{investment.daily_growth_rate != null
+                ? Number(investment.daily_growth_rate).toFixed(2)
+                : "0.00"}%
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Status:</span>
+            <span>{investment.status}</span>
+          </div>
+        </CardContent>
       </CardContent>
     </Card>
   );

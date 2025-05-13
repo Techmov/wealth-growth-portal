@@ -1,29 +1,29 @@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Product, Downline } from "@/types";
+import { User, Downline } from "@/types";
 
 export function useInvestmentActions(user: User | null) {
-  const invest = async (productId: string) => {
+  // Accepts full investment data object, not just productId
+  const invest = async (investmentData: {
+    userId: string;
+    productId: string;
+    amount: number;
+    startDate: string;
+    endDate: string;
+    status: string;
+    currentValue: number;
+    startingValue: number;
+    finalValue: number;
+    dailyGrowthRate: number;
+    lastProfitClaimDate: string;
+  }) => {
     if (!user) {
       toast.error("You must be logged in to invest");
       return;
     }
 
     try {
-      console.log("Attempting investment for product:", productId);
-
-      const { data: productData, error: productError } = await supabase
-        .from("products")
-        .select("amount")
-        .eq("id", productId)
-        .single();
-
-      if (productError || !productData) {
-        throw new Error("Failed to fetch product information");
-      }
-
-      const investmentAmount = productData.amount;
-
+      // Check user profile for balance
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("balance, total_invested")
@@ -34,29 +34,38 @@ export function useInvestmentActions(user: User | null) {
         throw new Error("Failed to fetch user profile");
       }
 
-      if (profileData.balance < investmentAmount) {
+      if (profileData.balance < investmentData.amount) {
         toast.error("Insufficient balance to invest");
         return;
       }
 
-      const response = await supabase.functions.invoke("create-investment", {
-        body: { userId: user.id, productId },
-      });
+      // Insert investment directly
+      const { error: investError } = await supabase
+        .from("investments")
+        .insert([
+          {
+            user_id: investmentData.userId,
+            product_id: investmentData.productId,
+            amount: investmentData.amount,
+            start_date: investmentData.startDate,
+            end_date: investmentData.endDate,
+            status: investmentData.status,
+            current_value: investmentData.currentValue,
+            starting_value: investmentData.startingValue,
+            final_value: investmentData.finalValue,
+            daily_growth_rate: investmentData.dailyGrowthRate,
+            last_profit_claim_date: investmentData.lastProfitClaimDate,
+          },
+        ]);
 
-      const { data, error, status } = response;
-
-      if (status < 200 || status >= 300) {
-        console.error("Edge Function error response:", response);
-        const message =
-          (data && typeof data === "object" && data.error) ||
-          error?.message ||
-          "Investment failed";
-        throw new Error(message);
+      if (investError) {
+        throw new Error(investError.message || "Failed to create investment");
       }
 
-      const newBalance = profileData.balance - investmentAmount;
+      // Update user balance and total invested
+      const newBalance = profileData.balance - investmentData.amount;
       const newTotalInvested =
-        (profileData.total_invested || 0) + investmentAmount;
+        (profileData.total_invested || 0) + investmentData.amount;
 
       const { error: updateError } = await supabase
         .from("profiles")
@@ -67,18 +76,10 @@ export function useInvestmentActions(user: User | null) {
         .eq("id", user.id);
 
       if (updateError) {
-        console.warn(
-          "Investment succeeded, but failed to update balance/investment:",
-          updateError
-        );
         toast.warning("Investment succeeded, but profile update failed.");
       } else {
-        toast.success(
-          "Investment successful — balance and total invested updated"
-        );
+        toast.success("Investment successful — balance and total invested updated");
       }
-
-      return data;
     } catch (error: any) {
       console.error("Investment failed:", error);
       toast.error(error.message || "Investment failed");
@@ -86,6 +87,7 @@ export function useInvestmentActions(user: User | null) {
     }
   };
 
+  // Claim profit: sets last_profit_claim_date to end_date, adds final_value to balance, marks as completed
   const claimProfit = async (investmentId: string) => {
     if (!user) {
       toast.error("You must be logged in to claim profit");
@@ -93,17 +95,68 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      const { data, error } = await supabase.rpc("claim_investment_profit", {
-        p_investment_id: investmentId,
-      });
+      // Fetch the investment
+      const { data: investment, error: invError } = await supabase
+        .from("investments")
+        .select("*")
+        .eq("id", investmentId)
+        .single();
 
-      if (error) {
-        throw new Error(error.message || "Failed to claim profit");
+      if (invError || !investment) {
+        throw new Error("Investment not found");
       }
 
-      const amount = typeof data?.amount === "number" ? data.amount : 0;
-      toast.success(`Successfully claimed $${amount.toFixed(2)} profit`);
-      return data;
+      const now = new Date();
+      const endDate = new Date(investment.end_date);
+
+      // Only allow claim if investment is matured and not already claimed
+      if (now < endDate) {
+        toast.error("You can only claim profit after the investment matures.");
+        return;
+      }
+      if (investment.status === "completed" || investment.last_profit_claim_date) {
+        toast.info("Profit already claimed for this investment.");
+        return;
+      }
+
+      // Add final_value to user's balance
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("balance")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error("Failed to fetch user profile");
+      }
+
+      const newBalance = (profile.balance || 0) + (investment.final_value || 0);
+
+      // Update user balance
+      const { error: updateProfileError } = await supabase
+        .from("profiles")
+        .update({ balance: newBalance })
+        .eq("id", user.id);
+
+      if (updateProfileError) {
+        throw new Error("Failed to update user balance");
+      }
+
+      // Mark investment as completed/expired and set last_profit_claim_date
+      const { error: updateInvestmentError } = await supabase
+        .from("investments")
+        .update({
+          status: "completed",
+          last_profit_claim_date: investment.end_date,
+        })
+        .eq("id", investmentId);
+
+      if (updateInvestmentError) {
+        throw new Error("Failed to update investment status");
+      }
+
+      toast.success(`Successfully claimed $${investment.final_value} profit`);
+      return { amount: investment.final_value };
     } catch (error: any) {
       console.error("Claim profit error:", error);
       toast.error(error.message || "Failed to claim profit");
@@ -156,8 +209,6 @@ export function useInvestmentActions(user: User | null) {
     if (!user) return [];
 
     try {
-      console.log("Fetching downlines for:", user.referralCode);
-
       const { data, error } = await supabase
         .from("profiles")
         .select("id, username, total_invested, referral_bonus, created_at")
