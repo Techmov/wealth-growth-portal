@@ -21,7 +21,7 @@ export function useUserInvestmentData(user: User | null) {
     const fetchUserData = async () => {
       setIsLoading(true);
       try {
-        // Fetch user's investments
+        // Fetch user's investments - intentionally not filtering by status to get all investments
         const { data: investmentsData, error: investmentsError } = await supabase
           .from('investments')
           .select('*')
@@ -95,7 +95,12 @@ export function useUserInvestmentData(user: User | null) {
             date: new Date(wr.date || Date.now()),
             trc20Address: wr.trc20_address,
             txHash: wr.tx_hash,
-            rejectionReason: wr.rejection_reason
+            rejectionReason: wr.rejection_reason,
+            userName: wr.userName,
+            userEmail: wr.userEmail,
+            username: wr.username,
+            withdrawalSource: wr.withdrawal_source as 'profit' | 'referral_bonus',
+            feeAmount: wr.fee_amount
           }));
           
           setWithdrawalRequests(mappedWithdrawals);

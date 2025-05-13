@@ -9,8 +9,9 @@ import { useInvestment } from "@/context/InvestmentContext";
 import { InvestmentCard } from "@/components/InvestmentCard";
 import { ActiveInvestmentCard } from "@/components/ActiveInvestmentCard";
 import { Product, Investment } from "@/types";
-import { TrendingUp, CircleDollarSign, AlertCircle } from "lucide-react";
+import { TrendingUp, CircleDollarSign, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 const InvestmentsPage = () => {
   const { user } = useAuth();
@@ -27,9 +28,19 @@ const InvestmentsPage = () => {
 
   if (!user) return null;
 
-  // Filter active investments
+  // Filter investments by status
   const activeInvestments = userInvestments?.filter(inv => inv.status === 'active') || [];
-  const completedInvestments = userInvestments?.filter(inv => inv.status === 'completed') || [];
+  const completedInvestments = userInvestments?.filter(inv => 
+    inv.status === 'completed' || 
+    (inv.endDate && new Date(inv.endDate) < new Date())
+  ) || [];
+  
+  // All investments that don't fit into the above categories
+  const otherInvestments = userInvestments?.filter(inv => 
+    inv.status !== 'active' && 
+    inv.status !== 'completed' &&
+    !(inv.endDate && new Date(inv.endDate) < new Date())
+  ) || [];
 
   // Calculate total investment stats
   const totalInvested = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
@@ -51,6 +62,40 @@ const InvestmentsPage = () => {
   };
 
   const dailyProfit = calculateDailyProfit();
+  
+  // Helper function to determine the status badge for an investment
+  const getInvestmentStatusBadge = (investment: Investment) => {
+    if (investment.status === 'active') {
+      // If active but past end date, show as expired
+      if (investment.endDate && new Date(investment.endDate) < new Date()) {
+        return (
+          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+            <Clock className="h-3 w-3 mr-1" />
+            Expired
+          </Badge>
+        );
+      }
+      return (
+        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
+          <Clock className="h-3 w-3 mr-1" />
+          Active
+        </Badge>
+      );
+    } else if (investment.status === 'completed') {
+      return (
+        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+          <CheckCircle2 className="h-3 w-3 mr-1" />
+          Completed
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200">
+          Cancelled
+        </Badge>
+      );
+    }
+  };
 
   return (
     <UserLayout>
@@ -67,9 +112,9 @@ const InvestmentsPage = () => {
               <TabsTrigger value="products">Investment Products</TabsTrigger>
               <TabsTrigger value="my-investments">
                 My Investments
-                {activeInvestments.length > 0 && (
+                {userInvestments.length > 0 && (
                   <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                    {activeInvestments.length}
+                    {userInvestments.length}
                   </span>
                 )}
               </TabsTrigger>
@@ -151,59 +196,100 @@ const InvestmentsPage = () => {
                 <div className="flex justify-center py-16">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
-              ) : activeInvestments.length > 0 ? (
+              ) : userInvestments.length > 0 ? (
                 <>
-                  <h2 className="text-xl font-semibold mb-4">Active Investments</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                    {activeInvestments.map((investment) => {
-                      const investmentProduct = products?.find(p => p.id === investment.productId);
-                      return (
-                        <ActiveInvestmentCard 
-                          key={investment.id}
-                          investment={investment}
-                          product={investmentProduct}
-                        />
-                      );
-                    })}
-                  </div>
+                  {activeInvestments.length > 0 && (
+                    <>
+                      <h2 className="text-xl font-semibold mb-4">Active Investments</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        {activeInvestments.map((investment) => {
+                          const investmentProduct = products?.find(p => p.id === investment.productId);
+                          return (
+                            <ActiveInvestmentCard 
+                              key={investment.id}
+                              investment={investment}
+                              product={investmentProduct}
+                            />
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                   
                   {completedInvestments.length > 0 && (
                     <>
-                      <h2 className="text-xl font-semibold mb-4">Completed Investments</h2>
+                      <h2 className="text-xl font-semibold mb-4">Completed & Expired Investments</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        {completedInvestments.map((investment) => {
+                          const product = products?.find(p => p.id === investment.productId);
+                          return (
+                            <Card key={investment.id}>
+                              <CardHeader>
+                                <div className="flex justify-between items-center">
+                                  <CardTitle className="text-base">
+                                    {product?.name || "Investment"}
+                                  </CardTitle>
+                                  {getInvestmentStatusBadge(investment)}
+                                </div>
+                                <CardDescription>
+                                  ${investment.amount.toFixed(2)} • {investment.endDate ? new Date(investment.endDate).toLocaleDateString() : 'No end date'}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="text-sm space-y-2">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Initial investment:</span>
+                                  <span>${investment.amount.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Final value:</span>
+                                  <span>${investment.finalValue.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between font-medium">
+                                  <span>Total profit:</span>
+                                  <span className="text-green-600">
+                                    +${(investment.finalValue - investment.amount).toFixed(2)}
+                                  </span>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                  
+                  {otherInvestments.length > 0 && (
+                    <>
+                      <h2 className="text-xl font-semibold mb-4">Other Investments</h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {completedInvestments.map((investment) => (
-                          <Card key={investment.id}>
-                            <CardHeader>
-                              <div className="flex justify-between">
-                                <CardTitle className="text-base">
-                                  {products?.find(p => p.id === investment.productId)?.name || "Investment"}
-                                </CardTitle>
-                                <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">
-                                  Completed
-                                </span>
-                              </div>
-                              <CardDescription>
-                                ${investment.amount.toFixed(2)} • Completed on {new Date(investment.endDate).toLocaleDateString()}
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className="text-sm space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Initial investment:</span>
-                                <span>${investment.amount.toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Final value:</span>
-                                <span>${investment.finalValue.toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between font-medium">
-                                <span>Total profit:</span>
-                                <span className="text-green-600">
-                                  +${(investment.finalValue - investment.amount).toFixed(2)}
-                                </span>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                        {otherInvestments.map((investment) => {
+                          const product = products?.find(p => p.id === investment.productId);
+                          return (
+                            <Card key={investment.id}>
+                              <CardHeader>
+                                <div className="flex justify-between items-center">
+                                  <CardTitle className="text-base">
+                                    {product?.name || "Investment"}
+                                  </CardTitle>
+                                  {getInvestmentStatusBadge(investment)}
+                                </div>
+                                <CardDescription>
+                                  ${investment.amount.toFixed(2)} • Status: {investment.status}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="text-sm space-y-2">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Initial investment:</span>
+                                  <span>${investment.amount.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Current value:</span>
+                                  <span>${investment.currentValue.toFixed(2)}</span>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                       </div>
                     </>
                   )}
