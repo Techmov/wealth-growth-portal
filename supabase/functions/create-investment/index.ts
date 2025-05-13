@@ -20,9 +20,7 @@ export const handler = async (req) => {
       throw new Error('Missing required parameters: userId and productId are required');
     }
 
-    // Validate UUIDs
     if (!isValidUUID(userId) || !isValidUUID(productId)) {
-      console.error(`Invalid UUID format - userId: ${userId}, productId: ${productId}`);
       throw new Error('Invalid UUID format for userId or productId');
     }
 
@@ -43,9 +41,9 @@ export const handler = async (req) => {
     // Fetch the product data
     const { data: productData, error: productError } = await supabaseClient
       .from('products')
-      .select('id, name, amount, duration, growth_rate')
+      .select('id, name, amount, duration')
       .eq('id', productId)
-      .maybeSingle();
+      .single();
     
     if (productError) {
       console.error("Product query error:", JSON.stringify(productError, null, 2));
@@ -62,7 +60,6 @@ export const handler = async (req) => {
     }
     
     if (!productData) {
-      console.error("No product found with ID:", productId);
       return new Response(JSON.stringify({
         error: 'Product not found or inactive'
       }), {
@@ -76,45 +73,11 @@ export const handler = async (req) => {
 
     console.log("Found product:", JSON.stringify(productData));
 
-    // Check user balance before proceeding
-    const { data: userData, error: userError } = await supabaseClient
-      .from('profiles')
-      .select('balance')
-      .eq('id', userId)
-      .maybeSingle();
-      
-    if (userError || !userData) {
-      console.error("User query error:", JSON.stringify(userError, null, 2));
-      return new Response(JSON.stringify({
-        error: 'User not found',
-        details: userError || 'No user data returned'
-      }), {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        },
-        status: 400
-      });
-    }
-    
-    if (userData.balance < productData.amount) {
-      console.error(`Insufficient balance: ${userData.balance} < ${productData.amount}`);
-      return new Response(JSON.stringify({
-        error: 'Insufficient balance'
-      }), {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        },
-        status: 400
-      });
-    }
-
     // Calculate end date based on product duration (in days)
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + (productData.duration || 30));
     
-    // Call the create_investment database function
+    // Call the RPC with properly typed parameters
     const { data, error } = await supabaseClient.rpc(
       'create_investment',
       { 
@@ -131,20 +94,21 @@ export const handler = async (req) => {
     if (error) {
       console.error("Investment creation error:", JSON.stringify(error, null, 2));
       return new Response(JSON.stringify({
-        error: error.message || 'Error creating investment',
-        details: error
+        error: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
       }), {
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json'
         },
-        status: 500
+        status: 400
       });
     }
 
     console.log("Investment created successfully:", JSON.stringify(data));
 
-    // Return success response
     return new Response(JSON.stringify({
       success: true,
       data
@@ -159,13 +123,13 @@ export const handler = async (req) => {
   } catch (error) {
     console.error("Investment function error:", error.message, error.stack);
     return new Response(JSON.stringify({
-      error: error.message || 'Unknown error occurred'
+      error: error.message
     }), {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json'
       },
-      status: 500
+      status: 400
     });
   }
 };

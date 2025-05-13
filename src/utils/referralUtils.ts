@@ -53,17 +53,15 @@ export const applyReferralCode = async (
       return false;
     }
 
-    // Increment the referrer's total_referred_users count
+    // Increment the referrer's total_referred_users count using the incrementValue function
+    // First ensure total_referred_users exists or default to 0
     const currentReferredUsers = referrerData.total_referred_users || 0;
     
-    const { error: incrementError } = await supabase
+    // Update the referrer's total_referred_users count
+    await supabase
       .from("profiles")
       .update({ total_referred_users: currentReferredUsers + 1 })
       .eq("id", referrerData.id);
-
-    if (incrementError) {
-      console.error("Failed to increment referred users count:", incrementError);
-    }
 
     toast.success("Referral code applied successfully!");
     return true;
@@ -71,66 +69,5 @@ export const applyReferralCode = async (
     console.error("Error applying referral code:", error);
     toast.error(error.message || "Failed to apply referral code");
     return false;
-  }
-};
-
-// New function to update a user's referral stats
-export const refreshReferralStats = async (userId: string): Promise<void> => {
-  try {
-    if (!userId) return;
-    
-    // Get user's referral code
-    const { data: userData, error: userError } = await supabase
-      .from("profiles")
-      .select("referral_code")
-      .eq("id", userId)
-      .single();
-      
-    if (userError || !userData?.referral_code) {
-      console.error("Failed to fetch user's referral code:", userError);
-      return;
-    }
-    
-    // Count referred users
-    const { count, error: countError } = await supabase
-      .from("profiles")
-      .select("id", { count: 'exact', head: true })
-      .eq("referred_by", userData.referral_code);
-    
-    if (countError) {
-      console.error("Failed to count referred users:", countError);
-      return;
-    }
-    
-    // Calculate total referred investments
-    const { data: referredUsers, error: referredError } = await supabase
-      .from("profiles")
-      .select("total_invested")
-      .eq("referred_by", userData.referral_code);
-      
-    if (referredError) {
-      console.error("Failed to fetch referred users investments:", referredError);
-      return;
-    }
-    
-    const totalReferredInvestments = (referredUsers || []).reduce(
-      (sum, user) => sum + (user.total_invested || 0), 0
-    );
-    
-    // Calculate referral bonus (5% of referred investments)
-    const referralBonus = totalReferredInvestments * 0.05;
-    
-    // Update user profile with latest stats
-    await supabase
-      .from("profiles")
-      .update({
-        total_referred_users: count || 0,
-        total_referred_investments: totalReferredInvestments,
-        referral_bonus: referralBonus
-      })
-      .eq("id", userId);
-      
-  } catch (error) {
-    console.error("Error refreshing referral stats:", error);
   }
 };

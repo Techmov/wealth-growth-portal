@@ -1,7 +1,6 @@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Product, Downline } from "@/types";
-import { v4 as uuidv4 } from "uuid";
 
 export function useInvestmentActions(user: User | null) {
   const invest = async (productId: string) => {
@@ -13,21 +12,18 @@ export function useInvestmentActions(user: User | null) {
     try {
       console.log("Attempting investment for product:", productId);
 
-      // Step 1: Fetch product to get investment amount
       const { data: productData, error: productError } = await supabase
         .from("products")
-        .select("")
+        .select("amount")
         .eq("id", productId)
         .single();
 
       if (productError || !productData) {
         throw new Error("Failed to fetch product information");
       }
-      console.log(productData);
 
       const investmentAmount = productData.amount;
 
-      // Step 2: Check user's current balance and total_invested
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("balance, total_invested")
@@ -43,7 +39,6 @@ export function useInvestmentActions(user: User | null) {
         return;
       }
 
-      // Step 3: Create investment via Edge Function
       const response = await supabase.functions.invoke("create-investment", {
         body: { userId: user.id, productId },
       });
@@ -59,7 +54,6 @@ export function useInvestmentActions(user: User | null) {
         throw new Error(message);
       }
 
-      // Step 4: Deduct balance and update total_invested
       const newBalance = profileData.balance - investmentAmount;
       const newTotalInvested =
         (profileData.total_invested || 0) + investmentAmount;
@@ -82,67 +76,6 @@ export function useInvestmentActions(user: User | null) {
         toast.success(
           "Investment successful — balance and total invested updated"
         );
-      }
-
-      //STEP 5: Insert investment into the database
-      try {
-        const startDate = new Date();
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + Number(productData.duration));
-
-        const formattedStartDate = startDate.toISOString();
-        const formattedEndDate = endDate.toISOString();
-
-        const { data, error } = await supabase
-          .from("investments")
-          .insert({
-            user_id: user.id, // should already be UUID
-            product_id: productId, // should already be UUID
-            amount: investmentAmount,
-            starting_value: investmentAmount,
-            current_value: investmentAmount,
-            final_value: 0,
-            start_date: formattedStartDate,
-            end_date: formattedEndDate,
-            status: "active",
-            last_profit_claim_date: formattedStartDate,
-          })
-          .select()
-          .single();
-
-        // const { data, error } = await supabase
-        //   .from("investments")
-        //   .insert({
-        //     user_id: user.id as unknown as string, // assuming user.id is already a UUID
-        //     product_id: productId as unknown as string,
-        //     amount: investmentAmount,
-        //     starting_value: investmentAmount,
-        //     current_value: investmentAmount,
-        //     final_value: 0,
-        //     start_date: formattedStartDate,
-        //     end_date: formattedEndDate,
-        //     status: "active",
-        //     last_profit_claim_date: formattedStartDate,
-        //   })
-        //   .select()
-        //   .single();
-
-        // const { data, error } = await supabase.from("investments").insert({
-        //   user_id: user.id,
-        //   product_id: productId,
-        //   amount: investmentAmount,
-        // });
-
-        if (error) {
-          console.error("Detailed Supabase error:", error);
-          throw error;
-        }
-
-        console.log("Insert successful:", data);
-        return data;
-      } catch (error) {
-        console.error("Full error:", error);
-        throw error;
       }
 
       return data;
@@ -169,7 +102,7 @@ export function useInvestmentActions(user: User | null) {
       }
 
       const amount = typeof data?.amount === "number" ? data.amount : 0;
-      toast.success(Successfully claimed $${amount.toFixed(2)} profit);
+      toast.success(`Successfully claimed $${amount.toFixed(2)} profit`);
       return data;
     } catch (error: any) {
       console.error("Claim profit error:", error);
