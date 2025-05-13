@@ -21,7 +21,7 @@ export function useUserInvestmentData(user: User | null) {
     const fetchUserData = async () => {
       setIsLoading(true);
       try {
-        // Fetch user's investments
+        // Fetch user's investments - using user.id as string
         const { data: investmentsData, error: investmentsError } = await supabase
           .from('investments')
           .select('*')
