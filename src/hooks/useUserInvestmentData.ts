@@ -8,7 +8,22 @@ export function useUserInvestmentData(user) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setUserInvestments([]);
+      setTransactions([]);
+      setWithdrawalRequests([]);
+      setIsLoading(false);
+      return;
+    }
+    
+    const fetchUserData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch user's investments - using user.id as string
+        const { data: investmentsData, error: investmentsError } = await supabase
+          .from('investments')
+          .select('*')
+          .eq('user_id', user.id);
 
     setIsLoading(true);
     supabase
