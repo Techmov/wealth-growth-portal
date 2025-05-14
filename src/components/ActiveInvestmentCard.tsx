@@ -104,7 +104,7 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
           <div>
             <CardTitle>{product?.name || "Investment"}</CardTitle>
             <CardDescription>
-              Invested on {format(investment.startDate, 'MMM d, yyyy')}
+              Invested on {format(investment.start_date, 'MMM d, yyyy')}
             </CardDescription>
           </div>
           <div className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
@@ -180,7 +180,7 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span>Maturity Date:</span>
           </div>
-          <span className="font-medium">{format(investment.endDate, 'MMM d, yyyy')}</span>
+          <span className="font-medium">{format(investment.end_date, 'MMM d, yyyy')}</span>
         </div>
         
         <div className="flex justify-between text-sm">

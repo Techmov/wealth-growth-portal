@@ -4,6 +4,7 @@ import { useAuth } from "./AuthContext";
 import { useProductsData } from "@/hooks/useProductsData";
 import { useUserInvestmentData } from "@/hooks/useUserInvestmentData";
 import { useInvestmentActions } from "@/hooks/useInvestmentActions";
+import { supabase } from "@/integrations/supabase/client";
 
 type InvestmentContextType = {
   products: Product[];

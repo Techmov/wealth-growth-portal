@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, ReactNode, useState } from "react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useAuthActions } from "@/hooks/useAuthActions";
@@ -126,3 +125,44 @@ export function useAuth() {
   }
   return context;
 }
+
+/*
+async function signup(name, email, password, referralCode) {
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+  if (authError) throw authError;
+
+  const userId = authData?.user?.id;
+  if (!userId) throw new Error("User ID not available after sign up.");
+
+  let referred_by = null;
+  let referred_by_code = null;
+  if (referralCode) {
+    const { data: refUser } = await supabase
+      .from("profiles")
+      .select("id, referral_code")
+      .eq("referral_code", referralCode)
+      .single();
+    if (refUser && refUser.id) {
+      referred_by = refUser.id;
+      referred_by_code = refUser.referral_code;
+    }
+  }
+
+  console.log({ referred_by, referred_by_code }); // Debug log
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .insert({
+      id: userId,
+      full_name: name,
+      email,
+      referral_code: generateReferralCode(), // your logic
+      referred_by,         // <-- use exact column name
+      referred_by_code,    // <-- use exact column name
+    });
+  if (profileError) throw profileError;
+}
+*/

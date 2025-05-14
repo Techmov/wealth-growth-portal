@@ -128,7 +128,12 @@ const InvestmentsPage = () => {
                           {products?.find(p => p.id === investment.product_id)?.name || "Investment"}
                         </CardTitle>
                         <CardDescription>
-                          Invested: ${investment.starting_value?.toFixed(2) ?? investment.amount?.toFixed(2)}
+                          Invested: $
+                          {typeof investment.starting_value === "number"
+                            ? investment.starting_value.toFixed(2)
+                            : typeof investment.amount === "number"
+                              ? investment.amount.toFixed(2)
+                              : "N/A"}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-2 text-sm">
@@ -149,28 +154,20 @@ const InvestmentsPage = () => {
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Starting Amount:</span>
-                          <span>${investment.starting_value?.toFixed(2) ?? investment.amount?.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
                           <span className="text-muted-foreground">Current Value:</span>
                           <span>
-                            ${(
-                              investment.starting_value +
-                              (investment.starting_value * investment.daily_growth_rate / 100 *
-                                Math.max(
-                                  Math.floor(
-                                    (new Date() - new Date(investment.start_date)) /
-                                      (1000 * 60 * 60 * 24)
-                                  ), 1
-                                )
-                              )
-                            ).toFixed(2)}
+                            {typeof investment.current_value === "number"
+                              ? `$${investment.current_value.toFixed(2)}`
+                              : "N/A"}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Daily Growth Rate:</span>
-                          <span>+{investment.daily_growth_rate?.toFixed(2) ?? 0}%</span>
+                          <span>
+                            {typeof investment.daily_growth_rate === "number"
+                              ? `+${investment.daily_growth_rate.toFixed(2)}%`
+                              : "+0%"}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Status:</span>
