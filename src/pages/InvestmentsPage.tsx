@@ -141,7 +141,7 @@ const InvestmentsPage = () => {
                           <span className="text-muted-foreground">Created:</span>
                           <span>
                             {investment.start_date
-                              ? new Date(investment.start_date).toLocaleString()
+                              ? new Date(investment.start_date).toLocaleDateString('en-GB')
                               : "N/A"}
                           </span>
                         </div>
@@ -149,9 +149,10 @@ const InvestmentsPage = () => {
                           <span className="text-muted-foreground">End Date:</span>
                           <span>
                             {investment.end_date
-                              ? new Date(investment.end_date).toLocaleString()
+                              ? new Date(investment.end_date).toLocaleDateString('en-GB')
                               : "N/A"}
                           </span>
+                          
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Current Value:</span>

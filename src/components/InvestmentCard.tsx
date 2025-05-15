@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
+import { useDailyProfitUpdater } from "@/hooks/useDailyProfitUpdater";
 
 interface InvestmentCardProps {
   product: Product;
@@ -19,7 +20,7 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
   const [isInvesting, setIsInvesting] = useState(false);
   const { invest, userInvestments } = useInvestment();
   const { user, updateUser } = useAuth();
-
+useDailyProfitUpdater();
   const handleInvest = async () => {
     if (!user) {
       toast.error("Please log in to invest");
@@ -45,22 +46,23 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
 
       // Supabase insertion
       await supabase
-        .from("investments")
-        .insert([
-          {
-            user_id: user.id,
-            product_id: product.id,
-            amount: product.amount,
-            start_date: start_date.toISOString(),
-            end_date: end_date.toISOString(),
-            status: "active",
-            starting_value: startingValue,
-            final_value: startingValue * 2,
-            current_value: currentValue,
-            daily_growth_rate: dailyGrowthRate,
-            last_profit_claim_date: end_date.toISOString(),
-          },
-        ]);
+  .from("investments")
+  .insert([
+    {
+      user_id: user.id,
+      product_id: product.id,
+      amount: product.amount,
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
+      status: "active",
+      starting_value: startingValue,
+      final_value: startingValue * 2,
+      current_value: currentValue,
+      daily_growth_rate: dailyGrowthRate,
+      last_profit_claim_date: endDate.toISOString(),
+    },
+  ]);
+
 
       if (updateUser) await updateUser();
       // Optionally refresh investments here if needed

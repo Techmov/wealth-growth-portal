@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export function useUserInvestmentData(user) {
@@ -7,67 +7,64 @@ export function useUserInvestmentData(user) {
   const [withdrawalRequests, setWithdrawalRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      setUserInvestments([]);
-      setTransactions([]);
-      setWithdrawalRequests([]);
-      setIsLoading(false);
-      return;
-    }
-    
-    const fetchUserData = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch user's investments - using user.id as string
-        const { data: investmentsData, error: investmentsError } = await supabase
-          .from('investments')
-          .select('*')
-          .eq('user_id', user.id);
+  const fetchUserInvestments = useCallback(async () => {
+    if (!user) return;
 
     setIsLoading(true);
-    supabase
-      .from("investments")
-      .select(`
-        id,
-        product_id,
-        amount,
-        start_date,
-        end_date,
-        starting_value,
-        current_value,
-        daily_growth_rate,
-        status,
-        created_at
-      `)
-      .eq("user_id", user.id)
-      .then(({ data, error }) => {
-        if (error) {
-          setUserInvestments([]);
-        } else {
-          // Map snake_case to camelCase if needed
-          setUserInvestments(
-            data.map(inv => ({
-              ...inv,
-              starting_value: inv.starting_value,
-              current_value: inv.current_value,
-              daily_growth_rate: inv.daily_growth_rate,
-              start_date: inv.start_date,
-              end_date: inv.end_date,
-              created_at: inv.created_at,
-            }))
-          );
-        }
-        setIsLoading(false);
-      });
 
-    // Fetch transactions and withdrawalRequests as needed...
+    try {
+      const { data: investmentsData, error: investmentsError } = await supabase
+        .from("investments")
+        .select(`
+          id,
+          product_id,
+          amount,
+          start_date,
+          end_date,
+          starting_value,
+          current_value,
+          daily_growth_rate,
+          status,
+          created_at
+        `)
+        .eq("user_id", user.id);
+
+      if (investmentsError) {
+        console.error("Error fetching investments:", investmentsError);
+        setUserInvestments([]);
+      } else if (investmentsData) {
+        setUserInvestments(
+          investmentsData.map(inv => ({
+            ...inv,
+            start_date: inv.start_date,
+            end_date: inv.end_date,
+            starting_value: inv.starting_value,
+            current_value: inv.current_value,
+            daily_growth_rate: inv.daily_growth_rate,
+            created_at: inv.created_at,
+          }))
+        );
+      }
+
+      // TODO: Fetch transactions and withdrawalRequests similarly if needed
+
+    } catch (error) {
+      console.error("Unexpected error fetching investments:", error);
+      setUserInvestments([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    fetchUserInvestments();
+  }, [fetchUserInvestments]);
 
   return {
     userInvestments,
     transactions,
     withdrawalRequests,
     isLoading,
+    refetchUserInvestments: fetchUserInvestments,
   };
 }
