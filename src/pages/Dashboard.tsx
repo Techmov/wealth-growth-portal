@@ -32,7 +32,12 @@ const Dashboard = () => {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
-    // Get 5 most recent transactions
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+  }, [authLoading, user, navigate]);
+
+  useEffect(() => {
     if (transactions && transactions.length > 0) {
       const sorted = [...transactions]
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -41,27 +46,17 @@ const Dashboard = () => {
     }
   }, [transactions]);
 
-  if (authLoading || investmentLoading) {
+  if (authLoading || investmentLoading || !user) {
     return <div className="flex justify-center items-center min-h-screen">
       <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
     </div>;
   }
 
-  if (!user) {
-    navigate("/login");
-    return null;
-  }
-
-  // Guard against undefined investments array
   const activeInvestments = userInvestments?.filter(inv => inv.status === 'active') || [];
-  
-  // Calculate total invested amount
-  const totalInvested = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
-  
-  // Calculate current investment value
-  const currentInvestmentValue = activeInvestments.reduce((sum, inv) => sum + inv.currentValue, 0);
-  
-  // Calculate profit/loss
+
+  const totalInvested = activeInvestments.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+  const currentInvestmentValue = activeInvestments.reduce((sum, inv) => sum + (Number(inv.currentValue) || 0), 0);
+
   const profitLoss = currentInvestmentValue - totalInvested;
   const profitLossPercentage = totalInvested > 0 
     ? ((profitLoss / totalInvested) * 100).toFixed(2) 
@@ -70,7 +65,6 @@ const Dashboard = () => {
   return (
     <UserLayout>
       <div className="container py-6">
-        {/* Welcome and Stats Overview */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome back, {user.name}!</h1>
           <p className="text-muted-foreground">
@@ -78,31 +72,31 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Main Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
             title="Available Balance"
-            value={`$${user.balance.toFixed(2)}`}
+            value={`$${Number(user.balance || 0).toFixed(2)}`}
             description="Ready to invest"
             icon={<Wallet className="h-5 w-5 text-primary" />}
             onAction={() => navigate("/transactions")}
           />
           <StatCard
             title="Total Invested"
-            value={`$${user.totalInvested.toFixed(2)}`}
-            description={`${activeInvestments.length} active investments`}
+            value={`$${Number(user.totalInvested || 0).toFixed(2)}`}
+            description={`${activeInvestments.length} active investments`
+            }
             icon={<TrendingUp className="h-5 w-5 text-green-600" />}
             onAction={() => navigate("/investments")}
           />
           <StatCard
             title="Total Withdrawn"
-            value={`$${user.totalWithdrawn.toFixed(2)}`}
+            value={`$${Number(user.totalWithdrawn || 0).toFixed(2)}`}
             description="All time"
             icon={<ArrowDown className="h-5 w-5 text-red-600" />}
           />
           <StatCard
             title="Referral Bonus"
-            value={`$${user.referralBonus.toFixed(2)}`}
+            value={`$${Number(user.referralBonus || 0).toFixed(2)}`}
             description="From referrals"
             icon={<Gift className="h-5 w-5 text-purple-600" />}
             onAction={() => navigate("/referrals")}
@@ -110,7 +104,6 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Portfolio Performance */}
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -138,9 +131,8 @@ const Dashboard = () => {
               {activeInvestments.length > 0 ? (
                 <div className="space-y-4">
                   {activeInvestments.slice(0, 2).map(investment => {
-                    // Find matching product for this investment
                     const investmentProduct = products?.find(p => p.id === investment.productId);
-                    
+
                     return (
                       <ActiveInvestmentCard 
                         key={investment.id}
@@ -149,7 +141,6 @@ const Dashboard = () => {
                       />
                     );
                   })}
-                  
                   {activeInvestments.length > 2 && (
                     <Button 
                       variant="outline" 
@@ -173,7 +164,6 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Recent Activity */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -205,7 +195,6 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Quick Actions */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="bg-primary/5 border-primary/20">
             <CardContent className="pt-6">
@@ -222,7 +211,7 @@ const Dashboard = () => {
               </Button>
             </CardContent>
           </Card>
-          
+
           <Card className="bg-primary/5 border-primary/20">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
@@ -238,7 +227,7 @@ const Dashboard = () => {
               </Button>
             </CardContent>
           </Card>
-          
+
           <Card className="bg-primary/5 border-primary/20">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-4">
@@ -256,20 +245,17 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Display promotions, offers, and features section */}
         <div className="mt-8">
           <PromotionsSection 
             promotions={promotions} 
             isLoading={contentLoading} 
             useMockData={useMockData} 
           />
-          
           <OffersSection 
             offers={offers} 
             isLoading={contentLoading} 
             useMockData={useMockData} 
           />
-          
           <FeaturesSection 
             features={features} 
             isLoading={contentLoading} 
