@@ -7,7 +7,7 @@ export function useUserInvestmentData(user) {
   const [withdrawalRequests, setWithdrawalRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUserInvestments = useCallback(async () => {
+  useEffect(() => {
     if (!user) return;
 
     setIsLoading(true);
