@@ -152,6 +152,7 @@ const InvestmentsPage = () => {
                               ? new Date(investment.end_date).toLocaleDateString('en-GB')
                               : "N/A"}
                           </span>
+                          
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Current Value:</span>

@@ -53,10 +53,15 @@ const Dashboard = () => {
   }
 
   const activeInvestments = userInvestments?.filter(inv => inv.status === 'active') || [];
-
-  const totalInvested = activeInvestments.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
-  const currentInvestmentValue = activeInvestments.reduce((sum, inv) => sum + (Number(inv.currentValue) || 0), 0);
-
+  console.log("Active Investments:", activeInvestments);
+  // Calculate total invested amount
+  const totalInvested = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
+  
+  // Calculate current investment value
+  const currentInvestmentValue = activeInvestments.reduce((sum, inv) => sum + inv.current_value
+, 0);
+  console.log("Current Investment Value:", currentInvestmentValue);
+  // Calculate profit/loss
   const profitLoss = currentInvestmentValue - totalInvested;
   const profitLossPercentage = totalInvested > 0 
     ? ((profitLoss / totalInvested) * 100).toFixed(2) 
@@ -116,17 +121,20 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-4 mb-6">
-                <div className="bg-muted px-4 py-3 rounded-lg flex-1">
-                  <div className="text-sm text-muted-foreground mb-1">Current Value</div>
-                  <div className="text-2xl font-bold">${currentInvestmentValue.toFixed(2)}</div>
-                </div>
-                <div className="bg-muted px-4 py-3 rounded-lg flex-1">
-                  <div className="text-sm text-muted-foreground mb-1">Profit/Loss</div>
-                  <div className={`text-2xl font-bold ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {profitLoss >= 0 ? '+' : ''}{profitLoss.toFixed(2)} ({profitLoss >= 0 ? '+' : ''}{profitLossPercentage}%)
-                  </div>
-                </div>
-              </div>
+  <div className="bg-muted px-4 py-3 rounded-lg flex-1">
+    <div className="text-sm text-muted-foreground mb-1">Current Value</div>
+    <div className="text-2xl font-bold">
+      ${!isNaN(currentInvestmentValue) ? currentInvestmentValue.toFixed(2) : '0.00'}
+    </div>
+  </div>
+  <div className="bg-muted px-4 py-3 rounded-lg flex-1">
+    <div className="text-sm text-muted-foreground mb-1">Profit/Loss</div>
+    <div className={`text-2xl font-bold ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+      {!isNaN(profitLoss) ? `${profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)}` : '0.00'} 
+      ({!isNaN(profitLossPercentage) ? `${profitLossPercentage >= 0 ? '+' : ''}${profitLossPercentage}%` : '0%'})
+    </div>
+  </div>
+</div>
 
               {activeInvestments.length > 0 ? (
                 <div className="space-y-4">
