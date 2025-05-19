@@ -17,8 +17,7 @@ export function useUserInvestmentData() {
 
     const { data, error } = await supabase
       .from("investments")
-      .select(
-        `
+      .select(`
         id,
         product_id,
         amount,
@@ -32,8 +31,7 @@ export function useUserInvestmentData() {
         last_profit_claim_date,
         created_at,
         user_id
-      `
-      )
+      `)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -79,92 +77,71 @@ export function useUserInvestmentData() {
       }
 
       const today = new Date();
-      const lastProfitClaimDate = new Date(investment.last_profit_claim_date);
+      const lastClaimDate = new Date(investment.last_profit_claim_date);
+      const endDate = new Date(investment.end_date);
+      const currentDateStr = today.toISOString().split("T")[0];
 
-      // Calculate days elapsed since last profit claim
-      const diffMs = today.getTime() - lastProfitClaimDate.getTime();
-      const daysElapsed = Math.max(
-        0,
-        Math.floor(diffMs / (1000 * 60 * 60 * 24))
-      ); // no negative days
+      const diffHours = (today.getTime() - lastClaimDate.getTime()) / (1000 * 60 * 60);
 
-      // If no days passed, no update needed
-      // if (daysElapsed <= 0) {
-      //   console.log("⏳ No update needed. daysElapsed =", daysElapsed);
-      //   window.alert("No new profit to claim yet.");
-      //   return;
-      // }
+      if (diffHours < 24) {
+        window.alert("You can only claim profit once every 24 hours.");
+        return;
+      }
+
+      // If matured
+      if (today >= endDate && investment.status !== "closed") {
+        // Add current value to user's profile balance
+        const { error: balanceUpdateError } = await supabase.rpc("increment_user_balance", {
+          user_id_input: user.id,
+          amount_input: investment.current_value
+        });
+
+        if (balanceUpdateError) {
+          console.error("Error updating user balance:", balanceUpdateError.message);
+        } else {
+          // Mark investment as closed
+          const { error: statusUpdateError } = await supabase
+            .from("investments")
+            .update({ status: "closed" })
+            .eq("id", investment.id);
+
+          if (statusUpdateError) {
+            console.error("Error closing investment:", statusUpdateError.message);
+          }
+        }
+
+        window.alert("Investment matured. Profit added to balance.");
+        fetchUserInvestments();
+        return;
+      }
 
       const { amount, daily_growth_rate, current_value } = investment;
-
-      // Calculate total profit to add over elapsed days
       const dailyGrowth = Number(amount) * (daily_growth_rate / 100);
       const profitToAdd = dailyGrowth;
 
-      // Then:
-      const newCurrentValue =
-        parseFloat(
-          (Math.abs(current_value) + Math.abs(profitToAdd)).toFixed(2)
-        );
-
-      console.log("📈 Adding profit:", profitToAdd);
-      console.log(
-        "🔄 Old value:",
-        current_value,
-        "➡️ New value:",
-        newCurrentValue
+      const newCurrentValue = parseFloat(
+        (Math.abs(current_value) + Math.abs(profitToAdd)).toFixed(2)
       );
 
-      // Perform the update in Supabase
       const { data: updateData, error: updateError } = await supabase
         .from("investments")
         .update({
           amount: newCurrentValue,
           current_value: newCurrentValue,
-          last_profit_claim_date: today.toISOString().split("T")[0],
+          last_profit_claim_date: currentDateStr,
         })
         .eq("id", investmentId.trim())
         .select();
-      console.log("Updating investment with id:", `"${investmentId.trim()}"`);
 
       if (updateError) {
-        console.error(
-          `❌ Error updating investment ${investmentId}:`,
-          updateError.message
-        );
+        console.error(`Error updating investment ${investmentId}:`, updateError.message);
         window.alert("Failed to update investment.");
         return;
       }
 
-      if (!updateData || updateData.length === 0) {
-        console.warn("⚠️ Update returned no rows - maybe no matching ID?");
-        window.alert("Update did not affect any rows.");
-        return;
-      }
-
-      console.log("✅ Updated data:", updateData);
-
-      // Confirm updated row by fetching it again
-      const { data: confirmedData, error: confirmError } = await supabase
-        .from("investments")
-        .select()
-        .eq("id", investmentId.trim())
-        .single();
-
-      if (confirmError) {
-        console.error(
-          "❌ Error fetching updated investment:",
-          confirmError.message
-        );
-      } else {
-        console.log("✅ Confirmed updated investment:", confirmedData);
-      }
-
-      window.alert(
-        `Investment updated. Profit of ${profitToAdd.toFixed(2)} added.`
-      );
+      window.alert(`Investment updated. Profit of ${profitToAdd.toFixed(2)} added.`);
     },
-    [user, userInvestments]
+    [user, userInvestments, fetchUserInvestments]
   );
 
   useEffect(() => {
@@ -178,6 +155,6 @@ export function useUserInvestmentData() {
     totalInvested,
     isLoading,
     refetchUserInvestments: fetchUserInvestments,
-    updateInvestmentProfits, // ✅ return this so you can use it outside
+    updateInvestmentProfits,
   };
-  }
+}
