@@ -9,12 +9,20 @@ import { InvestmentCard } from "@/components/InvestmentCard";
 import { ActiveInvestmentCard } from "@/components/ActiveInvestmentCard";
 import { Product } from "@/types";
 import { TrendingUp, CircleDollarSign } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useUserInvestmentData } from "@/hooks/useUserInvestmentData";
 
 const InvestmentsPage = () => {
   const { user } = useAuth();
-  const { products, userInvestments, isLoading, fetchUserInvestments } = useInvestment();
+  const { products, userInvestments, isLoading } = useInvestment();
+  const { fetchUserInvestments,updateInvestmentProfits } = useUserInvestmentData();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("products");
 
@@ -33,25 +41,33 @@ const InvestmentsPage = () => {
 
   // Use correct field names from DB (snake_case)
   const now = new Date();
-  const activeInvestments = userInvestments?.filter(
-    inv => inv.status === "active" && new Date(inv.endDate) > now
-  ) || [];
-  const completedInvestments = userInvestments?.filter(
-    inv => inv.status === "completed" || new Date(inv.end_date) <= now
-  ) || [];
+  const activeInvestments =
+    userInvestments?.filter(
+      (inv) => inv.status === "active" && new Date(inv.endDate) > now
+    ) || [];
+  const completedInvestments =
+    userInvestments?.filter(
+      (inv) => inv.status === "completed" || new Date(inv.end_date) <= now
+    ) || [];
 
   // Calculate total investment stats
-  const totalInvested = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
-  const currentInvestmentValue = activeInvestments.reduce((sum, inv) => sum + (inv.current_value || 0), 0);
+  const totalInvested = activeInvestments.reduce(
+    (sum, inv) => sum + inv.amount,
+    0
+  );
+  const currentInvestmentValue = activeInvestments.reduce(
+    (sum, inv) => sum + (inv.current_value || 0),
+    0
+  );
   const totalProfit = currentInvestmentValue - totalInvested;
 
   // Calculate daily profit
   const calculateDailyProfit = () => {
     let dailyTotal = 0;
-    activeInvestments.forEach(inv => {
-      const product = products?.find(p => p.id === inv.product_id);
+    activeInvestments.forEach((inv) => {
+      const product = products?.find((p) => p.id === inv.product_id);
       if (product) {
-        dailyTotal += (inv.amount * (product.growthRate / 100));
+        dailyTotal += inv.amount * (product.growthRate / 100);
       }
     });
     return dailyTotal;
@@ -72,13 +88,17 @@ const InvestmentsPage = () => {
         />
 
         <div className="mb-8">
-          <Tabs defaultValue="products" value={activeTab} onValueChange={setActiveTab}>
+          <Tabs
+            defaultValue="products"
+            value={activeTab}
+            onValueChange={setActiveTab}
+          >
             <TabsList className="grid w-full grid-cols-2 mb-8">
               <TabsTrigger value="products">Investment Products</TabsTrigger>
               <TabsTrigger value="myinvestments">
                 My Investments
                 <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                  {activeInvestments.length}
+                  {userInvestments.length}
                 </span>
               </TabsTrigger>
             </TabsList>
@@ -86,19 +106,30 @@ const InvestmentsPage = () => {
             {/* Investment Products Tab */}
             <TabsContent value="products">
               <div className="mb-8 p-6 bg-muted/50 rounded-lg">
-                <h2 className="text-lg font-medium mb-2">Your Investment Profile</h2>
+                <h2 className="text-lg font-medium mb-2">
+                  Your Investment Profile
+                </h2>
                 <div className="flex flex-wrap items-center gap-4">
                   <div>
-                    <span className="text-sm text-muted-foreground">Available Balance:</span>
-                    <span className="ml-2 font-bold">${user.balance.toFixed(2)}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Available Balance:
+                    </span>
+                    <span className="ml-2 font-bold">
+                      ${user.balance.toFixed(2)}
+                    </span>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Total Invested:</span>
-                    <span className="ml-2 font-bold">${user.totalInvested.toFixed(2)}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Total Invested:
+                    </span>
+                    <span className="ml-2 font-bold">
+                      ${user.totalInvested.toFixed(2)}
+                    </span>
                   </div>
                 </div>
                 <p className="mt-4 text-sm text-muted-foreground">
-                  All products are designed to double your investment over their duration. Fixed investment amounts with varying risk levels.
+                  All products are designed to double your investment over their
+                  duration. Fixed investment amounts with varying risk levels.
                 </p>
               </div>
 
@@ -122,58 +153,83 @@ const InvestmentsPage = () => {
               ) : userInvestments && userInvestments.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {userInvestments.map((investment) => (
-                    <Card key={investment.id}>
+                    <Card key={investment?.id}>
                       <CardHeader>
                         <CardTitle>
-                          {products?.find(p => p.id === investment.product_id)?.name || "Investment"}
+                          {products?.find(
+                            (p) => p.id === investment?.product_id
+                          )?.name || "Investment"}
                         </CardTitle>
                         <CardDescription>
                           Invested: $
-                          {typeof investment.starting_value === "number"
-                            ? investment.starting_value.toFixed(2)
-                            : typeof investment.amount === "number"
-                              ? investment.amount.toFixed(2)
-                              : "N/A"}
+                          {typeof investment?.starting_value === "number"
+                            ? investment?.starting_value.toFixed(2)
+                            : typeof investment?.amount === "number"
+                            ? investment?.amount.toFixed(2)
+                            : "N/A"}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Created:</span>
+                          <span className="text-muted-foreground">
+                            Created:
+                          </span>
                           <span>
-                            {investment.start_date
-                              ? new Date(investment.start_date).toLocaleDateString('en-GB')
+                            {investment?.start_date
+                              ? new Date(
+                                  investment?.start_date
+                                ).toLocaleDateString("en-GB")
                               : "N/A"}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">End Date:</span>
-                          <span>
-                            {investment.end_date
-                              ? new Date(investment.end_date).toLocaleDateString('en-GB')
-                              : "N/A"}
+                          <span className="text-muted-foreground">
+                            End Date:
                           </span>
-                          
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Current Value:</span>
                           <span>
-                            {typeof investment.current_value === "number"
-                              ? `$${investment.current_value.toFixed(2)}`
+                            {investment?.end_date
+                              ? new Date(
+                                  investment?.end_date
+                                ).toLocaleDateString("en-GB")
                               : "N/A"}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Daily Growth Rate:</span>
+                          <span className="text-muted-foreground">
+                            Current Value:
+                          </span>
                           <span>
-                            {typeof investment.daily_growth_rate === "number"
-                              ? `+${investment.daily_growth_rate.toFixed(2)}%`
+                            {typeof investment?.current_value === "number"
+                              ? `$${investment?.current_value.toFixed(2)}`
+                              : "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Daily Growth Rate:
+                          </span>
+                          <span>
+                            {typeof investment?.daily_growth_rate === "number"
+                              ? `+${investment?.daily_growth_rate.toFixed(2)}%`
                               : "+0%"}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Status:</span>
-                          <span>{investment.status}</span>
+                          <span>{investment?.status}</span>
                         </div>
+
+                        {/* {investment?.status === "completed" && ( */}
+                        <Button
+                          className="w-full mt-4"
+                          onClick={() => {
+                            updateInvestmentProfits(investment.id);
+                          }}
+                        >
+                          Claim Profit
+                        </Button>
+
+                        {/* )} */}
                       </CardContent>
                     </Card>
                   ))}
