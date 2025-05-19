@@ -90,12 +90,11 @@ const ProfilePage = () => {
 
     try {
       setIsUpdating(true);
-      await updateTrc20Address(trc20Address);
-      setIsEditing(false);
-      toast({
-        title: "Success",
-        description: "TRC20 address updated successfully",
-      });
+    const { error } = await supabase
+      .from("profiles")
+      .update({ trc20_address: trc20Address.trim() })
+      .eq("id", user.id);
+      
     } catch (error: any) {
       toast({
         title: "Error",
