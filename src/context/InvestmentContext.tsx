@@ -128,4 +128,4 @@ export function useInvestment() {
     throw new Error("useInvestment must be used within an InvestmentProvider");
   }
   return context;
-}
+           }
