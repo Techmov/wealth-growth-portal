@@ -208,7 +208,7 @@ const TransactionsPage = () => {
                       </ol>
                     </div>
                     
-                    <div className="p-3 mb-4 bg-gray-50 border border-gray-200 rounded">
+                    <div className="p-3 mb-4 bg-white-50 border border-gray-200 rounded">
                       <p className="text-sm font-medium mb-1">Platform TRC20 Address:</p>
                       <p className="font-mono text-xs sm:text-sm break-all">{platformTrc20Address}</p>
                     </div>
@@ -289,7 +289,7 @@ const TransactionsPage = () => {
                         </div>
                       </div>
                       
-                      <div className="p-3 mb-1 bg-gray-50 border border-gray-200 rounded text-sm">
+                      <div className="p-3 mb-1 bg-white-50 border border-white-200 rounded text-sm">
                         <p className="font-medium">Withdrawal Information:</p>
                         <ul className="mt-1 space-y-1">
                           <li>• Withdrawals are processed manually by an admin</li>
@@ -301,7 +301,7 @@ const TransactionsPage = () => {
                       <Button 
                         type="submit" 
                         className="w-full" 
-                        disabled={isProcessing || !user.trc20Address || !amount || amount === "0"}
+                        disabled={isProcessing || !user.trc20_address || !amount || amount === "0"}
                       >
                         {isProcessing ? (
                           <>
