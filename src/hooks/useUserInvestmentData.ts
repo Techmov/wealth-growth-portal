@@ -180,4 +180,4 @@ export function useUserInvestmentData() {
     refetchUserInvestments: fetchUserInvestments,
     updateInvestmentProfits, // ✅ return this so you can use it outside
   };
-           }
+  }
