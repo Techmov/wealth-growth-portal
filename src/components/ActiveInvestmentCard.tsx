@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Investment, Product } from "@/types";
-import { useInvestment } from "@/context/InvestmentContext";
-import { formatDistanceToNow, differenceInDays, format, addDays } from "date-fns";
+import { format } from "date-fns";
 import { Loader2, Calendar, TrendingUp, BadgeDollarSign } from "lucide-react";
+import { useUserInvestmentData } from "@/hooks/useUserInvestmentData";
 
 interface ActiveInvestmentCardProps {
   investment: Investment;
@@ -15,54 +22,18 @@ interface ActiveInvestmentCardProps {
 export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCardProps) {
   const [isClaimingProfit, setIsClaimingProfit] = useState(false);
   const [claimableProfit, setClaimableProfit] = useState(0);
-  const { claimProfit, getClaimableProfit } = useInvestment();
+  const { updateInvestmentProfits } = useUserInvestmentData();
 
-  // Calculate progress percentage
-  const calculateProgress = () => {
-    const today = new Date();
-    const startDate = investment.startDate;
-    const endDate = investment.endDate;
-    const totalDays = differenceInDays(endDate, startDate);
-    const elapsedDays = differenceInDays(today, startDate);
-    
-    const progress = Math.min(Math.max((elapsedDays / totalDays) * 100, 0), 100);
-    return Math.round(progress);
-  };
-
-  // Calculate days until maturity
-  const daysUntilMaturity = () => {
-    const today = new Date();
-    const endDate = investment.endDate;
-    return Math.max(0, differenceInDays(endDate, today));
-  };
-
-  // Calculate daily profit
   const calculateDailyProfit = () => {
     if (!product) return 0;
     return investment.amount * (product.growthRate / 100);
   };
 
-  // Load claimable profit amount
-  useEffect(() => {
-    const loadClaimableProfit = async () => {
-      const profit = await getClaimableProfit(investment.id);
-      setClaimableProfit(profit);
-    };
-    
-    loadClaimableProfit();
-    
-    // Set up a timer to refresh profit amount every minute
-    const timer = setInterval(loadClaimableProfit, 60000);
-    
-    return () => clearInterval(timer);
-  }, [investment.id, getClaimableProfit]);
-
-  // Handle profit claim
   const handleClaimProfit = async () => {
     try {
       setIsClaimingProfit(true);
-      await claimProfit(investment.id);
-      setClaimableProfit(0); // Reset claimable profit amount after claiming
+      await updateInvestmentProfits(investment.id);
+      setClaimableProfit(0);
     } catch (error) {
       console.error("Error claiming profit:", error);
     } finally {
@@ -70,16 +41,15 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
     }
   };
 
-  const progress = calculateProgress();
-  const daysRemaining = daysUntilMaturity();
   const dailyProfit = calculateDailyProfit();
 
-  const getCurrentValue = (investment) => {
+  const getCurrentValue = (investment: Investment) => {
     if (
       investment.starting_value == null ||
       investment.daily_growth_rate == null ||
       investment.start_date == null
-    ) return 0;
+    )
+      return 0;
 
     const start = new Date(investment.start_date);
     const now = new Date();
@@ -97,6 +67,27 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
     return Math.min(totalValue, finalValue);
   };
 
+  const calculateProgress = () => {
+    if (!investment.start_date || !investment.end_date) return 0;
+    const startDate = new Date(investment.start_date);
+    const endDate = new Date(investment.end_date);
+    const currentDate = new Date();
+
+    const totalDuration = endDate.getTime() - startDate.getTime();
+    const elapsedDuration = currentDate.getTime() - startDate.getTime();
+
+    const progress = (elapsedDuration / totalDuration) * 100;
+    return Math.min(100, Math.max(0, progress));
+  };
+
+  const getDaysLeft = () => {
+    if (!investment.end_date) return 0;
+    const endDate = new Date(investment.end_date);
+    const now = new Date();
+    const diffTime = endDate.getTime() - now.getTime();
+    return Math.max(Math.ceil(diffTime / (1000 * 60 * 60 * 24)), 0);
+  };
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="bg-muted/20 pb-2">
@@ -104,7 +95,7 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
           <div>
             <CardTitle>{product?.name || "Investment"}</CardTitle>
             <CardDescription>
-              Invested on {format(investment.start_date, 'MMM d, yyyy')}
+              Invested on {format(new Date(investment.start_date), 'MMM d, yyyy')}
             </CardDescription>
           </div>
           <div className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
@@ -112,7 +103,7 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="pt-4 space-y-4">
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
@@ -121,33 +112,16 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Current Value:</span>
-            <span className="font-medium">${investment.starting_value != null ? Number(investment.starting_value).toFixed(2) : "0.00"}</span>
+            <span className="font-medium">
+              ${investment.starting_value != null ? Number(investment.starting_value).toFixed(2) : "0.00"}
+            </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Daily Profit:</span>
             <span className="font-medium text-green-600">+${dailyProfit.toFixed(2)}</span>
           </div>
-          
-          <div className="pt-2">
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-muted-foreground">Progress:</span>
-              <span className="font-medium">{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-            
-            <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                Started
-              </span>
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {daysRemaining} days left
-              </span>
-            </div>
-          </div>
         </div>
-        
+
         <div className="p-3 bg-muted/50 rounded-md">
           <div className="flex justify-between items-center">
             <div>
@@ -174,15 +148,22 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
             </Button>
           </div>
         </div>
-        
+
+        <div className="space-y-2">
+          <Progress value={calculateProgress()} />
+          <div className="text-sm text-muted-foreground text-right">
+            {getDaysLeft()} day{getDaysLeft() !== 1 ? 's' : ''} remaining
+          </div>
+        </div>
+
         <div className="flex justify-between text-sm border-t pt-3 mt-2">
           <div className="flex items-center gap-1">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span>Maturity Date:</span>
           </div>
-          <span className="font-medium">{format(investment.end_date, 'MMM d, yyyy')}</span>
+          <span className="font-medium">{format(new Date(investment.end_date), 'MMM d, yyyy')}</span>
         </div>
-        
+
         <div className="flex justify-between text-sm">
           <div className="flex items-center gap-1">
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -195,21 +176,21 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
             </span>
           </span>
         </div>
-        
+
         <CardContent className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Created:</span>
             <span>
-              {investment.startDate
-                ? new Date(investment.startDate).toLocaleString()
+              {investment.start_date
+                ? new Date(investment.start_date).toLocaleDateString('en-GB')
                 : "N/A"}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">End Date:</span>
             <span>
-              {investment.endDate
-                ? new Date(investment.endDate).toLocaleString()
+              {investment.end_date
+                ? new Date(investment.end_date).toLocaleDateString('en-GB')
                 : "N/A"}
             </span>
           </div>
@@ -226,7 +207,7 @@ export function ActiveInvestmentCard({ investment, product }: ActiveInvestmentCa
           <div className="flex justify-between">
             <span className="text-muted-foreground">Current Value:</span>
             <span>
-              {investment.starting_value != null && investment.daily_growth_rate != null && investment.startDate
+              {investment.starting_value != null && investment.daily_growth_rate != null && investment.start_date
                 ? `$${getCurrentValue(investment).toFixed(2)}`
                 : "$0.00"}
             </span>
