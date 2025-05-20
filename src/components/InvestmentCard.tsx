@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
-import { useDailyProfitUpdater } from "@/hooks/useDailyProfitUpdater";
 
 interface InvestmentCardProps {
   product: Product;
@@ -20,8 +19,8 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
   const [isInvesting, setIsInvesting] = useState(false);
   const { invest, userInvestments } = useInvestment();
   const { user, updateUser } = useAuth();
-useDailyProfitUpdater();
-  const handleInvest = async () => {
+
+ const handleInvest = async () => {
   if (!user) {
     toast.error("Please log in to invest");
     return;
@@ -34,50 +33,74 @@ useDailyProfitUpdater();
 
   try {
     setIsInvesting(true);
-    console.log("Investment started");
 
-      const startDate = new Date();
-      const endDate = new Date(
-        startDate.getTime() + product.duration * 24 * 60 * 60 * 1000
-      );
+    const startDate = new Date();
+    const endDate = new Date(
+      startDate.getTime() + product.duration * 24 * 60 * 60 * 1000
+    );
 
-      const startingValue = product.amount;
-      const dailyGrowthRate = product.growthRate;
-      const currentValue = startingValue * (dailyGrowthRate / 100); // first day's growth
+    const startingValue = product.amount;
+    const dailyGrowthRate = product.growthRate;
+    const currentValue = startingValue * (dailyGrowthRate / 100); // first day's growth
 
-      // Supabase insertion
-      await supabase
-  .from("investments")
-  .insert([
-    {
-      user_id: user.id,
-      product_id: product.id,
-      amount: product.amount,
-      start_date: startDate.toISOString(),
-      end_date: endDate.toISOString(),
-      status: "active",
-      starting_value: startingValue,
-      final_value: startingValue * 2,
-      current_value: currentValue,
-      daily_growth_rate: dailyGrowthRate,
-      last_profit_claim_date: endDate.toISOString(),
-    },
-  ]);
+    // Insert investment
+    const { error: insertError } = await supabase
+      .from("investments")
+      .insert({
+        user_id: user.id,
+        product_id: product.id,
+        amount: product.amount,
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+        status: "active",
+        starting_value: startingValue,
+        final_value: startingValue * 2,
+        current_value: currentValue,
+        daily_growth_rate: dailyGrowthRate,
+        last_profit_claim_date: endDate.toISOString(),
+      });
 
-
-      if (updateUser) await updateUser();
-      // Optionally refresh investments here if needed
-
-      toast.success(`Successfully invested in ${product.name}!`);
-    } catch (error: any) {
-      console.error("Investment failed:", error);
-      toast.error(
-        error.message || "Failed to process investment. Please try again later."
-      );
-    } finally {
-      setIsInvesting(false);
+    if (insertError) {
+      throw new Error(insertError.message || "Failed to insert investment");
     }
-  };
+
+    // Deduct amount from user's balance and update total_invested
+    // Fetch latest profile data
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("balance, total_invested")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error("Failed to fetch user profile for balance update");
+    }
+
+    const newBalance = profile.balance - product.amount;
+    const newTotalInvested = (profile.total_invested || 0) + product.amount;
+
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ balance: newBalance, total_invested: newTotalInvested })
+      .eq("id", user.id);
+
+    if (updateError) {
+      throw new Error(updateError.message || "Failed to update user balance");
+    }
+
+    if (updateUser) await updateUser();
+
+    toast.success(`Successfully invested in ${product.name}!`);
+  } catch (error: any) {
+    console.error("Investment failed:", error);
+    toast.error(
+      error.message || "Failed to process investment. Please try again later."
+    );
+  } finally {
+    setIsInvesting(false);
+  }
+};
+
 
   const calculateReturn = () => product.amount * 2;
 
@@ -118,7 +141,7 @@ useDailyProfitUpdater();
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Daily Growth:</span>
           <span className="font-medium text-green-600">
-            +10.00%
+            +{product.growthRate.toFixed(2)}%
           </span>
         </div>
         <div className="flex justify-between text-sm">
@@ -173,6 +196,7 @@ useDailyProfitUpdater();
 const getCurrentValue = (investment) => {
   if (
     investment.starting_value == null ||
+    investment.daily_growth_rate == null ||
     investment.start_date == null
   ) return 0;
 
@@ -182,12 +206,12 @@ const getCurrentValue = (investment) => {
     Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)),
     1
   );
-
   const startingValue = Number(investment.starting_value);
-  const dailyGrowthRate = 10; // fixed 10%
+  const dailyGrowthRate = Number(investment.daily_growth_rate);
   const finalValue = Number(investment.final_value);
 
-  const totalValue = startingValue + (startingValue * dailyGrowthRate / 100 * daysElapsed);
+  const totalValue =
+    startingValue + (startingValue * dailyGrowthRate / 100 * daysElapsed);
 
   return Math.min(totalValue, finalValue);
 };
