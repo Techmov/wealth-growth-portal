@@ -159,7 +159,7 @@ const WithdrawalPage = () => {
                 
                 <div className="flex justify-between items-center pt-2 border-t">
                   <span className="text-sm font-medium">Total Withdrawn:</span>
-                  <span className="font-bold">${user.totalWithdrawn.toFixed(2)}</span>
+                  <span className="font-bold">${stats.totalWithdrawn.toFixed(2)}</span>
                 </div>
               </div>
             ) : (
