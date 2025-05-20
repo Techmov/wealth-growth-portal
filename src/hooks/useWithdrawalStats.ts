@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, WithdrawalStats } from '@/types';
@@ -10,8 +9,10 @@ export function useWithdrawalStats(user: User | null) {
     profitAmount: 0,
     referralBonus: 0,
     pendingWithdrawals: 0,
-    escrowedAmount: 0
+    escrowedAmount: 0,
+    totalWithdrawn: 0, // ✅ include this
   });
+
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchStats = async () => {
@@ -19,33 +20,37 @@ export function useWithdrawalStats(user: User | null) {
 
     try {
       setIsLoading(true);
-      
-      // Call the database function to get available withdrawal amount
-      const { data: availableData, error: availableError } = await supabase.rpc(
-        'calculate_available_withdrawal',
-        { user_id: user.id }
-      );
 
-      if (availableError) throw availableError;
+      const [availableRes, statsRes, totalWithdrawnRes] = await Promise.all([
+        supabase.rpc('calculate_available_withdrawal', { user_id: user.id }),
+        supabase
+          .from('user_withdrawal_stats')
+          .select('profit_amount, referral_bonus, pending_withdrawals, escrowed_amount')
+          .eq('user_id', user.id)
+          .single(),
+        supabase
+          .from('withdrawal_requests')
+          .select('amount')
+          .eq('user_id', user.id)
+          .eq('status', 'approved'),
+      ]);
 
-      // Get withdrawal stats from the view we created
-      const { data: statsData, error: statsError } = await supabase
-        .from('user_withdrawal_stats')
-        .select('profit_amount, referral_bonus, pending_withdrawals, escrowed_amount')
-        .eq('user_id', user.id)
-        .single();
+      if (availableRes.error || statsRes.error || totalWithdrawnRes.error) {
+        throw availableRes.error || statsRes.error || totalWithdrawnRes.error;
+      }
 
-      if (statsError) throw statsError;
+      const totalWithdrawn = totalWithdrawnRes.data?.reduce((sum, row) => sum + (row.amount || 0), 0) || 0;
 
       setStats({
-        availableWithdrawal: availableData || 0,
-        profitAmount: statsData?.profit_amount || 0,
-        referralBonus: statsData?.referral_bonus || 0,
-        pendingWithdrawals: statsData?.pending_withdrawals || 0,
-        escrowedAmount: statsData?.escrowed_amount || 0
+        availableWithdrawal: availableRes.data || 0,
+        profitAmount: statsRes.data?.profit_amount || 0,
+        referralBonus: statsRes.data?.referral_bonus || 0,
+        pendingWithdrawals: statsRes.data?.pending_withdrawals || 0,
+        escrowedAmount: statsRes.data?.escrowed_amount || 0,
+        totalWithdrawn, // ✅ fix here
       });
     } catch (error: any) {
-      console.error('Error fetching withdrawal stats:', error);
+      console.error('Error fetching withdrawal stats:', error.message);
       toast.error('Failed to load withdrawal statistics');
     } finally {
       setIsLoading(false);
@@ -55,34 +60,23 @@ export function useWithdrawalStats(user: User | null) {
   useEffect(() => {
     fetchStats();
 
-    // Set up real-time listener for profile changes
     if (user) {
       const channel = supabase
         .channel('withdrawal-stats-changes')
-        .on('postgres_changes', 
-          {
-            event: '*',
-            schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${user.id}`
-          },
-          () => {
-            fetchStats();
-          }
-        )
-        .on('postgres_changes', 
+        .on(
+          'postgres_changes',
           {
             event: '*',
             schema: 'public',
             table: 'withdrawal_requests',
-            filter: `user_id=eq.${user.id}`
+            filter: `user_id=eq.${user.id}`,
           },
           () => {
             fetchStats();
           }
         )
         .subscribe();
-        
+
       return () => {
         supabase.removeChannel(channel);
       };
