@@ -193,7 +193,7 @@ export function WithdrawalForm() {
             </div>
             <div className="flex justify-between">
               <p className="text-xs text-muted-foreground">Minimum withdrawal amount: $10</p>
-              <p className="text-xs text-muted-foreground">Fee: $3.00</p>
+              <p className="text-xs text-muted-foreground">Fee: $0.00</p>
             </div>
             
             <Alert className="bg-muted/50 mt-2 py-2">
