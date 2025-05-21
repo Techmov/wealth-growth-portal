@@ -19,7 +19,7 @@ interface WithdrawalsTableProps {
   onReject: (withdrawalId: string) => void;
 }
 
-const WITHDRAWAL_FEE = 3; // $3 withdrawal fee
+const WITHDRAWAL_FEE = 0; // $3 withdrawal fee
 
 export function WithdrawalsTable({
   withdrawals,
