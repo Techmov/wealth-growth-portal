@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { LoginCredentials, SignupCredentials } from "@/types/auth";
 
 // Withdrawal fee constant
-const WITHDRAWAL_FEE = 3;
+const WITHDRAWAL_FEE = 0;
 
 // Sign up with email and password
 export const signup = async (credentials: SignupCredentials) => {
