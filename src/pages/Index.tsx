@@ -166,9 +166,9 @@ const Index = () => {
               <div className="container px-4 mx-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                   <div className="order-2 lg:order-1">
-                    <h2 className="text-3xl font-bold mb-6">About WealthGrow</h2>
+                    <h2 className="text-3xl font-bold mb-6">About WealthGrowth</h2>
                     <p className="text-lg text-gray-600 mb-6">
-                      WealthGrow is a leading investment platform focused on providing exceptional returns through carefully selected market opportunities and strategic investments.
+                      WealthGrowth is a leading investment platform focused on providing exceptional returns through carefully selected market opportunities and strategic investments.
                     </p>
                     <div className="space-y-4">
                       <div className="flex items-start gap-4">
