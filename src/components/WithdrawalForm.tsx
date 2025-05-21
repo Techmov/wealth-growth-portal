@@ -13,7 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useWithdrawalStats } from "@/hooks/useWithdrawalStats";
 
 // Withdrawal fee constant
-const WITHDRAWAL_FEE = -3;
+const WITHDRAWAL_FEE = 0;
 
 export function WithdrawalForm() {
   const navigate = useNavigate();
