@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService"; 
 
 // Withdrawal fee constant
-const WITHDRAWAL_FEE = 3;
+const WITHDRAWAL_FEE = 0;
 
 export const useAuthActions = ({
   user,
