@@ -72,19 +72,25 @@ export const useAuthActions = ({
   setIsLoading(true);
 
   try {
-    // Register the user with Supabase auth
+    // Try to sign up the user
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          name: name,
-          username: generateUsername(name, email), // This goes to user_metadata only
+          name,
+          username: generateUsername(name, email), // only goes into user_metadata
         },
       },
     });
 
     if (authError) {
+      // Check if it's a conflict (email already registered)
+      if (authError.message.toLowerCase().includes("user already registered")) {
+        setIsLoading(false);
+        return { error: "Email is already registered. Please log in instead." };
+      }
+
       throw authError;
     }
 
@@ -95,9 +101,9 @@ export const useAuthActions = ({
       return { message: "Check your email for the confirmation link." };
     }
 
-    // Explicitly insert user data into 'profiles' table
+    // Manually insert or update the user's profile
     const { error: profileError } = await supabase.from("profiles").upsert({
-      id: user.id, // assuming 'id' in profiles is linked to auth.user.id
+      id: user.id,
       name,
       username: generateUsername(name, email),
       email,
@@ -108,7 +114,6 @@ export const useAuthActions = ({
       console.error("Profile creation error:", profileError);
     }
 
-    // Set the session and fetch profile
     if (authData.session) {
       setSession(authData.session);
       await fetchProfile(user.id);
@@ -120,12 +125,19 @@ export const useAuthActions = ({
     return authData.session
       ? authData
       : { message: "Check your email for the confirmation link." };
-  } catch (error) {
+  } catch (error: any) {
     setIsLoading(false);
+
+    const friendlyMessage = error?.message?.toLowerCase().includes("user already registered")
+      ? "Email is already registered. Please log in instead."
+      : "An error occurred during sign-up. Please try again.";
+
     console.error("Signup error:", error);
-    return { error };
+
+    return { error: friendlyMessage };
   }
 };
+
 
 
   // Improved logout function with proper async handling
