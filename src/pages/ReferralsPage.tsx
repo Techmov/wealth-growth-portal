@@ -131,7 +131,7 @@ const ReferralsPage = () => {
                 <Share2 className="h-5 w-5" /> Share Your Referral Link
               </CardTitle>
               <CardDescription>
-                Share this link with your friends and earn 5% when they invest
+                Share this link with your friends and earn 20% when they invest
               </CardDescription>
             </CardHeader>
             <CardContent>
