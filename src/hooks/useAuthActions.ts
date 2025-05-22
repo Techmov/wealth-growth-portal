@@ -68,40 +68,57 @@ export const useAuthActions = ({
   };
 
   // Wrapper for signup to include referralCode
-  const signup = async (name: string, email: string, password: string, referralCode?: string) => {
+  const signup = async (
+  name: string,
+  email: string,
+  password: string,
+  referralCode?: string
+) => {
   setIsLoading(true);
 
   try {
-    // Try to sign up the user
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           name,
-          username: generateUsername(name, email), // only goes into user_metadata
+          username: generateUsername(name, email),
         },
       },
     });
 
     if (authError) {
-      // Check if it's a conflict (email already registered)
-      if (authError.message.toLowerCase().includes("user already registered")) {
-        setIsLoading(false);
-        return { error: "Email is already registered. Please log in instead." };
-      }
+      const alreadyRegistered =
+        authError.message.toLowerCase().includes("user already registered");
 
-      throw authError;
+      toast.error(
+        alreadyRegistered
+          ? "Email is already registered. Please log in instead."
+          : "Sign-up failed. Please try again."
+      );
+
+      setIsLoading(false);
+      return {
+        error: alreadyRegistered
+          ? "Email is already registered. Please log in instead."
+          : authError.message,
+      };
     }
 
     const user = authData.user;
 
     if (!user) {
+      toast.success("Signup successful", {
+        description: "Check your email for the confirmation link.",
+      });
       setIsLoading(false);
-      return { message: "Check your email for the confirmation link." };
+      return {
+        message: "Check your email for the confirmation link.",
+      };
     }
 
-    // Manually insert or update the user's profile
+    // Insert or update profile
     const { error: profileError } = await supabase.from("profiles").upsert({
       id: user.id,
       name,
@@ -120,21 +137,26 @@ export const useAuthActions = ({
       setLoginSuccess(true);
     }
 
+    toast.success("Signup successful", {
+      description: "Confirmation email sent. Please check your inbox.",
+    });
+
     setIsLoading(false);
 
     return authData.session
       ? authData
       : { message: "Check your email for the confirmation link." };
   } catch (error: any) {
-    setIsLoading(false);
-
-    const friendlyMessage = error?.message?.toLowerCase().includes("user already registered")
-      ? "Email is already registered. Please log in instead."
-      : "An error occurred during sign-up. Please try again.";
-
     console.error("Signup error:", error);
 
-    return { error: friendlyMessage };
+    toast.error("Signup failed", {
+      description: error.message || "An unexpected error occurred.",
+    });
+
+    setIsLoading(false);
+    return {
+      error: "An error occurred during sign-up. Please try again.",
+    };
   }
 };
 
