@@ -88,22 +88,26 @@ export const useAuthActions = ({
       },
     });
 
+    // 🛑 Check for common email registration errors
     if (authError) {
-      const alreadyRegistered =
-        authError.message.toLowerCase().includes("user already registered");
+      const errorMsg = authError.message?.toLowerCase();
 
-      toast.error(
-        alreadyRegistered
-          ? "Email is already registered. Please log in instead."
-          : "Sign-up failed. Please try again."
-      );
+      if (
+        errorMsg.includes("user already registered") ||
+        errorMsg.includes("signups not allowed") ||
+        errorMsg.includes("already exists")
+      ) {
+        toast.error("Email is already registered. Please log in instead.");
+        setIsLoading(false);
+        return { error: "Email is already registered. Please log in instead." };
+      }
 
+      // Other auth errors
+      toast.error("Signup failed", {
+        description: authError.message,
+      });
       setIsLoading(false);
-      return {
-        error: alreadyRegistered
-          ? "Email is already registered. Please log in instead."
-          : authError.message,
-      };
+      return { error: authError.message };
     }
 
     const user = authData.user;
@@ -118,7 +122,7 @@ export const useAuthActions = ({
       };
     }
 
-    // Insert or update profile
+    // Upsert profile
     const { error: profileError } = await supabase.from("profiles").upsert({
       id: user.id,
       name,
@@ -159,6 +163,7 @@ export const useAuthActions = ({
     };
   }
 };
+
 
 
 
