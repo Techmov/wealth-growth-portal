@@ -69,65 +69,64 @@ export const useAuthActions = ({
 
   // Wrapper for signup to include referralCode
   const signup = async (name: string, email: string, password: string, referralCode?: string) => {
-    setIsLoading(true);
-    
-    try {
-      // Register the user with Supabase auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name,
-            username: generateUsername(name, email),
-          },
+  setIsLoading(true);
+
+  try {
+    // Register the user with Supabase auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name,
+          username: generateUsername(name, email), // This goes to user_metadata only
         },
-      });
+      },
+    });
 
-      if (authError) {
-        throw authError;
-      }
-
-      // If we have a referral code, apply it after registration
-      if (referralCode && authData.user) {
-        // Set a short timeout to ensure the profile has been created
-        setTimeout(async () => {
-          try {
-            // Update the user's referred_by field
-            const { error } = await supabase
-              .from('profiles')
-              .update({ referred_by: referralCode.toUpperCase() })
-              .eq('id', authData.user?.id);
-            
-            if (error) {
-              console.error("Failed to apply referral code:", error);
-            }
-          } catch (err) {
-            console.error("Error applying referral code:", err);
-          }
-        }, 1000);
-      }
-
-      // Set the session and reload user data
-      if (authData.session) {
-        setSession(authData.session);
-        await fetchProfile(authData.session.user.id);
-        setLoginSuccess(true);
-        setIsLoading(false);
-        return authData;
-      } else {
-        // Email confirmation required
-        setIsLoading(false);
-        return {
-          message: "Check your email for the confirmation link.",
-        };
-      }
-    } catch (error) {
-      setIsLoading(false);
-      console.error("Signup error:", error);
-      return { error };
+    if (authError) {
+      throw authError;
     }
-  };
+
+    const user = authData.user;
+
+    if (!user) {
+      setIsLoading(false);
+      return { message: "Check your email for the confirmation link." };
+    }
+
+    // Explicitly insert user data into 'profiles' table
+    const { error: profileError } = await supabase.from("profiles").upsert({
+      id: user.id, // assuming 'id' in profiles is linked to auth.user.id
+      name,
+      username: generateUsername(name, email),
+      email,
+      referred_by: referralCode?.toUpperCase() || null,
+    });
+
+    if (profileError) {
+      console.error("Profile creation error:", profileError);
+    }
+
+    // Set the session and fetch profile
+    if (authData.session) {
+      setSession(authData.session);
+      await fetchProfile(user.id);
+      setLoginSuccess(true);
+    }
+
+    setIsLoading(false);
+
+    return authData.session
+      ? authData
+      : { message: "Check your email for the confirmation link." };
+  } catch (error) {
+    setIsLoading(false);
+    console.error("Signup error:", error);
+    return { error };
+  }
+};
+
 
   // Improved logout function with proper async handling
   const logout = async () => {
