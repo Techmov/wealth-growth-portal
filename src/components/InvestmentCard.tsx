@@ -20,88 +20,85 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
   const { invest, userInvestments } = useInvestment();
   const { user, updateUser } = useAuth();
 
- const handleInvest = async () => {
-  if (!user) {
-    toast.error("Please log in to invest");
-    return;
-  }
-
-  if (product.amount > user.balance) {
-    toast.error("Insufficient balance. Please deposit more funds.");
-    return;
-  }
-
-  try {
-    setIsInvesting(true);
-
-    const startDate = new Date();
-    const endDate = new Date(
-      startDate.getTime() + product.duration * 24 * 60 * 60 * 1000
-    );
-
-    const startingValue = product.amount;
-    const dailyGrowthRate = product.growthRate;
-    const currentValue = startingValue * (dailyGrowthRate / 100); // first day's growth
-
-    // Insert investment
-    const { error: insertError } = await supabase
-      .from("investments")
-      .insert({
-        user_id: user.id,
-        product_id: product.id,
-        amount: product.amount,
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
-        status: "active",
-        starting_value: startingValue,
-        final_value: startingValue * 2,
-        current_value: currentValue,
-        daily_growth_rate: dailyGrowthRate,
-        last_profit_claim_date: endDate.toISOString(),
-      });
-
-    if (insertError) {
-      throw new Error(insertError.message || "Failed to insert investment");
+  const handleInvest = async () => {
+    if (!user) {
+      toast.error("Please log in to invest");
+      return;
     }
 
-    // Deduct amount from user's balance and update total_invested
-    // Fetch latest profile data
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("balance, total_invested")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || !profile) {
-      throw new Error("Failed to fetch user profile for balance update");
+    if (product.amount > user.balance) {
+      toast.error("Insufficient balance. Please deposit more funds.");
+      return;
     }
 
-    const newBalance = profile.balance - product.amount;
-    const newTotalInvested = (profile.total_invested || 0) + product.amount;
+    try {
+      setIsInvesting(true);
 
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ balance: newBalance, total_invested: newTotalInvested })
-      .eq("id", user.id);
+      // Generate single timestamp for creation
+      const creationDate = new Date().toISOString();
+      const endDate = new Date(
+        new Date(creationDate).getTime() + product.duration * 24 * 60 * 60 * 1000
+      ).toISOString();
 
-    if (updateError) {
-      throw new Error(updateError.message || "Failed to update user balance");
+      // Initial values
+      const startingValue = product.amount;
+      const dailyGrowthRate = product.growthRate;
+      const currentValue = startingValue; // Start with principal amount
+
+      // Insert investment with synchronized timestamps
+      const { error: insertError } = await supabase
+        .from("investments")
+        .insert({
+          user_id: user.id,
+          product_id: product.id,
+          amount: product.amount,
+          start_date: creationDate,
+          end_date: endDate,
+          status: "active",
+          starting_value: startingValue,
+          final_value: startingValue * 2,
+          current_value: currentValue,
+          daily_growth_rate: dailyGrowthRate,
+          last_profit_claim_date: creationDate, // Match creation date
+          created_at: creationDate // Explicit set timestamp
+        });
+
+      if (insertError) {
+        throw new Error(insertError.message || "Failed to create investment");
+      }
+
+      // Update user balance
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("balance, total_invested")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error("Failed to fetch user profile");
+      }
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          balance: profile.balance - product.amount,
+          total_invested: (profile.total_invested || 0) + product.amount
+        })
+        .eq("id", user.id);
+
+      if (updateError) throw new Error("Balance update failed");
+      if (updateUser) await updateUser();
+
+      toast.success(`Successfully invested in ${product.name}!`);
+    } catch (error: any) {
+      console.error("Investment failed:", error);
+      toast.error(error.message || "Investment failed. Please try again.");
+    } finally {
+      setIsInvesting(false);
     }
+  };
 
-    if (updateUser) await updateUser();
-
-    toast.success(`Successfully invested in ${product.name}!`);
-  } catch (error: any) {
-    console.error("Investment failed:", error);
-    toast.error(
-      error.message || "Failed to process investment. Please try again later."
-    );
-  } finally {
-    setIsInvesting(false);
-  }
-};
-
-
+  // Rest of the component remains the same...
   const calculateReturn = () => product.amount * 2;
 
   const riskColorMap = {
