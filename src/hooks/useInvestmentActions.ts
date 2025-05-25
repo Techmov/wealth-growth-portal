@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Downline } from "@/types";
 
 export function useInvestmentActions(user: User | null) {
-  // Accepts full investment data object, not just productId
   const invest = async (investmentData: {
     userId: string;
     productId: string;
@@ -15,7 +14,6 @@ export function useInvestmentActions(user: User | null) {
     startingValue: number;
     finalValue: number;
     dailyGrowthRate: number;
-    lastProfitClaimDate: string;
   }) => {
     if (!user) {
       toast.error("You must be logged in to invest");
@@ -39,7 +37,9 @@ export function useInvestmentActions(user: User | null) {
         return;
       }
 
-      // Insert investment directly
+      // Set creation timestamp and use it for both fields
+      const now = new Date().toISOString();
+
       const { error: investError } = await supabase
         .from("investments")
         .insert([
@@ -54,7 +54,8 @@ export function useInvestmentActions(user: User | null) {
             starting_value: investmentData.startingValue,
             final_value: investmentData.finalValue,
             daily_growth_rate: investmentData.dailyGrowthRate,
-            last_profit_claim_date: investmentData.lastProfitClaimDate,
+            created_at: now,
+            last_profit_claim_date: now, // ✅ Set to same value as created_at
           },
         ]);
 
@@ -62,7 +63,7 @@ export function useInvestmentActions(user: User | null) {
         throw new Error(investError.message || "Failed to create investment");
       }
 
-      // Update user balance and total invested
+      // Update user's profile (balance and total invested)
       const newBalance = profileData.balance - investmentData.amount;
       const newTotalInvested =
         (profileData.total_invested || 0) + investmentData.amount;
@@ -87,7 +88,6 @@ export function useInvestmentActions(user: User | null) {
     }
   };
 
-  // Claim profit: sets last_profit_claim_date to end_date, adds final_value to balance, marks as completed
   const claimProfit = async (investmentId: string) => {
     if (!user) {
       toast.error("You must be logged in to claim profit");
@@ -95,7 +95,6 @@ export function useInvestmentActions(user: User | null) {
     }
 
     try {
-      // Fetch the investment
       const { data: investment, error: invError } = await supabase
         .from("investments")
         .select("*")
@@ -109,17 +108,16 @@ export function useInvestmentActions(user: User | null) {
       const now = new Date();
       const endDate = new Date(investment.end_date);
 
-      // Only allow claim if investment is matured and not already claimed
       if (now < endDate) {
         toast.error("You can only claim profit after the investment matures.");
         return;
       }
+
       if (investment.status === "completed" || investment.last_profit_claim_date) {
         toast.info("Profit already claimed for this investment.");
         return;
       }
 
-      // Add final_value to user's balance
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("balance")
@@ -131,18 +129,21 @@ export function useInvestmentActions(user: User | null) {
       }
 
       const newBalance = (profile.balance || 0) + (investment.final_value || 0);
+const newTotalInvested = Math.max((profile.total_invested || 0) - investment.amount, 0);
 
-      // Update user balance
-      const { error: updateProfileError } = await supabase
-        .from("profiles")
-        .update({ balance: newBalance })
-        .eq("id", user.id);
+const { error: updateProfileError } = await supabase
+  .from("profiles")
+  .update({
+    balance: newBalance,
+    total_invested: newTotalInvested,
+  })
+  .eq("id", user.id);
+
 
       if (updateProfileError) {
         throw new Error("Failed to update user balance");
       }
 
-      // Mark investment as completed/expired and set last_profit_claim_date
       const { error: updateInvestmentError } = await supabase
         .from("investments")
         .update({
@@ -193,9 +194,7 @@ export function useInvestmentActions(user: User | null) {
     try {
       if (referralCode && referralCode !== user.referralCode) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        toast.info(
-          "Referral bonuses are automatically added when referrals invest."
-        );
+        toast.info("Referral bonuses are automatically added when referrals invest.");
       } else {
         toast.error("Invalid referral code");
       }
