@@ -4,9 +4,9 @@ import { useAuth } from "@/context/AuthContext";
 
 export function useUserInvestmentData() {
   const { user } = useAuth();
-  const [userInvestments, setUserInvestments] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [withdrawalRequests, setWithdrawalRequests] = useState([]);
+  const [userInvestments, setUserInvestments] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<any[]>([]);
   const [totalInvested, setTotalInvested] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -15,149 +15,122 @@ export function useUserInvestmentData() {
 
     setIsLoading(true);
 
-    const { data, error } = await supabase
-      .from("investments")
-      .select(`
-        id,
-        product_id,
-        amount,
-        start_date,
-        end_date,
-        starting_value,
-        current_value,
-        daily_growth_rate,
-        status,
-        final_value,
-        last_profit_claim_date,
-        created_at,
-        user_id
-      `)
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("investments")
+        .select(`
+          id,
+          product_id,
+          amount,
+          start_date,
+          end_date,
+          starting_value,
+          current_value,
+          daily_growth_rate,
+          status,
+          final_value,
+          last_profit_claim_date,
+          created_at,
+          user_id
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
-    if (error) {
+      if (error) throw error;
+
+      const investments = data.map(inv => ({
+        ...inv,
+        start_date: new Date(inv.start_date),
+        end_date: new Date(inv.end_date),
+        created_at: new Date(inv.created_at),
+        // Ensure last_profit_claim_date matches created_at for new investments
+        last_profit_claim_date: inv.last_profit_claim_date 
+          ? new Date(inv.last_profit_claim_date)
+          : new Date(inv.created_at),
+      }));
+
+      setUserInvestments(investments);
+      setTotalInvested(investments.reduce((sum, inv) => sum + (inv.amount || 0), 0));
+    } catch (error) {
       console.error("Error fetching investments:", error.message);
       setUserInvestments([]);
       setTotalInvested(0);
-    } else {
-      const investments = data.map((inv) => ({
-        ...inv,
-        starting_value: inv.starting_value,
-        current_value: inv.current_value,
-        daily_growth_rate: inv.daily_growth_rate,
-        start_date: inv.start_date,
-        end_date: inv.end_date,
-        final_value: inv.final_value,
-        last_profit_claim_date: inv.last_profit_claim_date,
-        created_at: inv.created_at,
-      }));
-      setUserInvestments(investments);
-
-      const total = investments.reduce(
-        (sum, inv) => sum + (inv.amount || 0),
-        0
-      );
-      setTotalInvested(total);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   }, [user]);
 
   const updateInvestmentProfits = useCallback(
-  async (investmentId: string) => {
-    if (!user) {
-      console.warn("No user found.");
-      return;
-    }
+    async (investmentId: string) => {
+      if (!user) return;
 
-    const investment = userInvestments.find((inv) => inv.id === investmentId);
-    if (!investment) {
-      console.warn(`Investment with id ${investmentId} not found.`);
-      return;
-    }
+      const investment = userInvestments.find(inv => inv.id === investmentId);
+      if (!investment) {
+        console.warn("Investment not found");
+        return;
+      }
 
-    // Prevent claiming if investment is already closed
-    if (investment.status === "closed") {
-      window.alert("This investment is already closed. No more profits can be claimed.");
-      return;
-    }
+      if (investment.status === "closed") {
+        alert("Investment closed");
+        return;
+      }
 
-    const today = new Date();
-    const lastClaimDate = new Date(investment.last_profit_claim_date);
-    const endDate = new Date(investment.end_date);
-    const currentDateStr = today.toISOString().split("T")[0];
+      const now = new Date();
+      const endDate = new Date(investment.end_date);
+      endDate.setHours(23, 59, 59, 999);
 
-    // Check if 24 hours have passed since last claim
-    const diffHours = (today.getTime() - lastClaimDate.getTime()) / (1000 * 60 * 60);
-    if (diffHours < 24) {
-      window.alert("You can only claim profit once every 24 hours.");
-      return;
-    }
+      // Use client-side calculated claim date
+      const lastClaimDate = investment.last_profit_claim_date;
 
-    // If investment matured and not closed yet
-    if (today >= endDate && investment.status !== "closed") {
-      // Add current value to user's balance using your SQL function
-      const { error: balanceUpdateError } = await supabase.rpc("increment_user_balance", {
+      if ((now.getTime() - lastClaimDate.getTime()) < 86400000) {
+        const nextClaim = new Date(lastClaimDate.getTime() + 86400000);
+        alert(`Next claim: ${nextClaim.toLocaleString()}`);
+        return;
+      }
+
+      try {
+        if (now >= endDate) {
+          await handleMatureInvestment(investment);
+        } else {
+          await claimDailyProfit(investment, now);
+        }
+        await fetchUserInvestments();
+      } catch (error) {
+        console.error("Transaction failed:", error.message);
+        alert("Operation failed");
+      }
+    },
+    [user, userInvestments, fetchUserInvestments]
+  );
+
+  async function handleMatureInvestment(investment: any) {
+    await Promise.all([
+      supabase.rpc("increment_user_balance", {
         user_id_input: user.id,
         amount_input: investment.current_value,
-      });
-
-      if (balanceUpdateError) {
-        console.error("Error updating user balance:", balanceUpdateError.message);
-        window.alert("Failed to add matured profit to your balance.");
-        return;
-      }
-
-      // Mark investment as closed
-      const { error: statusUpdateError } = await supabase
+      }),
+      supabase
         .from("investments")
         .update({ status: "closed" })
-        .eq("id", investment.id);
+        .eq("id", investment.id),
+    ]);
+    alert("Investment matured successfully");
+  }
 
-      if (statusUpdateError) {
-        console.error("Error closing investment:", statusUpdateError.message);
-        window.alert("Failed to close investment after maturity.");
-        return;
-      }
+  async function claimDailyProfit(investment: any, claimDate: Date) {
+    const dailyProfit = Number(investment.amount) * (investment.daily_growth_rate / 100);
+    const newValue = investment.current_value + dailyProfit;
 
-      window.alert("Investment matured. Profit added to your balance.");
-      fetchUserInvestments();
-      return;
-    }
-
-    // Calculate daily profit to add
-    const { amount, daily_growth_rate, current_value } = investment;
-    const dailyGrowth = Number(amount) * (daily_growth_rate / 100);
-    const profitToAdd = dailyGrowth;
-
-    // New current value after adding profit
-    const newCurrentValue = parseFloat(
-      (Math.abs(current_value) + Math.abs(profitToAdd)).toFixed(2)
-    );
-
-    // Update investment with new profit and claim date
-    const { data: updateData, error: updateError } = await supabase
+    await supabase
       .from("investments")
       .update({
-        amount: newCurrentValue,
-        current_value: newCurrentValue,
-        last_profit_claim_date: currentDateStr,
+        current_value: newValue,
+        last_profit_claim_date: claimDate.toISOString(),
       })
-      .eq("id", investmentId.trim())
-      .select();
+      .eq("id", investment.id);
 
-    if (updateError) {
-      console.error(`Error updating investment ${investmentId}:`, updateError.message);
-      window.alert("Failed to update investment.");
-      return;
-    }
-
-    window.alert(`Investment updated. Profit of ${profitToAdd.toFixed(2)} added.`);
-    fetchUserInvestments();
-  },
-  [user, userInvestments, fetchUserInvestments]
-);
-
+    alert(`Claimed $${dailyProfit.toFixed(2)} profit`);
+  }
 
   useEffect(() => {
     fetchUserInvestments();
