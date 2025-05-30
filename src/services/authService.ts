@@ -2,6 +2,22 @@
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types';
 
+export async function login(credentials: { email: string; password: string }) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: credentials.email,
+      password: credentials.password,
+    });
+
+    if (error) throw error;
+
+    return data;
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
+}
+
 export async function signUpUser(userData: {
   email: string;
   password: string;
@@ -109,7 +125,6 @@ export async function requestWithdrawal(
       p_amount: amount,
       p_trc20_address: trc20Address,
       p_withdrawal_source: withdrawalSource,
-      // Removed p_fee_amount since it doesn't exist in the function signature
     });
 
     if (error) throw error;
@@ -168,9 +183,9 @@ export async function getUserProfile(userId: string): Promise<User | null> {
       totalInvested: data.total_invested,
       totalWithdrawn: data.total_withdrawn,
       referralBonus: data.referral_bonus,
-      trc20Address: data.trc20_address, // Fixed property name
+      trc20Address: data.trc20_address,
       withdrawalPassword: data.withdrawal_password,
-      role: data.role,
+      role: (data.role as 'user' | 'admin') || 'user',
       createdAt: new Date(data.created_at),
       escrowedAmount: data.escrowed_amount,
     };

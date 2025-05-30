@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -15,6 +14,9 @@ import { WithdrawalsRequestList } from "@/components/WithdrawalsRequestList";
 import { toast } from "sonner";
 import { AlertCircle, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { ResponsivePagination } from "@/components/ResponsivePagination";
+import { DepositForm } from "@/components/DepositForm";
+import { WithdrawalForm } from "@/components/WithdrawalForm";
+import { Alert } from "@/components/ui/alert";
 
 const TransactionsPage = () => {
   const { user, deposit, requestWithdrawal } = useAuth();
@@ -147,6 +149,56 @@ const TransactionsPage = () => {
           <p className="text-muted-foreground">
             Manage your funds and track your transactions
           </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ArrowUp className="h-5 w-5 text-green-600" />
+                Make a Deposit
+              </CardTitle>
+              <CardDescription>
+                Add funds to your account to start investing
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DepositForm />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ArrowDown className="h-5 w-5 text-red-600" />
+                Request Withdrawal
+              </CardTitle>
+              <CardDescription>
+                Withdraw your profits and earnings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {user?.trc20Address ? (
+                <WithdrawalForm />
+              ) : (
+                <div className="space-y-4">
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>TRC20 Address Required</AlertTitle>
+                    <AlertDescription>
+                      You need to set up your TRC20 address before requesting withdrawals.
+                    </AlertDescription>
+                  </Alert>
+                  <Button 
+                    onClick={() => navigate("/profile")} 
+                    className="w-full"
+                  >
+                    Set Up TRC20 Address
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -58,8 +58,7 @@ const Dashboard = () => {
   const totalInvested = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
   
   // Calculate current investment value
-  const currentInvestmentValue = activeInvestments.reduce((sum, inv) => sum + inv.current_value
-, 0);
+  const currentInvestmentValue = activeInvestments.reduce((sum, inv) => sum + inv.current_value, 0);
   console.log("Current Investment Value:", currentInvestmentValue);
   // Calculate profit/loss
   const profitLoss = currentInvestmentValue - totalInvested;
@@ -131,7 +130,7 @@ const Dashboard = () => {
     <div className="text-sm text-muted-foreground mb-1">Profit/Loss</div>
     <div className={`text-2xl font-bold ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
       {!isNaN(profitLoss) ? `${profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)}` : '0.00'} 
-      ({!isNaN(profitLossPercentage) ? `${profitLossPercentage >= 0 ? '+' : ''}${profitLossPercentage}%` : '0%'})
+      ({Number(profitLossPercentage) >= 0 ? '+' : ''}{profitLossPercentage}%)
     </div>
   </div>
 </div>
@@ -139,7 +138,7 @@ const Dashboard = () => {
               {activeInvestments.length > 0 ? (
                 <div className="space-y-4">
                   {activeInvestments.slice(0, 2).map(investment => {
-                    const investmentProduct = products?.find(p => p.id === investment.productId);
+                    const investmentProduct = products?.find(p => p.id === investment.product_id);
 
                     return (
                       <ActiveInvestmentCard 
