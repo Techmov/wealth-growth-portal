@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -51,7 +52,7 @@ export function useUserInvestmentData() {
 
       setUserInvestments(investments);
       setTotalInvested(investments.reduce((sum, inv) => sum + (inv.amount || 0), 0));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching investments:", error.message);
       setUserInvestments([]);
       setTotalInvested(0);
@@ -95,7 +96,7 @@ export function useUserInvestmentData() {
           await claimDailyProfit(investment, now);
         }
         await fetchUserInvestments();
-      } catch (error) {
+      } catch (error: any) {
         console.error("Transaction failed:", error.message);
         alert("Operation failed");
       }
@@ -106,7 +107,7 @@ export function useUserInvestmentData() {
   async function handleMatureInvestment(investment: any) {
     await Promise.all([
       supabase.rpc("increment_user_balance", {
-        user_id_input: user.id,
+        user_id_input: user!.id,
         amount_input: investment.current_value,
       }),
       supabase

@@ -47,45 +47,70 @@ export type Database = {
           amount: number | null
           created_at: string
           current_value: number | null
+          daily_growth_rate: number | null
           end_date: string | null
           final_value: number | null
-          id: number
+          id: string
           last_profit_claim_date: string | null
-          product_id: number | null
+          product_id: string | null
           start_date: string | null
           starting_value: number | null
           status: string | null
-          user_id: number | null
+          user_id: string | null
         }
         Insert: {
           amount?: number | null
           created_at?: string
           current_value?: number | null
+          daily_growth_rate?: number | null
           end_date?: string | null
           final_value?: number | null
-          id?: number
+          id?: string
           last_profit_claim_date?: string | null
-          product_id?: number | null
+          product_id?: string | null
           start_date?: string | null
           starting_value?: number | null
           status?: string | null
-          user_id?: number | null
+          user_id?: string | null
         }
         Update: {
           amount?: number | null
           created_at?: string
           current_value?: number | null
+          daily_growth_rate?: number | null
           end_date?: string | null
           final_value?: number | null
-          id?: number
+          id?: string
           last_profit_claim_date?: string | null
-          product_id?: number | null
+          product_id?: string | null
           start_date?: string | null
           starting_value?: number | null
           status?: string | null
-          user_id?: number | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "investments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_withdrawal_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       offers: {
         Row: {
@@ -170,12 +195,14 @@ export type Database = {
           balance: number
           created_at: string | null
           email: string
+          escrow_balance: number | null
           escrowed_amount: number | null
           id: string
           name: string
           referral_bonus: number
           referral_code: string
           referred_by: string | null
+          referred_by_code: string | null
           role: string
           total_invested: number
           total_referred_investments: number | null
@@ -189,12 +216,14 @@ export type Database = {
           balance?: number
           created_at?: string | null
           email: string
+          escrow_balance?: number | null
           escrowed_amount?: number | null
           id: string
           name: string
           referral_bonus?: number
           referral_code: string
           referred_by?: string | null
+          referred_by_code?: string | null
           role?: string
           total_invested?: number
           total_referred_investments?: number | null
@@ -208,12 +237,14 @@ export type Database = {
           balance?: number
           created_at?: string | null
           email?: string
+          escrow_balance?: number | null
           escrowed_amount?: number | null
           id?: string
           name?: string
           referral_bonus?: number
           referral_code?: string
           referred_by?: string | null
+          referred_by_code?: string | null
           role?: string
           total_invested?: number
           total_referred_investments?: number | null
@@ -285,8 +316,11 @@ export type Database = {
           date: string | null
           deposit_screenshot: string | null
           description: string | null
+          email: string | null
+          fee: number | null
           id: string
           rejection_reason: string | null
+          source: string | null
           status: string
           trc20_address: string | null
           tx_hash: string | null
@@ -298,8 +332,11 @@ export type Database = {
           date?: string | null
           deposit_screenshot?: string | null
           description?: string | null
+          email?: string | null
+          fee?: number | null
           id?: string
           rejection_reason?: string | null
+          source?: string | null
           status: string
           trc20_address?: string | null
           tx_hash?: string | null
@@ -311,8 +348,11 @@ export type Database = {
           date?: string | null
           deposit_screenshot?: string | null
           description?: string | null
+          email?: string | null
+          fee?: number | null
           id?: string
           rejection_reason?: string | null
+          source?: string | null
           status?: string
           trc20_address?: string | null
           tx_hash?: string | null
@@ -406,11 +446,11 @@ export type Database = {
           username: string | null
         }
         Insert: {
-          available_withdrawal?: never
+          available_withdrawal?: number | null
           balance?: number | null
-          escrowed_amount?: number | null
+          escrowed_amount?: never
           pending_withdrawals?: never
-          profit_amount?: never
+          profit_amount?: number | null
           referral_bonus?: number | null
           total_invested?: number | null
           total_withdrawn?: number | null
@@ -418,11 +458,11 @@ export type Database = {
           username?: string | null
         }
         Update: {
-          available_withdrawal?: never
+          available_withdrawal?: number | null
           balance?: number | null
-          escrowed_amount?: number | null
+          escrowed_amount?: never
           pending_withdrawals?: never
-          profit_amount?: never
+          profit_amount?: number | null
           referral_bonus?: number | null
           total_invested?: number | null
           total_withdrawn?: number | null
@@ -481,12 +521,14 @@ export type Database = {
           balance: number
           created_at: string | null
           email: string
+          escrow_balance: number | null
           escrowed_amount: number | null
           id: string
           name: string
           referral_bonus: number
           referral_code: string
           referred_by: string | null
+          referred_by_code: string | null
           role: string
           total_invested: number
           total_referred_investments: number | null
@@ -508,8 +550,11 @@ export type Database = {
           date: string | null
           deposit_screenshot: string | null
           description: string | null
+          email: string | null
+          fee: number | null
           id: string
           rejection_reason: string | null
+          source: string | null
           status: string
           trc20_address: string | null
           tx_hash: string | null
@@ -542,21 +587,27 @@ export type Database = {
           username: string
         }[]
       }
+      increment_user_balance: {
+        Args: { user_id_input: string; amount_input: number }
+        Returns: undefined
+      }
+      invest: {
+        Args: {
+          user_id: string
+          product_id: string
+          investment_amount: number
+          daily_growth_rate: number
+          duration_days: number
+        }
+        Returns: undefined
+      }
       request_withdrawal: {
-        Args:
-          | {
-              p_user_id: string
-              p_amount: number
-              p_trc20_address: string
-              p_withdrawal_source: string
-            }
-          | {
-              p_user_id: string
-              p_amount: number
-              p_trc20_address: string
-              p_withdrawal_source?: string
-              p_fee_amount?: number
-            }
+        Args: {
+          p_user_id: string
+          p_amount: number
+          p_trc20_address: string
+          p_withdrawal_source?: string
+        }
         Returns: string
       }
     }

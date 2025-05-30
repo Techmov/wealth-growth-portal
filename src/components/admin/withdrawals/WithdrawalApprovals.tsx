@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { WithdrawalRequest } from "@/types";
 import { toast } from "sonner";
-import { incrementValue } from "@/utils/supabaseUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { adminUtils } from "@/utils/adminUtils";
 import { WithdrawalsTable } from "./WithdrawalsTable";
@@ -112,7 +111,7 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
     if (!selectedWithdrawal) return;
     
     try {
-      // Create transaction record
+      // Create transaction record for the withdrawal
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -127,7 +126,7 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
 
       if (transactionError) throw transactionError;
 
-      // Update withdrawal status
+      // Update withdrawal status - the trigger will handle balance updates automatically
       const { error: withdrawalError } = await supabase
         .from('withdrawal_requests')
         .update({ 
@@ -137,14 +136,6 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
         .eq('id', selectedWithdrawal.id);
 
       if (withdrawalError) throw withdrawalError;
-      
-      // Increment total_withdrawn on the user's profile
-      await incrementValue(
-        'profiles',
-        'total_withdrawn',
-        selectedWithdrawal.userId,
-        selectedWithdrawal.amount
-      );
 
       // Update local state
       setWithdrawals(withdrawals.filter(w => w.id !== selectedWithdrawal.id));
@@ -166,15 +157,7 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
     if (!withdrawal) return;
     
     try {
-      // Refund the amount to user's balance
-      await incrementValue(
-        'profiles',
-        'balance',
-        withdrawal.userId,
-        withdrawal.amount
-      );
-      
-      // Update withdrawal status
+      // Update withdrawal status - the trigger will handle returning funds from escrow automatically
       const { error } = await supabase
         .from('withdrawal_requests')
         .update({ 
@@ -188,7 +171,7 @@ export function WithdrawalApprovals({ onStatusChange }: WithdrawalApprovalsProps
       // Update local state
       setWithdrawals(withdrawals.filter(w => w.id !== withdrawalId));
       
-      toast.success("Withdrawal rejected and amount refunded to user's balance");
+      toast.success("Withdrawal rejected and amount returned from escrow");
       
       if (onStatusChange) {
         onStatusChange();

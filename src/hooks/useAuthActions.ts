@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService";
@@ -290,12 +291,13 @@ export const useAuthActions = ({
 
     try {
       const toastId = toast.loading("Processing withdrawal request...");
+      
+      // Use the corrected database function that handles escrow properly
       const { data, error } = await supabase.rpc("request_withdrawal", {
         p_user_id: user.id,
-        p_amount: amount - WITHDRAWAL_FEE,
+        p_amount: amount,
         p_trc20_address: trc20Address,
         p_withdrawal_source: withdrawalSource,
-        p_fee_amount: WITHDRAWAL_FEE,
       });
 
       if (error) {
@@ -308,9 +310,7 @@ export const useAuthActions = ({
 
       toast.success("Withdrawal request submitted", {
         id: toastId,
-        description: `You will receive $${amount.toFixed(
-          2
-        )} after a $${WITHDRAWAL_FEE.toFixed(2)} fee. Processed within 24 hours.`,
+        description: `Request for $${amount.toFixed(2)} submitted successfully. Processed within 24 hours.`,
       });
 
       return Promise.resolve(data);
