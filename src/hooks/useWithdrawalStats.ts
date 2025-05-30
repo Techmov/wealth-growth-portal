@@ -10,7 +10,7 @@ export function useWithdrawalStats(user: User | null) {
     referralBonus: 0,
     pendingWithdrawals: 0,
     escrowedAmount: 0,
-    totalWithdrawn: 0, // ✅ include this
+    totalWithdrawn: 0,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -21,11 +21,10 @@ export function useWithdrawalStats(user: User | null) {
     try {
       setIsLoading(true);
 
-      const [availableRes, statsRes, totalWithdrawnRes] = await Promise.all([
-        supabase.rpc('calculate_available_withdrawal', { user_id: user.id }),
+      const [statsRes, totalWithdrawnRes] = await Promise.all([
         supabase
           .from('user_withdrawal_stats')
-          .select('profit_amount, referral_bonus, pending_withdrawals, escrowed_amount')
+          .select('profit_amount, referral_bonus, pending_withdrawals, escrowed_amount, balance') // `balance` now reflects availableWithdrawal
           .eq('user_id', user.id)
           .single(),
         supabase
@@ -35,19 +34,19 @@ export function useWithdrawalStats(user: User | null) {
           .eq('status', 'approved'),
       ]);
 
-      if (availableRes.error || statsRes.error || totalWithdrawnRes.error) {
-        throw availableRes.error || statsRes.error || totalWithdrawnRes.error;
+      if (statsRes.error || totalWithdrawnRes.error) {
+        throw statsRes.error || totalWithdrawnRes.error;
       }
 
       const totalWithdrawn = totalWithdrawnRes.data?.reduce((sum, row) => sum + (row.amount || 0), 0) || 0;
 
       setStats({
-        availableWithdrawal: availableRes.data || 0,
+        availableWithdrawal: statsRes.data?.balance || 0, // 🆕 reflects full balance
         profitAmount: statsRes.data?.profit_amount || 0,
         referralBonus: statsRes.data?.referral_bonus || 0,
         pendingWithdrawals: statsRes.data?.pending_withdrawals || 0,
         escrowedAmount: statsRes.data?.escrowed_amount || 0,
-        totalWithdrawn, // ✅ fix here
+        totalWithdrawn,
       });
     } catch (error: any) {
       console.error('Error fetching withdrawal stats:', error.message);
