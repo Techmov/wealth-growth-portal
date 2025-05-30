@@ -16,7 +16,7 @@ import { AlertCircle, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { ResponsivePagination } from "@/components/ResponsivePagination";
 import { DepositForm } from "@/components/DepositForm";
 import { WithdrawalForm } from "@/components/WithdrawalForm";
-import { Alert } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const TransactionsPage = () => {
   const { user, deposit, requestWithdrawal } = useAuth();
@@ -353,7 +353,7 @@ const TransactionsPage = () => {
                       <Button 
                         type="submit" 
                         className="w-full" 
-                        disabled={isProcessing || !user.trc20_address || !amount || amount === "0"}
+                        disabled={isProcessing || !user.trc20Address || !amount || amount === "0"}
                       >
                         {isProcessing ? (
                           <>
