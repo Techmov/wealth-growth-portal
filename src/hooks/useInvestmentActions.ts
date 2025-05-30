@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Downline } from "@/types";
@@ -120,7 +121,7 @@ export function useInvestmentActions(user: User | null) {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("balance")
+        .select("balance, total_invested")
         .eq("id", user.id)
         .single();
 
@@ -129,16 +130,15 @@ export function useInvestmentActions(user: User | null) {
       }
 
       const newBalance = (profile.balance || 0) + (investment.final_value || 0);
-const newTotalInvested = Math.max((profile.total_invested || 0) - investment.amount, 0);
+      const newTotalInvested = Math.max((profile.total_invested || 0) - investment.amount, 0);
 
-const { error: updateProfileError } = await supabase
-  .from("profiles")
-  .update({
-    balance: newBalance,
-    total_invested: newTotalInvested,
-  })
-  .eq("id", user.id);
-
+      const { error: updateProfileError } = await supabase
+        .from("profiles")
+        .update({
+          balance: newBalance,
+          total_invested: newTotalInvested,
+        })
+        .eq("id", user.id);
 
       if (updateProfileError) {
         throw new Error("Failed to update user balance");

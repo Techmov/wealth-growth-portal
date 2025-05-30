@@ -16,19 +16,21 @@ export interface Product {
   active: boolean;
 }
 
-// Investment type from Supabase
+// Investment type from Supabase - using snake_case to match database
 export interface Investment {
   id: string;
-  userId: string;
-  productId: string;
+  user_id: string;
+  product_id: string;
   amount: number;
-  startDate: Date;
-  endDate: Date;
-  startingValue: number;
-  currentValue: number;
-  finalValue: number;
+  start_date: string;
+  end_date: string;
+  starting_value: number;
+  current_value: number;
+  final_value: number;
   status: 'active' | 'completed' | 'cancelled';
-  lastProfitClaimDate?: Date;
+  last_profit_claim_date?: string;
+  daily_growth_rate: number;
+  created_at: string;
 }
 
 // Transaction type from Supabase

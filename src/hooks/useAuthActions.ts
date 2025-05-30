@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import * as authService from "@/services/authService";
@@ -107,6 +106,7 @@ export const useAuthActions = ({
         name,
         username: generateUsername(name, email),
         email,
+        referral_code: generateUsername(name, email).toUpperCase(),
         referred_by: referralCode?.toUpperCase() || null,
       });
 

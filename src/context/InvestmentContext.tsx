@@ -1,120 +1,127 @@
-import { createContext, useContext, ReactNode } from "react";
-import {
-  Investment,
-  Product,
-  Transaction,
-  WithdrawalRequest,
-  Downline,
-} from "@/types";
-import { useAuth } from "./AuthContext";
-import { useProductsData } from "@/hooks/useProductsData";
-import { useUserInvestmentData } from "@/hooks/useUserInvestmentData";
-import { useInvestmentActions } from "@/hooks/useInvestmentActions";
-import { supabase } from "@/integrations/supabase/client";
 
-const platformTrc20Address = "TQk4fXaSRJt32y5od9TeQFh6z3zaeyiQcu";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Product, Investment } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { useInvestmentActions } from '@/hooks/useInvestmentActions';
 
-type InvestmentContextType = {
+interface InvestmentContextType {
   products: Product[];
   userInvestments: Investment[];
-  investments: Investment[]; // alias
-  transactions: Transaction[];
-  withdrawalRequests: WithdrawalRequest[];
-  platformTrc20Address: string;
   isLoading: boolean;
-  invest: (investmentData: {
-    userId: string;
-    productId: string;
-    amount: number;
-    startDate: string;
-    endDate: string;
-    status: string;
-    currentValue: number;
-  }) => Promise<void>;
-  claimProfit: (investmentId: string) => Promise<any>;
-  getClaimableProfit: (investmentId: string) => Promise<number>;
-  getReferralBonus: (referralCode: string) => Promise<void>;
-  getUserDownlines: () => Promise<Downline[]>;
-};
+  invest: (investmentData: any) => Promise<void>;
+  refreshData: () => Promise<void>;
+}
 
 const InvestmentContext = createContext<InvestmentContextType | undefined>(undefined);
 
 export function InvestmentProvider({ children }: { children: ReactNode }) {
-  const { user, setUser } = useAuth();
-  const { products, isLoading: productsLoading } = useProductsData();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [userInvestments, setUserInvestments] = useState<Investment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user, fetchProfile } = useAuth();
+  const { invest: investAction } = useInvestmentActions(user);
 
-  const {
-    userInvestments = [],
-    transactions = [],
-    withdrawalRequests = [],
-    isLoading: userDataLoading,
-  } = useUserInvestmentData(); // ✅ no user passed here
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('active', true)
+        .order('created_at', { ascending: false });
 
-  const {
-    claimProfit,
-    getClaimableProfit,
-    getReferralBonus,
-    getUserDownlines,
-  } = useInvestmentActions(user);
+      if (error) throw error;
 
-  const isLoading = productsLoading || userDataLoading;
+      const formattedProducts: Product[] = (data || []).map(product => ({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        amount: product.amount,
+        duration: product.duration,
+        growthRate: product.growth_rate,
+        risk: product.risk as 'low' | 'medium' | 'high',
+        active: product.active,
+      }));
 
-  const invest = async (investmentData: {
-    userId: string;
-    productId: string;
-    amount: number;
-    startDate: string;
-    endDate: string;
-    status: string;
-    currentValue: number;
-  }) => {
-    if (!user) throw new Error("User not authenticated");
-
-    const { error: insertError } = await supabase.from("investments").insert([
-      {
-        user_id: investmentData.userId,
-        product_id: investmentData.productId,
-        amount: investmentData.amount,
-        start_date: investmentData.startDate,
-        end_date: investmentData.endDate,
-        status: investmentData.status,
-        current_value: investmentData.currentValue,
-      },
-    ]);
-
-    if (insertError) throw insertError;
-
-    const newBalance = (user.balance || 0) - investmentData.amount;
-    const newTotalInvested = (user.totalInvested || 0) + investmentData.amount;
-
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({
-        balance: newBalance,
-        totalInvested: newTotalInvested,
-      })
-      .eq("id", user.id);
-
-    if (updateError) throw updateError;
-
-    setUser({ ...user, balance: newBalance, totalInvested: newTotalInvested });
+      setProducts(formattedProducts);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setProducts([]);
+    }
   };
 
+  const fetchUserInvestments = async () => {
+    if (!user) {
+      setUserInvestments([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('investments')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUserInvestments(data || []);
+    } catch (error) {
+      console.error('Error fetching user investments:', error);
+      setUserInvestments([]);
+    }
+  };
+
+  const refreshData = async () => {
+    setIsLoading(true);
+    await Promise.all([fetchProducts(), fetchUserInvestments()]);
+    if (user && fetchProfile) {
+      await fetchProfile(user.id);
+    }
+    setIsLoading(false);
+  };
+
+  const invest = async (investmentData: any) => {
+    await investAction(investmentData);
+    await refreshData();
+  };
+
+  useEffect(() => {
+    refreshData();
+  }, [user?.id]);
+
+  // Set up real-time subscriptions
+  useEffect(() => {
+    const productsChannel = supabase
+      .channel('products-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        fetchProducts();
+      })
+      .subscribe();
+
+    const investmentsChannel = user ? supabase
+      .channel('investments-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'investments', filter: `user_id=eq.${user.id}` }, 
+        () => {
+          fetchUserInvestments();
+        }
+      )
+      .subscribe() : null;
+
+    return () => {
+      supabase.removeChannel(productsChannel);
+      if (investmentsChannel) supabase.removeChannel(investmentsChannel);
+    };
+  }, [user?.id]);
+
   return (
-    <InvestmentContext.Provider
-      value={{
-        products: products || [],
-        userInvestments: userInvestments || [],
-        investments: userInvestments || [],
-        transactions: transactions || [],
-        withdrawalRequests: withdrawalRequests || [],
-        platformTrc20Address,
-        isLoading,
-        invest,
-        claimProfit,
-        getClaimableProfit,
-        getReferralBonus,
-        getUserDownlines,
+    <InvestmentContext.Provider 
+      value={{ 
+        products, 
+        userInvestments, 
+        isLoading, 
+        invest, 
+        refreshData 
       }}
     >
       {children}
@@ -125,7 +132,7 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
 export function useInvestment() {
   const context = useContext(InvestmentContext);
   if (context === undefined) {
-    throw new Error("useInvestment must be used within an InvestmentProvider");
+    throw new Error('useInvestment must be used within an InvestmentProvider');
   }
   return context;
-           }
+}

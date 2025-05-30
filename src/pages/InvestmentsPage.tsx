@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserLayout } from "@/components/UserLayout";
@@ -22,7 +23,7 @@ import { useUserInvestmentData } from "@/hooks/useUserInvestmentData";
 const InvestmentsPage = () => {
   const { user } = useAuth();
   const { products, userInvestments, isLoading } = useInvestment();
-  const { fetchUserInvestments,updateInvestmentProfits } = useUserInvestmentData();
+  const { refetchUserInvestments, updateInvestmentProfits } = useUserInvestmentData();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("products");
 
@@ -32,10 +33,10 @@ const InvestmentsPage = () => {
       return;
     }
     // Fetch investments when switching to "myinvestments" tab
-    if (activeTab === "myinvestments" && fetchUserInvestments) {
-      fetchUserInvestments();
+    if (activeTab === "myinvestments" && refetchUserInvestments) {
+      refetchUserInvestments();
     }
-  }, [user, navigate, activeTab, fetchUserInvestments]);
+  }, [user, navigate, activeTab, refetchUserInvestments]);
 
   if (!user) return null;
 
@@ -43,7 +44,7 @@ const InvestmentsPage = () => {
   const now = new Date();
   const activeInvestments =
     userInvestments?.filter(
-      (inv) => inv.status === "active" && new Date(inv.endDate) > now
+      (inv) => inv.status === "active" && new Date(inv.end_date) > now
     ) || [];
   const completedInvestments =
     userInvestments?.filter(
@@ -219,7 +220,6 @@ const InvestmentsPage = () => {
                           <span>{investment?.status}</span>
                         </div>
 
-                        {/* {investment?.status === "completed" && ( */}
                         <Button
                           className="w-full mt-4"
                           onClick={() => {
@@ -228,8 +228,6 @@ const InvestmentsPage = () => {
                         >
                           Claim Profit
                         </Button>
-
-                        {/* )} */}
                       </CardContent>
                     </Card>
                   ))}

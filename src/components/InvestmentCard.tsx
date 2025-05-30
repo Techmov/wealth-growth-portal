@@ -18,7 +18,7 @@ interface InvestmentCardProps {
 export function InvestmentCard({ product }: InvestmentCardProps) {
   const [isInvesting, setIsInvesting] = useState(false);
   const { invest, userInvestments } = useInvestment();
-  const { user, updateUser } = useAuth();
+  const { user, fetchProfile } = useAuth();
 
   const handleInvest = async () => {
     if (!user) {
@@ -87,7 +87,7 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
         .eq("id", user.id);
 
       if (updateError) throw new Error("Balance update failed");
-      if (updateUser) await updateUser();
+      if (fetchProfile) await fetchProfile(user.id);
 
       toast.success(`Successfully invested in ${product.name}!`);
     } catch (error: any) {
@@ -98,7 +98,6 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
     }
   };
 
-  // Rest of the component remains the same...
   const calculateReturn = () => product.amount * 2;
 
   const riskColorMap = {
