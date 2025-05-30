@@ -32,6 +32,8 @@ export function WithdrawalForm() {
   const handleWithdraw = async (e: FormEvent) => {
     e.preventDefault();
     
+    console.log("Withdrawal form submitted", { amount, withdrawalSource, trc20Address: user.trc20Address });
+    
     const withdrawalAmount = parseFloat(amount);
     if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
       toast.error("Please enter a valid amount");
@@ -72,6 +74,13 @@ export function WithdrawalForm() {
     setIsProcessing(true);
     
     try {
+      console.log("Calling requestWithdrawal with:", {
+        amount: withdrawalAmount,
+        trc20Address: user.trc20Address,
+        withdrawalSource,
+        withdrawalPassword: withdrawalPassword || undefined
+      });
+      
       // Pass the withdrawal amount (fee will be added in the backend)
       await requestWithdrawal(withdrawalAmount, user.trc20Address, withdrawalSource, withdrawalPassword || undefined);
       setAmount("");
@@ -80,6 +89,7 @@ export function WithdrawalForm() {
         description: "An admin will process your withdrawal within 24 hours"
       });
     } catch (error: any) {
+      console.error("Withdrawal error:", error);
       toast.error("Withdrawal request failed", {
         description: error.message || "Something went wrong. Please try again."
       });
@@ -88,20 +98,22 @@ export function WithdrawalForm() {
     }
   };
 
-  // Calculate disabled state
+  // Calculate disabled state - simplified logic
+  const amountValue = parseFloat(amount);
+  const isValidAmount = !isNaN(amountValue) && amountValue >= 10;
+  const hasRequiredPassword = !user.withdrawalPassword || withdrawalPassword.length > 0;
+  
   const isButtonDisabled = isProcessing || 
     !user.trc20Address || 
     statsLoading || 
-    !amount ||
-    parseFloat(amount) <= 0 ||
-    (withdrawalSource === 'profit' && parseFloat(amount) > stats.profitAmount) ||
-    (withdrawalSource === 'referral_bonus' && parseFloat(amount) > stats.referralBonus) ||
-    (user.withdrawalPassword && !withdrawalPassword);
+    !isValidAmount ||
+    !hasRequiredPassword ||
+    (withdrawalSource === 'profit' && amountValue > stats.profitAmount) ||
+    (withdrawalSource === 'referral_bonus' && amountValue > stats.referralBonus);
 
   // Calculate total amount including fee
-  const amountValue = parseFloat(amount);
-  const actualReceiveAmount = !isNaN(amountValue) && amountValue > 0 ? amountValue + WITHDRAWAL_FEE : 0;
-  const totalDeducted = !isNaN(amountValue) && amountValue > 0 ? amountValue : 0;
+  const actualReceiveAmount = isValidAmount ? amountValue + WITHDRAWAL_FEE : 0;
+  const totalDeducted = isValidAmount ? amountValue : 0;
 
   return (
     <Card className="p-6">
@@ -202,7 +214,7 @@ export function WithdrawalForm() {
                 <div className="flex justify-between w-full items-center">
                   <span className="text-xs">You will receive:</span>
                   <span className="text-xs font-medium">
-                    ${!isNaN(amountValue) && amountValue > 0 ? actualReceiveAmount.toFixed(2) : '0.00'}
+                    ${actualReceiveAmount.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -211,7 +223,7 @@ export function WithdrawalForm() {
                 <div className="flex justify-between w-full items-center">
                   <span className="text-xs">Total deducted:</span>
                   <span className="text-xs font-medium">
-                    ${!isNaN(totalDeducted) ? totalDeducted.toFixed(2) : '0.00'}
+                    ${totalDeducted.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -245,6 +257,14 @@ export function WithdrawalForm() {
                 </>
               ) : "Request Withdrawal"}
             </Button>
+            
+            {/* Debug info - remove in production */}
+            <div className="text-xs text-muted-foreground mt-2">
+              Debug: Button disabled = {isButtonDisabled.toString()}, 
+              Amount valid = {isValidAmount.toString()}, 
+              Has TRC20 = {(!!user.trc20Address).toString()},
+              Stats loading = {statsLoading.toString()}
+            </div>
           </div>
         </form>
         
