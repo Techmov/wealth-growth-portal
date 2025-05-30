@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
@@ -18,7 +19,7 @@ interface InvestmentCardProps {
 export function InvestmentCard({ product }: InvestmentCardProps) {
   const [isInvesting, setIsInvesting] = useState(false);
   const { invest, userInvestments } = useInvestment();
-  const { user, fetchProfile } = useAuth();
+  const { user } = useAuth(); // Removed fetchProfile since it doesn't exist in AuthContextType
 
   const handleInvest = async () => {
     if (!user) {
@@ -87,8 +88,7 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
         .eq("id", user.id);
 
       if (updateError) throw new Error("Balance update failed");
-      if (fetchProfile) await fetchProfile(user.id);
-
+      
       toast.success(`Successfully invested in ${product.name}!`);
     } catch (error: any) {
       console.error("Investment failed:", error);
@@ -189,7 +189,7 @@ export function InvestmentCard({ product }: InvestmentCardProps) {
 }
 
 // Calculate the current value including principal and growth
-const getCurrentValue = (investment) => {
+const getCurrentValue = (investment: any) => {
   if (
     investment.starting_value == null ||
     investment.daily_growth_rate == null ||

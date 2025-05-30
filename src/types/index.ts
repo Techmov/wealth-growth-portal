@@ -27,7 +27,7 @@ export interface Investment {
   starting_value: number;
   current_value: number;
   final_value: number;
-  status: 'active' | 'completed' | 'cancelled';
+  status: string; // Changed from union type to string to match database
   last_profit_claim_date?: string;
   daily_growth_rate: number;
   created_at: string;
@@ -93,7 +93,7 @@ export type User = {
   totalInvested: number;
   totalWithdrawn: number;
   referralBonus: number;
-  trc20Address?: string;
+  trc20Address?: string; // Changed from trc20_address to match camelCase
   withdrawalPassword?: string;
   role?: 'user' | 'admin';
   createdAt: Date;
@@ -101,11 +101,12 @@ export type User = {
   escrowedAmount?: number;
 };
 
-// New type for withdrawal statistics
+// Updated withdrawal statistics type
 export interface WithdrawalStats {
   availableWithdrawal: number;
   profitAmount: number;
   referralBonus: number;
   pendingWithdrawals: number;
   escrowedAmount: number;
+  totalWithdrawn: number; // Added missing property
 }

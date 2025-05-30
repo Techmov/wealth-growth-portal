@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, WithdrawalStats } from '@/types';
@@ -10,7 +11,7 @@ export function useWithdrawalStats(user: User | null) {
     referralBonus: 0,
     pendingWithdrawals: 0,
     escrowedAmount: 0,
-    totalWithdrawn: 0,
+    totalWithdrawn: 0, // Now included in type
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +25,7 @@ export function useWithdrawalStats(user: User | null) {
       const [statsRes, totalWithdrawnRes] = await Promise.all([
         supabase
           .from('user_withdrawal_stats')
-          .select('profit_amount, referral_bonus, pending_withdrawals, escrowed_amount, balance') // `balance` now reflects availableWithdrawal
+          .select('profit_amount, referral_bonus, pending_withdrawals, escrowed_amount, balance')
           .eq('user_id', user.id)
           .single(),
         supabase
@@ -41,12 +42,12 @@ export function useWithdrawalStats(user: User | null) {
       const totalWithdrawn = totalWithdrawnRes.data?.reduce((sum, row) => sum + (row.amount || 0), 0) || 0;
 
       setStats({
-        availableWithdrawal: statsRes.data?.balance || 0, // 🆕 reflects full balance
+        availableWithdrawal: statsRes.data?.balance || 0,
         profitAmount: statsRes.data?.profit_amount || 0,
         referralBonus: statsRes.data?.referral_bonus || 0,
         pendingWithdrawals: statsRes.data?.pending_withdrawals || 0,
         escrowedAmount: statsRes.data?.escrowed_amount || 0,
-        totalWithdrawn,
+        totalWithdrawn, // Now properly included
       });
     } catch (error: any) {
       console.error('Error fetching withdrawal stats:', error.message);

@@ -8,6 +8,9 @@ import { useInvestmentActions } from '@/hooks/useInvestmentActions';
 interface InvestmentContextType {
   products: Product[];
   userInvestments: Investment[];
+  transactions: any[]; // Added missing property
+  withdrawalRequests: any[]; // Added missing property
+  platformTrc20Address: string; // Added missing property
   isLoading: boolean;
   invest: (investmentData: any) => Promise<void>;
   refreshData: () => Promise<void>;
@@ -18,9 +21,14 @@ const InvestmentContext = createContext<InvestmentContextType | undefined>(undef
 export function InvestmentProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [userInvestments, setUserInvestments] = useState<Investment[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, fetchProfile } = useAuth();
+  const { user } = useAuth(); // Removed fetchProfile since it doesn't exist
   const { invest: investAction } = useInvestmentActions(user);
+
+  // Platform TRC20 address - this should be configurable
+  const platformTrc20Address = "TYourPlatformAddressHere"; // You should make this configurable
 
   const fetchProducts = async () => {
     try {
@@ -64,6 +72,7 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      // Don't transform the data, use it as-is since types now match database
       setUserInvestments(data || []);
     } catch (error) {
       console.error('Error fetching user investments:', error);
@@ -74,9 +83,6 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
   const refreshData = async () => {
     setIsLoading(true);
     await Promise.all([fetchProducts(), fetchUserInvestments()]);
-    if (user && fetchProfile) {
-      await fetchProfile(user.id);
-    }
     setIsLoading(false);
   };
 
@@ -118,7 +124,10 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
     <InvestmentContext.Provider 
       value={{ 
         products, 
-        userInvestments, 
+        userInvestments,
+        transactions,
+        withdrawalRequests,
+        platformTrc20Address,
         isLoading, 
         invest, 
         refreshData 

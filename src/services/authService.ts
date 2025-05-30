@@ -1,188 +1,181 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { LoginCredentials, SignupCredentials } from "@/types/auth";
+import { supabase } from '@/integrations/supabase/client';
+import { User } from '@/types';
 
-// Withdrawal fee constant
-const WITHDRAWAL_FEE = 0;
-
-// Sign up with email and password
-export const signup = async (credentials: SignupCredentials) => {
-  const { email, password, name, referralCode } = credentials;
-  
+export async function signUpUser(userData: {
+  email: string;
+  password: string;
+  name: string;
+  username: string;
+  referredBy?: string;
+}) {
   try {
-    // Create user with Supabase auth
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: userData.email,
+      password: userData.password,
       options: {
         data: {
-          name,
-          referred_by: referralCode // Include referral code if provided
-        },
-      },
+          name: userData.name,
+          username: userData.username,
+        }
+      }
     });
 
-    if (error) {
-      console.error("Signup error:", error);
-      return Promise.reject(error);
-    }
+    if (authError) throw authError;
 
-    // If successful, return the data
-    return Promise.resolve(data);
+    // Generate a unique referral code
+    const referralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+
+    // Create profile record with referral handling
+    const profileData = {
+      id: authData.user?.id,
+      name: userData.name,
+      username: userData.username,
+      email: userData.email,
+      referral_code: referralCode,
+      referred_by: userData.referredBy || null,
+    };
+
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert([profileData]);
+
+    if (profileError) throw profileError;
+
+    return { user: authData.user, profile: profileData };
   } catch (error) {
-    console.error("Unexpected signup error:", error);
-    return Promise.reject(error);
+    console.error('Signup error:', error);
+    throw error;
   }
-};
+}
 
-// Login with email and password
-export const login = async (credentials: LoginCredentials) => {
-  const { email, password } = credentials;
-  
+export async function signInUser(email: string, password: string) {
   try {
-    console.log("authService: Login attempt with email:", email);
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) {
-      console.error("authService: Login error:", error);
-      return Promise.reject(error);
-    }
+    if (error) throw error;
 
-    console.log("authService: Login successful, returning session");
-    return Promise.resolve(data);
+    return data;
   } catch (error) {
-    console.error("authService: Unexpected login error:", error);
-    return Promise.reject(error);
+    console.error('Sign in error:', error);
+    throw error;
   }
-};
+}
 
-// Logout
-export const logout = async () => {
+export async function signOut() {
   try {
     const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      return Promise.reject(error);
-    }
-    
-    return Promise.resolve();
+    if (error) throw error;
   } catch (error) {
-    return Promise.reject(error);
+    console.error('Sign out error:', error);
+    throw error;
   }
-};
+}
 
-// Fetch user profile
-export const fetchProfile = async (userId: string) => {
+export async function depositFunds(userId: string, amount: number, txHash: string) {
+  try {
+    const { error } = await supabase
+      .from('transactions')
+      .insert([
+        {
+          user_id: userId,
+          type: 'deposit',
+          amount: amount,
+          status: 'pending',
+          tx_hash: txHash,
+          description: `Deposit of $${amount} USDT`,
+        }
+      ]);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Deposit error:', error);
+    throw error;
+  }
+}
+
+export async function requestWithdrawal(
+  userId: string,
+  amount: number,
+  trc20Address: string,
+  withdrawalSource: string = 'profit'
+) {
+  try {
+    const { data, error } = await supabase.rpc('request_withdrawal', {
+      p_user_id: userId,
+      p_amount: amount,
+      p_trc20_address: trc20Address,
+      p_withdrawal_source: withdrawalSource,
+      // Removed p_fee_amount since it doesn't exist in the function signature
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Withdrawal request error:', error);
+    throw error;
+  }
+}
+
+export async function updateProfile(userId: string, updates: Partial<User>) {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Profile update error:', error);
+    throw error;
+  }
+}
+
+export async function bindTrc20Address(userId: string, trc20Address: string) {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ trc20_address: trc20Address })
+      .eq('id', userId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('TRC20 address binding error:', error);
+    throw error;
+  }
+}
+
+export async function getUserProfile(userId: string): Promise<User | null> {
   try {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .maybeSingle();
-      
-    if (error) {
-      return Promise.reject(error);
-    }
-    
-    return Promise.resolve(data);
-  } catch (error) {
-    return Promise.reject(error);
-  }
-};
-
-// Update profile data
-export const updateProfile = async (userId: string, profileData: any) => {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(profileData)
-      .eq('id', userId)
-      .select()
       .single();
-      
-    if (error) {
-      return Promise.reject(error);
-    }
-    
-    return Promise.resolve(data);
-  } catch (error) {
-    return Promise.reject(error);
-  }
-};
 
-// Updated version of updateTrc20Address with proper user ID handling
-export const updateTrc20Address = async (userId: string, address: string, withdrawalPassword?: string) => {
-  try {
-    // Create update data object
-    const updateData: any = { trc20_address: address };
-    
-    // Add withdrawal password if provided
-    if (withdrawalPassword) {
-      updateData.withdrawal_password = withdrawalPassword;
-    }
-    
-    // This now properly passes the user ID and includes the withdrawal password
-    await updateProfile(userId, updateData);
-    return Promise.resolve();
-  } catch (error) {
-    return Promise.reject(error);
-  }
-};
+    if (error) throw error;
 
-// Add deposit function for TransactionsPage
-export const deposit = async (userId: string, amount: number, txHash: string) => {
-  try {
-    // Create a deposit transaction record
-    const { error } = await supabase
-      .from('transactions')
-      .insert({
-        user_id: userId,
-        amount,
-        type: 'deposit',
-        status: 'pending',
-        tx_hash: txHash,
-        description: 'Manual deposit request'
-      });
-      
-    if (error) {
-      return Promise.reject(error);
-    }
-    
-    return Promise.resolve();
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      username: data.username,
+      referralCode: data.referral_code,
+      balance: data.balance,
+      totalInvested: data.total_invested,
+      totalWithdrawn: data.total_withdrawn,
+      referralBonus: data.referral_bonus,
+      trc20Address: data.trc20_address, // Fixed property name
+      withdrawalPassword: data.withdrawal_password,
+      role: data.role,
+      createdAt: new Date(data.created_at),
+      escrowedAmount: data.escrowed_amount,
+    };
   } catch (error) {
-    return Promise.reject(error);
+    console.error('Get user profile error:', error);
+    return null;
   }
-};
-
-// Update the withdrawal request function to include withdrawal source parameter and fee
-export const requestWithdrawal = async (
-  userId: string, 
-  amount: number, 
-  trc20Address: string,
-  withdrawalSource: 'profit' | 'referral_bonus' = 'profit'
-) => {
-  try {
-    // Use the database function for withdrawal requests with updated parameters
-    const { data, error } = await supabase.rpc(
-      'request_withdrawal',
-      {
-        p_user_id: userId,
-        p_amount: amount + WITHDRAWAL_FEE,  // Total amount including fee
-        p_trc20_address: trc20Address,
-        p_withdrawal_source: withdrawalSource,
-        p_fee_amount: WITHDRAWAL_FEE  // Pass fee amount separately
-      }
-    );
-      
-    if (error) {
-      return Promise.reject(error);
-    }
-    
-    return Promise.resolve(data);
-  } catch (error) {
-    return Promise.reject(error);
-  }
-};
+}
