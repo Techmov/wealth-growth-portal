@@ -11,7 +11,7 @@ export function useWithdrawalStats(user: User | null) {
     referralBonus: 0,
     pendingWithdrawals: 0,
     escrowedAmount: 0,
-    totalWithdrawn: 0, // Now included in type
+    totalWithdrawn: 0,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -22,32 +22,53 @@ export function useWithdrawalStats(user: User | null) {
     try {
       setIsLoading(true);
 
-      const [statsRes, totalWithdrawnRes] = await Promise.all([
-        supabase
-          .from('user_withdrawal_stats')
-          .select('profit_amount, referral_bonus, pending_withdrawals, escrowed_amount, balance')
-          .eq('user_id', user.id)
-          .single(),
-        supabase
-          .from('withdrawal_requests')
-          .select('amount')
-          .eq('user_id', user.id)
-          .eq('status', 'approved'),
-      ]);
+      // Get user's current profile data
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('balance, total_invested, referral_bonus, escrowed_amount, total_withdrawn')
+        .eq('id', user.id)
+        .single();
 
-      if (statsRes.error || totalWithdrawnRes.error) {
-        throw statsRes.error || totalWithdrawnRes.error;
+      if (profileError) {
+        throw profileError;
       }
 
-      const totalWithdrawn = totalWithdrawnRes.data?.reduce((sum, row) => sum + (row.amount || 0), 0) || 0;
+      // Get pending withdrawals
+      const { data: pendingWithdrawals, error: withdrawalsError } = await supabase
+        .from('withdrawal_requests')
+        .select('amount')
+        .eq('user_id', user.id)
+        .eq('status', 'pending');
+
+      if (withdrawalsError) {
+        throw withdrawalsError;
+      }
+
+      const pendingAmount = pendingWithdrawals?.reduce((sum, w) => sum + (w.amount || 0), 0) || 0;
+
+      // Calculate profit amount: current balance minus total invested
+      // This represents the actual profit earned from investments
+      const profitAmount = Math.max(0, (profile.balance || 0) - (profile.total_invested || 0));
+      
+      // Available withdrawal is profit + referral bonus minus escrowed amount
+      const availableWithdrawal = profitAmount + (profile.referral_bonus || 0) - (profile.escrowed_amount || 0);
+
+      console.log('Withdrawal stats calculation:', {
+        balance: profile.balance,
+        totalInvested: profile.total_invested,
+        calculatedProfit: profitAmount,
+        referralBonus: profile.referral_bonus,
+        escrowedAmount: profile.escrowed_amount,
+        availableWithdrawal
+      });
 
       setStats({
-        availableWithdrawal: statsRes.data?.balance || 0,
-        profitAmount: statsRes.data?.profit_amount || 0,
-        referralBonus: statsRes.data?.referral_bonus || 0,
-        pendingWithdrawals: statsRes.data?.pending_withdrawals || 0,
-        escrowedAmount: statsRes.data?.escrowed_amount || 0,
-        totalWithdrawn, // Now properly included
+        availableWithdrawal: Math.max(0, availableWithdrawal),
+        profitAmount: profitAmount,
+        referralBonus: profile.referral_bonus || 0,
+        pendingWithdrawals: pendingAmount,
+        escrowedAmount: profile.escrowed_amount || 0,
+        totalWithdrawn: profile.total_withdrawn || 0,
       });
     } catch (error: any) {
       console.error('Error fetching withdrawal stats:', error.message);
@@ -70,6 +91,18 @@ export function useWithdrawalStats(user: User | null) {
             schema: 'public',
             table: 'withdrawal_requests',
             filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            fetchStats();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${user.id}`,
           },
           () => {
             fetchStats();

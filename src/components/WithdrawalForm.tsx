@@ -1,4 +1,3 @@
-
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -32,7 +31,12 @@ export function WithdrawalForm() {
   const handleWithdraw = async (e: FormEvent) => {
     e.preventDefault();
     
-    console.log("Withdrawal form submitted", { amount, withdrawalSource, trc20Address: user.trc20Address });
+    console.log("Withdrawal form submitted", { 
+      amount, 
+      withdrawalSource, 
+      trc20Address: user.trc20Address,
+      stats 
+    });
     
     const withdrawalAmount = parseFloat(amount);
     if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
@@ -48,14 +52,14 @@ export function WithdrawalForm() {
     // Check if amount exceeds available balance (without considering fee)
     if (withdrawalSource === 'profit' && withdrawalAmount > stats.profitAmount) {
       toast.error("Insufficient profit funds for withdrawal", {
-        description: `Available: $${stats.profitAmount.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
+        description: `Available profit: $${stats.profitAmount.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
       });
       return;
     }
     
     if (withdrawalSource === 'referral_bonus' && withdrawalAmount > stats.referralBonus) {
       toast.error("Insufficient referral bonus funds for withdrawal", {
-        description: `Available: $${stats.referralBonus.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
+        description: `Available bonus: $${stats.referralBonus.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
       });
       return;
     }
@@ -263,7 +267,8 @@ export function WithdrawalForm() {
               Debug: Button disabled = {isButtonDisabled.toString()}, 
               Amount valid = {isValidAmount.toString()}, 
               Has TRC20 = {(!!user.trc20Address).toString()},
-              Stats loading = {statsLoading.toString()}
+              Stats loading = {statsLoading.toString()},
+              Profit available = ${stats.profitAmount.toFixed(2)}
             </div>
           </div>
         </form>
