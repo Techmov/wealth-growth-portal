@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, WithdrawalStats } from '@/types';
 import { toast } from 'sonner';
+import { useRealtimeManager } from './useRealtimeManager';
 
 export function useWithdrawalStats(user: User | null) {
   const [stats, setStats] = useState<WithdrawalStats>({
@@ -58,34 +59,26 @@ export function useWithdrawalStats(user: User | null) {
     }
   };
 
+  // Use optimized realtime manager
+  const subscriptions = user ? [
+    {
+      channel: `withdrawal-stats-${user.id}`,
+      table: 'withdrawal_requests',
+      filter: `user_id=eq.${user.id}`,
+      callback: fetchStats
+    },
+    {
+      channel: `profile-stats-${user.id}`,
+      table: 'profiles',
+      filter: `id=eq.${user.id}`,
+      callback: fetchStats
+    }
+  ] : [];
+
+  useRealtimeManager(subscriptions);
+
   useEffect(() => {
     fetchStats();
-
-    if (user) {
-      const channel = supabase
-        .channel('withdrawal-stats-changes')
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'withdrawal_requests',
-            filter: `user_id=eq.${user.id}`,
-          },
-          fetchStats
-        )
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${user.id}`,
-          },
-          fetchStats
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
   }, [user]);
 
   return {

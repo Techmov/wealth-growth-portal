@@ -1,12 +1,12 @@
-import { createContext, useContext, useEffect, ReactNode, useState } from "react";
+
+import { createContext, useContext, ReactNode, useState, useMemo } from "react";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useAuthActions } from "@/hooks/useAuthActions";
-import { useAuthInitialization } from "@/hooks/useAuthInitialization";
+import { useOptimizedAuthInit } from "@/hooks/useOptimizedAuthInit";
 import { User } from "@/types";
 import { Session } from "@supabase/supabase-js";
 import { Loader2 } from "lucide-react";
 
-// Define the type for the authentication context
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -23,10 +23,8 @@ interface AuthContextType {
   resetLoginSuccess: () => void;
 }
 
-// Create the authentication context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Define the authentication provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   // Get auth state from custom hook
   const {
@@ -47,15 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useAuthState();
 
   // Get auth actions from custom hook
-  const {
-    login,
-    signup,
-    logout,
-    updateUser,
-    updateTrc20Address,
-    requestWithdrawal,
-    deposit
-  } = useAuthActions({
+  const authActions = useAuthActions({
     user,
     setUser,
     setIsLoading,
@@ -64,60 +54,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoginSuccess
   });
 
-  // Initialize auth with custom hook
-  useAuthInitialization({
+  // Initialize auth with optimized hook
+  useOptimizedAuthInit({
     setSession,
     setIsLoading,
     fetchProfile
   });
 
-  // Effect for debugging auth state
-  useEffect(() => {
-    console.log("AuthContext: Auth state updated", { 
-      hasSession: !!session, 
-      hasUser: !!user, 
-      isLoading, 
-      loginSuccess 
-    });
-  }, [session, user, isLoading, loginSuccess]);
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    user,
+    session,
+    isLoading,
+    isAdmin,
+    loginSuccess,
+    resetLoginSuccess,
+    ...authActions
+  }), [user, session, isLoading, isAdmin, loginSuccess, authActions]);
 
-  // Use a simpler loading state without additional initialization flag
+  // Simplified loading state - single loading screen
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-2">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading authentication...</p>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Make the authentication details available to all child components
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        isLoading,
-        isAdmin,
-        login,
-        signup,
-        logout,
-        updateUser,
-        updateTrc20Address,
-        requestWithdrawal,
-        deposit,
-        loginSuccess,
-        resetLoginSuccess
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// Define the hook to use the authentication context
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -125,44 +98,3 @@ export function useAuth() {
   }
   return context;
 }
-
-/*
-async function signup(name, email, password, referralCode) {
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-  if (authError) throw authError;
-
-  const userId = authData?.user?.id;
-  if (!userId) throw new Error("User ID not available after sign up.");
-
-  let referred_by = null;
-  let referred_by_code = null;
-  if (referralCode) {
-    const { data: refUser } = await supabase
-      .from("profiles")
-      .select("id, referral_code")
-      .eq("referral_code", referralCode)
-      .single();
-    if (refUser && refUser.id) {
-      referred_by = refUser.id;
-      referred_by_code = refUser.referral_code;
-    }
-  }
-
-  console.log({ referred_by, referred_by_code }); // Debug log
-
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .insert({
-      id: userId,
-      full_name: name,
-      email,
-      referral_code: generateReferralCode(), // your logic
-      referred_by,         // <-- use exact column name
-      referred_by_code,    // <-- use exact column name
-    });
-  if (profileError) throw profileError;
-}
-*/

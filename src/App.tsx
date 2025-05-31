@@ -25,53 +25,38 @@ import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import { useAuth } from "./context/AuthContext";
-import { initializeRealtimeSubscriptions } from "./integrations/supabase/realtime";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import ReferralsPage from "./pages/ReferralsPage";
+import { memo } from "react";
 
-// Add component for admin redirection
-const AdminRedirect = () => {
+// Optimized admin redirect component
+const AdminRedirect = memo(() => {
   const { isAdmin } = useAuth();
   
-  useEffect(() => {
-    console.log("AdminRedirect: Admin status =", isAdmin);
-  }, [isAdmin]);
-  
   if (isAdmin) {
-    console.log("AdminRedirect: Is admin, redirecting to admin dashboard");
     return <Navigate to="/admin" replace />;
   }
   
   return null;
-};
+});
+
+AdminRedirect.displayName = "AdminRedirect";
 
 function App() {
   const [initializing, setInitializing] = useState(true);
-  const [realtimeSub, setRealtimeSub] = useState<{cleanup: () => void} | null>(null);
 
   useEffect(() => {
-    // Check for initial session
+    // Quick session check without heavy operations
     supabase.auth.getSession().then(() => {
       setInitializing(false);
     }).catch(() => {
       setInitializing(false);
     });
-
-    // Initialize realtime subscriptions
-    const subscription = initializeRealtimeSubscriptions();
-    setRealtimeSub(subscription);
-
-    return () => {
-      // Clean up subscriptions when the app unmounts
-      if (realtimeSub) {
-        realtimeSub.cleanup();
-      }
-    };
   }, []);
 
   if (initializing) {
     return <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
+      <div className="animate-spin h-6 w-6 border-b-2 border-primary rounded-full"></div>
     </div>;
   }
 
@@ -83,15 +68,14 @@ function App() {
           <Routes>
             <Route path="/" element={<Index />} />
             
-            {/* Public routes - redirect to dashboard if authenticated */}
+            {/* Public routes */}
             <Route element={<ProtectedRoute requireAuth={false} redirectTo="/dashboard" />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
             </Route>
             
-            {/* Protected routes - require authentication */}
+            {/* Protected routes */}
             <Route element={<ProtectedRoute requireAuth={true} redirectTo="/login" />}>
-              {/* User routes - wrapped with InvestmentProvider */}
               <Route element={
                 <InvestmentProvider>
                   <Outlet />
@@ -106,12 +90,10 @@ function App() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/change-password" element={<ChangePasswordPage />} />
                 <Route path="/referrals" element={<ReferralsPage />} />
-                
-                {/* Redirect old withdrawal route to the withdrawal page */}
                 <Route path="/withdrawal" element={<Navigate to="/withdraw" replace />} />
               </Route>
               
-              {/* Admin routes - require admin role */}
+              {/* Admin routes */}
               <Route element={<ProtectedRoute requireAuth={true} requireAdmin={true} redirectTo="/dashboard" />}>
                 <Route path="/admin" element={
                   <InvestmentProvider>

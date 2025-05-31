@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserLayout } from "@/components/UserLayout";
 import { Heading } from "@/components/ui/heading";
@@ -8,8 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { UserCircle } from "lucide-react";
+import { useRealtimeManager } from "@/hooks/useRealtimeManager";
 
 const ProfilePage = () => {
   const { user, logout, updateTrc20Address } = useAuth();
@@ -20,6 +21,33 @@ const ProfilePage = () => {
   const [profileData, setProfileData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+
+  const fetchProfileDetails = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      // Profile data is already available from auth context
+      setProfileData(user);
+    } catch (error) {
+      console.error("Error setting profile data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  // Set up realtime subscription for profile updates
+  const subscriptions = useMemo(() => 
+    user ? [{
+      channel: `profile-${user.id}`,
+      table: 'profiles',
+      filter: `id=eq.${user.id}`,
+      callback: fetchProfileDetails
+    }] : [], 
+    [user?.id, fetchProfileDetails]
+  );
+
+  useRealtimeManager(subscriptions);
 
   useEffect(() => {
     if (!user) {
@@ -32,52 +60,10 @@ const ProfilePage = () => {
       setTrc20Address(user.trc20Address);
     }
 
-    const fetchProfileDetails = async () => {
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error("Error fetching profile details:", error);
-          return;
-        }
-
-        setProfileData(data);
-      } catch (error) {
-        console.error("Unexpected error fetching profile details:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchProfileDetails();
+  }, [user, navigate, fetchProfileDetails]);
 
-    // Set up real-time subscription for profile updates
-    const channel = supabase
-      .channel('profile-changes')
-      .on('postgres_changes', 
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${user.id}`
-        },
-        () => {
-          fetchProfileDetails();
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, navigate]);
-
-  const handleSaveTrc20Address = async () => {
+  const handleSaveTrc20Address = useCallback(async () => {
     if (!trc20Address.trim()) {
       toast({
         title: "Error",
@@ -106,7 +92,12 @@ const ProfilePage = () => {
     } finally {
       setIsUpdating(false);
     }
-  };
+  }, [trc20Address, updateTrc20Address, toast]);
+
+  const handleLogout = useCallback(async () => {
+    await logout();
+    navigate("/");
+  }, [logout, navigate]);
 
   if (!user) return null;
 
@@ -263,10 +254,7 @@ const ProfilePage = () => {
                   <Button
                     variant="destructive"
                     className="w-full"
-                    onClick={async () => {
-                      await logout();
-                      navigate("/");
-                    }}
+                    onClick={handleLogout}
                   >
                     Logout
                   </Button>
