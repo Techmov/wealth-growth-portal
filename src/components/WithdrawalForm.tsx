@@ -41,17 +41,19 @@ export function WithdrawalForm() {
     const insufficientMsg = {
       profit: `Available profit: $${stats.profitAmount.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
       referral_bonus: `Available bonus: $${stats.referralBonus.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
-      available: `Available balance: $${stats.availableBalance.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
+      available: `Available balance: $${stats.availableWithdrawal.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
     };
 
     const availableCheck = {
       profit: stats.profitAmount,
       referral_bonus: stats.referralBonus,
-      available: stats.availableBalance
+      available: stats.availableWithdrawal
     };
 
     if (withdrawalAmount > availableCheck[withdrawalSource]) {
-      toast.error("Insufficient funds for withdrawal", { description: insufficientMsg[withdrawalSource] });
+      toast.error("Insufficient funds for withdrawal", {
+        description: insufficientMsg[withdrawalSource]
+      });
       return;
     }
 
@@ -115,10 +117,9 @@ export function WithdrawalForm() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Updated to use availableBalance */}
             <div className="flex items-center justify-between px-3 py-2 bg-primary/10 rounded-md border">
               <div className="text-sm font-medium">Available for Withdrawal</div>
-              <div className="font-bold text-lg text-primary">${stats.availableBalance.toFixed(2)}</div>
+              <div className="font-bold text-lg text-primary">${stats.availableWithdrawal.toFixed(2)}</div>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
@@ -132,7 +133,7 @@ export function WithdrawalForm() {
               </div>
               <div className={`px-3 py-2 rounded-md ${withdrawalSource === 'available' ? 'bg-yellow-100 border border-yellow-200' : 'bg-yellow-50'}`}>
                 <div className="text-sm">Available</div>
-                <div className="font-semibold">${stats.availableBalance.toFixed(2)}</div>
+                <div className="font-semibold">${stats.availableWithdrawal.toFixed(2)}</div>
               </div>
             </div>
 
@@ -223,5 +224,4 @@ export function WithdrawalForm() {
       </div>
     </Card>
   );
-    }
-    
+}
