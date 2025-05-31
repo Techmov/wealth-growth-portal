@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, WithdrawalStats } from '@/types';
@@ -98,7 +99,7 @@ export function useWithdrawalStats(user: User | null) {
             event: '*',
             schema: 'public',
             table: 'withdrawal_requests',
-            filter: user_id=eq.${user.id},
+            filter: `user_id=eq.${user.id}`,
           },
           fetchStats
         )
@@ -106,7 +107,7 @@ export function useWithdrawalStats(user: User | null) {
             event: '*',
             schema: 'public',
             table: 'profiles',
-            filter: id=eq.${user.id},
+            filter: `id=eq.${user.id}`,
           },
           fetchStats
         )
@@ -124,5 +125,5 @@ export function useWithdrawalStats(user: User | null) {
     isWithdrawing,
     refetch: fetchStats,
     withdraw,
-  };
+  };
 }
