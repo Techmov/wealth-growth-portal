@@ -135,10 +135,13 @@ const WithdrawalPage = () => {
                   <span className="font-bold">${stats.availableWithdrawal.toFixed(2)}</span>
                 </div>
                 
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">From Profits:</span>
-                  <span>${stats.profitAmount.toFixed(2)}</span>
-                </div>
+                {/*
+<div className="flex justify-between items-center">
+  <span className="text-sm">From Profits:</span>
+  <span>${stats.profitAmount.toFixed(2)}</span>
+</div>
+*/}
+
                 
                 <div className="flex justify-between items-center">
                   <span className="text-sm">From Referrals:</span>
