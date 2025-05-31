@@ -24,7 +24,7 @@ export function useWithdrawalStats(user: User | null) {
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('balance, referral_bonus, escrowed_amount, total_withdrawn')
+        .select('balance, total_invested, referral_bonus, escrowed_amount, total_withdrawn')
         .eq('id', user.id)
         .single();
 
@@ -40,18 +40,28 @@ export function useWithdrawalStats(user: User | null) {
 
       const pendingAmount = pendingWithdrawals?.reduce((sum, w) => sum + (w.amount || 0), 0) || 0;
 
-      // Calculate available withdrawal (balance + referral_bonus - escrowed_amount)
-      const availableWithdrawal = (profile.balance || 0) + (profile.referral_bonus || 0) - (profile.escrowed_amount || 0);
+      // Calculate profit based on your formula
+      // availableWithdrawal = balance + profitAmount + referralBonus - escrowedAmount
+      // We first calculate availableWithdrawal and then profitAmount as availableWithdrawal - referralBonus
+      const balance = profile.balance || 0;
+      const referralBonus = profile.referral_bonus || 0;
+      const escrowedAmount = profile.escrowed_amount || 0;
 
-      // Profit is availableWithdrawal minus referral bonus
-      const profitAmount = availableWithdrawal - (profile.referral_bonus || 0);
+      // Temporarily calculate profit as balance - total_invested (or 0 if negative)
+      const profitFromInvested = Math.max(0, (profile.balance || 0) - (profile.total_invested || 0));
+
+      // Calculate availableWithdrawal as per your formula (including profitFromInvested)
+      const availableWithdrawal = Math.max(0, balance + profitFromInvested + referralBonus - escrowedAmount);
+
+      // Calculate profitAmount = availableWithdrawal - referralBonus, min 0
+      const profitAmount = Math.max(0, availableWithdrawal - referralBonus);
 
       setStats({
-        availableWithdrawal: Math.max(0, availableWithdrawal),
-        profitAmount: Math.max(0, profitAmount),
-        referralBonus: profile.referral_bonus || 0,
+        availableWithdrawal,
+        profitAmount,
+        referralBonus,
         pendingWithdrawals: pendingAmount,
-        escrowedAmount: profile.escrowed_amount || 0,
+        escrowedAmount,
         totalWithdrawn: profile.total_withdrawn || 0,
       });
     } catch (error: any) {
@@ -88,5 +98,4 @@ export function useWithdrawalStats(user: User | null) {
     isLoading,
     refetch: fetchStats,
   };
-        }
-            
+    }
