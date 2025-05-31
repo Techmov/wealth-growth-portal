@@ -19,7 +19,7 @@ export function WithdrawalForm() {
 
   const [amount, setAmount] = useState("");
   const [withdrawalPassword, setWithdrawalPassword] = useState("");
-  const [withdrawalSource, setWithdrawalSource] = useState<'profit' | 'referral_bonus' | 'available'>('profit');
+  const [withdrawalSource, setWithdrawalSource] = useState<'referral_bonus' | 'available'>('available');
   const [isProcessing, setIsProcessing] = useState(false);
 
   if (!user) return null;
@@ -38,23 +38,12 @@ export function WithdrawalForm() {
       return;
     }
 
-    // Debug log to help trace any withdrawal issues
-    console.log({
-      withdrawalAmount,
-      withdrawalSource,
-      profitAmount: stats.profitAmount,
-      referralBonus: stats.referralBonus,
-      availableWithdrawal: stats.availableWithdrawal,
-    });
-
     const insufficientMsg = {
-      profit: `Available profit: $${stats.profitAmount.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
       referral_bonus: `Available bonus: $${stats.referralBonus.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
       available: `Available balance: $${stats.availableWithdrawal.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
     };
 
     const availableCheck = {
-      profit: stats.profitAmount,
       referral_bonus: stats.referralBonus,
       available: stats.availableWithdrawal
     };
@@ -131,18 +120,14 @@ export function WithdrawalForm() {
               <div className="font-bold text-lg text-primary">${stats.availableWithdrawal.toFixed(2)}</div>
             </div>
 
-            {/*<div className="grid grid-cols-3 gap-2">
-              <div className={`px-3 py-2 rounded-md ${withdrawalSource === 'profit' ? 'bg-blue-100 border border-blue-200' : 'bg-blue-50'}`}>
-                <div className="text-sm">Profit</div>
-                <div className="font-semibold">${stats.profitAmount.toFixed(2)}</div>
-              </div>*/}
+            <div className="grid grid-cols-2 gap-2">
               <div className={`px-3 py-2 rounded-md ${withdrawalSource === 'referral_bonus' ? 'bg-green-100 border border-green-200' : 'bg-green-50'}`}>
                 <div className="text-sm">Referral Bonus</div>
-                <div className="font-semibold">${stats.referralBonus.toFixed(2)}</div>
+                <div className="font-bold text-lg text-primary">${stats.referralBonus.toFixed(2)}</div>
               </div>
               <div className={`px-3 py-2 rounded-md ${withdrawalSource === 'available' ? 'bg-yellow-100 border border-yellow-200' : 'bg-yellow-50'}`}>
                 <div className="text-sm">Available</div>
-                <div className="font-semibold">${stats.availableWithdrawal.toFixed(2)}</div>
+                <div className="font-bold text-lg text-primary">${stats.availableWithdrawal.toFixed(2)}</div>
               </div>
             </div>
 
@@ -161,17 +146,6 @@ export function WithdrawalForm() {
               onValueChange={(v) => setWithdrawalSource(v as any)}
               className="flex gap-4"
             >
-              {/* 
-<div className="flex items-center space-x-2">
-  <RadioGroupItem 
-    value="profit" 
-    id="profit" 
-    disabled={stats.profitAmount <= 0}
-  />
-  <Label htmlFor="profit">Profit</Label>
-</div> 
-*/}
-
               <div className="flex items-center space-x-2">
                 <RadioGroupItem 
                   value="referral_bonus" 
@@ -248,5 +222,5 @@ export function WithdrawalForm() {
       </div>
     </Card>
   );
-            }
-    
+  }
+            
