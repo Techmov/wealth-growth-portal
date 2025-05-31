@@ -148,7 +148,7 @@ export function WithdrawalForm() {
 
             <div className="px-3 py-2 bg-orange-50 rounded-md flex justify-between">
               <div className="text-sm text-orange-700">In Escrow (Pending)</div>
-              <div className="font-semibold">${stats.escrowedAmount.toFixed(2)}</div>
+              <div className="font-bold text-lg text-primary">${stats.escrowedAmount.toFixed(2)}</div>
             </div>
           </div>
         )}
@@ -161,14 +161,17 @@ export function WithdrawalForm() {
               onValueChange={(v) => setWithdrawalSource(v as any)}
               className="flex gap-4"
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem 
-                  value="profit" 
-                  id="profit" 
-                  disabled={stats.profitAmount <= 0}
-                />
-                <Label htmlFor="profit">Profit</Label>
-              </div>
+              {/* 
+<div className="flex items-center space-x-2">
+  <RadioGroupItem 
+    value="profit" 
+    id="profit" 
+    disabled={stats.profitAmount <= 0}
+  />
+  <Label htmlFor="profit">Profit</Label>
+</div> 
+*/}
+
               <div className="flex items-center space-x-2">
                 <RadioGroupItem 
                   value="referral_bonus" 
