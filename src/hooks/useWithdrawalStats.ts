@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, WithdrawalStats } from '@/types';
@@ -40,8 +39,17 @@ export function useWithdrawalStats(user: User | null) {
       if (withdrawalsError) throw withdrawalsError;
 
       const pendingAmount = pendingWithdrawals?.reduce((sum, w) => sum + (w.amount || 0), 0) || 0;
+
+      // Calculate profit amount (profit = balance - total invested)
       const profitAmount = Math.max(0, (profile.balance || 0) - (profile.total_invested || 0));
-      const availableWithdrawal = profitAmount + (profile.referral_bonus || 0) - (profile.escrowed_amount || 0);
+
+      // Calculate available withdrawal per your formula:
+      // availableWithdrawal = balance + profitAmount + referral_bonus - escrowed_amount
+      const availableWithdrawal =
+        (profile.balance || 0) +
+        profitAmount +
+        (profile.referral_bonus || 0) -
+        (profile.escrowed_amount || 0);
 
       setStats({
         availableWithdrawal: Math.max(0, availableWithdrawal),
@@ -59,21 +67,22 @@ export function useWithdrawalStats(user: User | null) {
     }
   };
 
-  // Use optimized realtime manager
-  const subscriptions = user ? [
-    {
-      channel: `withdrawal-stats-${user.id}`,
-      table: 'withdrawal_requests',
-      filter: `user_id=eq.${user.id}`,
-      callback: fetchStats
-    },
-    {
-      channel: `profile-stats-${user.id}`,
-      table: 'profiles',
-      filter: `id=eq.${user.id}`,
-      callback: fetchStats
-    }
-  ] : [];
+  const subscriptions = user
+    ? [
+        {
+          channel: `withdrawal-stats-${user.id}`,
+          table: 'withdrawal_requests',
+          filter: `user_id=eq.${user.id}`,
+          callback: fetchStats,
+        },
+        {
+          channel: `profile-stats-${user.id}`,
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
+          callback: fetchStats,
+        },
+      ]
+    : [];
 
   useRealtimeManager(subscriptions);
 
