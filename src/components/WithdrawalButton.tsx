@@ -7,7 +7,7 @@ interface WithdrawalButtonProps {
   isValidAmount: boolean;
   hasRequiredSetup: boolean;
   hasSufficientFunds: boolean;
-  onSubmit: () => void;
+  onSubmit: (e: React.FormEvent) => void;
 }
 
 export function WithdrawalButton({

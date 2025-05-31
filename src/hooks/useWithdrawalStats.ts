@@ -15,7 +15,6 @@ export function useWithdrawalStats(user: User | null) {
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   const fetchStats = async () => {
     if (!user) return;
@@ -59,36 +58,6 @@ export function useWithdrawalStats(user: User | null) {
     }
   };
 
-  const withdraw = async () => {
-    if (!user) return;
-    if (stats.availableWithdrawal <= 0) {
-      toast.error('No available balance to withdraw');
-      return;
-    }
-
-    try {
-      setIsWithdrawing(true);
-
-      const { error } = await supabase.from('withdrawal_requests').insert([
-        {
-          user_id: user.id,
-          amount: stats.availableWithdrawal,
-          status: 'pending',
-        },
-      ]);
-
-      if (error) throw error;
-
-      toast.success('Withdrawal request submitted');
-      fetchStats();
-    } catch (error: any) {
-      console.error('Withdrawal error:', error.message);
-      toast.error('Failed to submit withdrawal');
-    } finally {
-      setIsWithdrawing(false);
-    }
-  };
-
   useEffect(() => {
     fetchStats();
 
@@ -122,8 +91,6 @@ export function useWithdrawalStats(user: User | null) {
   return {
     stats,
     isLoading,
-    isWithdrawing,
     refetch: fetchStats,
-    withdraw,
   };
 }
