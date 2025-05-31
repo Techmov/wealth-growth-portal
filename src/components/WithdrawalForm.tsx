@@ -40,10 +40,11 @@ export function WithdrawalForm() {
     }
 
     const insufficientMsg = {
-      profit: Available profit: $${stats.profitAmount.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)},
-      referral_bonus: Available bonus: $${stats.referralBonus.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)},
-      available: Available balance: $${stats.availableWithdrawal.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}
-    };
+  profit: `Available profit: $${stats.profitAmount.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
+  referral_bonus: `Available bonus: $${stats.referralBonus.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
+  available: `Available balance: $${stats.availableWithdrawal.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
+}
+
 
     const availableCheck = {
       profit: stats.profitAmount,
