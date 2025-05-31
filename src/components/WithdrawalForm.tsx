@@ -131,11 +131,11 @@ export function WithdrawalForm() {
               <div className="font-bold text-lg text-primary">${stats.availableWithdrawal.toFixed(2)}</div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            {/*<div className="grid grid-cols-3 gap-2">
               <div className={`px-3 py-2 rounded-md ${withdrawalSource === 'profit' ? 'bg-blue-100 border border-blue-200' : 'bg-blue-50'}`}>
                 <div className="text-sm">Profit</div>
                 <div className="font-semibold">${stats.profitAmount.toFixed(2)}</div>
-              </div>
+              </div>*/}
               <div className={`px-3 py-2 rounded-md ${withdrawalSource === 'referral_bonus' ? 'bg-green-100 border border-green-200' : 'bg-green-50'}`}>
                 <div className="text-sm">Referral Bonus</div>
                 <div className="font-semibold">${stats.referralBonus.toFixed(2)}</div>
