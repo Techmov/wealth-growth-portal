@@ -24,7 +24,7 @@ export function useWithdrawalStats(user: User | null) {
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('balance, total_invested, referral_bonus, escrowed_amount, total_withdrawn')
+        .select('balance, referral_bonus, escrowed_amount, total_withdrawn')
         .eq('id', user.id)
         .single();
 
@@ -40,21 +40,15 @@ export function useWithdrawalStats(user: User | null) {
 
       const pendingAmount = pendingWithdrawals?.reduce((sum, w) => sum + (w.amount || 0), 0) || 0;
 
-      // Calculate profit based on your formula
-      // availableWithdrawal = balance + profitAmount + referralBonus - escrowedAmount
-      // We first calculate availableWithdrawal and then profitAmount as availableWithdrawal - referralBonus
       const balance = profile.balance || 0;
       const referralBonus = profile.referral_bonus || 0;
       const escrowedAmount = profile.escrowed_amount || 0;
 
-      // Temporarily calculate profit as balance - total_invested (or 0 if negative)
-      const profitFromInvested = Math.max(0, (profile.balance || 0) - (profile.total_invested || 0));
+      // Profit = profile balance
+      const profitAmount = balance;
 
-      // Calculate availableWithdrawal as per your formula (including profitFromInvested)
-      const availableWithdrawal = Math.max(0, balance + profitFromInvested + referralBonus - escrowedAmount);
-
-      // Calculate profitAmount = availableWithdrawal - referralBonus, min 0
-      const profitAmount = Math.max(0, availableWithdrawal - referralBonus);
+      // availableWithdrawal = balance + referralBonus - escrowedAmount, minimum 0
+      const availableWithdrawal = Math.max(0, balance + referralBonus - escrowedAmount);
 
       setStats({
         availableWithdrawal,
@@ -99,3 +93,4 @@ export function useWithdrawalStats(user: User | null) {
     refetch: fetchStats,
   };
     }
+                
