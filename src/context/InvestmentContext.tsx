@@ -28,7 +28,7 @@ export function InvestmentProvider({ children }: { children: ReactNode }) {
   const { invest: investAction } = useInvestmentActions(user);
 
   // Platform TRC20 address - this should be configurable
-  const platformTrc20Address = "TYourPlatformAddressHere"; // You should make this configurable
+  const platformTrc20Address = "TQk4fXaSRJt32y5od9TeQFh6z3zaeyiQcu"; // You should make this configurable
 
   const fetchProducts = async () => {
     try {
