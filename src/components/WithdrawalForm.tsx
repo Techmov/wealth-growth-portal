@@ -38,6 +38,15 @@ export function WithdrawalForm() {
       return;
     }
 
+    // Debug log to help trace any withdrawal issues
+    console.log({
+      withdrawalAmount,
+      withdrawalSource,
+      profitAmount: stats.profitAmount,
+      referralBonus: stats.referralBonus,
+      availableWithdrawal: stats.availableWithdrawal,
+    });
+
     const insufficientMsg = {
       profit: `Available profit: $${stats.profitAmount.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
       referral_bonus: `Available bonus: $${stats.referralBonus.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
@@ -153,15 +162,27 @@ export function WithdrawalForm() {
               className="flex gap-4"
             >
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="profit" id="profit" />
+                <RadioGroupItem 
+                  value="profit" 
+                  id="profit" 
+                  disabled={stats.profitAmount <= 0}
+                />
                 <Label htmlFor="profit">Profit</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="referral_bonus" id="referral_bonus" />
+                <RadioGroupItem 
+                  value="referral_bonus" 
+                  id="referral_bonus" 
+                  disabled={stats.referralBonus <= 0}
+                />
                 <Label htmlFor="referral_bonus">Referral Bonus</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="available" id="available" />
+                <RadioGroupItem 
+                  value="available" 
+                  id="available" 
+                  disabled={stats.availableWithdrawal <= 0}
+                />
                 <Label htmlFor="available">Available</Label>
               </div>
             </RadioGroup>
@@ -224,4 +245,5 @@ export function WithdrawalForm() {
       </div>
     </Card>
   );
-}
+            }
+    
