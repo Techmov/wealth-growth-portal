@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Info } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useWithdrawalStats } from "@/hooks/useWithdrawalStats";
 import { WithdrawalRequirementsAlert } from "./WithdrawalRequirementsAlert";
@@ -40,11 +39,10 @@ export function WithdrawalForm() {
     }
 
     const insufficientMsg = {
-  profit: `Available profit: $${stats.profitAmount.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
-  referral_bonus: `Available bonus: $${stats.referralBonus.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
-  available: `Available balance: $${stats.availableWithdrawal.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
-}
-
+      profit: `Available profit: $${stats.profitAmount.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
+      referral_bonus: `Available bonus: $${stats.referralBonus.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`,
+      available: `Available balance: $${stats.availableWithdrawal.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
+    };
 
     const availableCheck = {
       profit: stats.profitAmount,
@@ -53,7 +51,9 @@ export function WithdrawalForm() {
     };
 
     if (withdrawalAmount > availableCheck[withdrawalSource]) {
-      toast.error("Insufficient funds for withdrawal", { description: insufficientMsg[withdrawalSource] });
+      toast.error("Insufficient funds for withdrawal", {
+        description: insufficientMsg[withdrawalSource]
+      });
       return;
     }
 
@@ -128,10 +128,10 @@ export function WithdrawalForm() {
                 <div className="font-semibold">${stats.profitAmount.toFixed(2)}</div>
               </div>
               <div className={`px-3 py-2 rounded-md ${withdrawalSource === 'referral_bonus' ? 'bg-green-100 border border-green-200' : 'bg-green-50'}`}>
-<div className="text-sm">Referral Bonus</div>
+                <div className="text-sm">Referral Bonus</div>
                 <div className="font-semibold">${stats.referralBonus.toFixed(2)}</div>
               </div>
-              <div className={px-3 py-2 rounded-md ${withdrawalSource === 'available' ? 'bg-yellow-100 border border-yellow-200' : 'bg-yellow-50'}}>
+              <div className={`px-3 py-2 rounded-md ${withdrawalSource === 'available' ? 'bg-yellow-100 border border-yellow-200' : 'bg-yellow-50'}`}>
                 <div className="text-sm">Available</div>
                 <div className="font-semibold">${stats.availableWithdrawal.toFixed(2)}</div>
               </div>
@@ -222,6 +222,7 @@ export function WithdrawalForm() {
           </button>
         </form>
       </div>
-    </Card>
-  );
-}
+    </Card>
+  );
+      }
+                                                        
