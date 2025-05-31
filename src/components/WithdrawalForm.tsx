@@ -123,7 +123,7 @@ export function WithdrawalForm() {
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              <div className={px-3 py-2 rounded-md ${withdrawalSource === 'profit' ? 'bg-blue-100 border border-blue-200' : 'bg-blue-50'}}>
+              <div className={`px-3 py-2 rounded-md ${withdrawalSource === 'profit' ? 'bg-blue-100 border border-blue-200' : 'bg-blue-50'}`}>
                 <div className="text-sm">Profit</div>
                 <div className="font-semibold">${stats.profitAmount.toFixed(2)}</div>
               </div>
