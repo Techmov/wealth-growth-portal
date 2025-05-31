@@ -2,14 +2,15 @@ import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { ArrowDown, Clock, Loader2, Info } from "lucide-react";
+import { Clock, Info } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useWithdrawalStats } from "@/hooks/useWithdrawalStats";
+import { WithdrawalRequirementsAlert } from "./WithdrawalRequirementsAlert";
+import { WithdrawalButton } from "./WithdrawalButton";
 
 // Withdrawal fee constant
 const WITHDRAWAL_FEE = 0;
@@ -49,7 +50,7 @@ export function WithdrawalForm() {
       return;
     }
     
-    // Check if amount exceeds available balance (without considering fee)
+    // Check if amount exceeds available balance
     if (withdrawalSource === 'profit' && withdrawalAmount > stats.profitAmount) {
       toast.error("Insufficient profit funds for withdrawal", {
         description: `Available profit: $${stats.profitAmount.toFixed(2)}, Requested: $${withdrawalAmount.toFixed(2)}`
@@ -85,7 +86,6 @@ export function WithdrawalForm() {
         withdrawalPassword: withdrawalPassword || undefined
       });
       
-      // Pass the withdrawal amount (fee will be added in the backend)
       await requestWithdrawal(withdrawalAmount, user.trc20Address, withdrawalSource, withdrawalPassword || undefined);
       setAmount("");
       setWithdrawalPassword("");
@@ -102,18 +102,14 @@ export function WithdrawalForm() {
     }
   };
 
-  // Calculate disabled state - simplified logic
+  // Calculate validation states
   const amountValue = parseFloat(amount);
   const isValidAmount = !isNaN(amountValue) && amountValue >= 10;
   const hasRequiredPassword = !user.withdrawalPassword || withdrawalPassword.length > 0;
-  
-  const isButtonDisabled = isProcessing || 
-    !user.trc20Address || 
-    statsLoading || 
-    !isValidAmount ||
-    !hasRequiredPassword ||
-    (withdrawalSource === 'profit' && amountValue > stats.profitAmount) ||
-    (withdrawalSource === 'referral_bonus' && amountValue > stats.referralBonus);
+  const hasRequiredSetup = !!user.trc20Address && hasRequiredPassword;
+  const hasSufficientFunds = 
+    (withdrawalSource === 'profit' && amountValue <= stats.profitAmount) ||
+    (withdrawalSource === 'referral_bonus' && amountValue <= stats.referralBonus);
 
   // Calculate total amount including fee
   const actualReceiveAmount = isValidAmount ? amountValue + WITHDRAWAL_FEE : 0;
@@ -127,31 +123,20 @@ export function WithdrawalForm() {
           <p className="text-sm text-muted-foreground">Withdraw funds to your TRC20 wallet</p>
         </div>
 
-        {!user.trc20Address && (
-          <Alert variant="default" className="bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-100 dark:border-yellow-800">
-            <AlertDescription className="flex flex-col space-y-2">
-              <p>Please set your TRC20 address in your profile before requesting a withdrawal.</p>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="self-start dark:text-yellow-100 dark:hover:bg-yellow-800"
-                onClick={() => navigate("/profile")}
-              >
-                Go to Profile Settings
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
+        <WithdrawalRequirementsAlert 
+          hasTrc20Address={!!user.trc20Address}
+          hasWithdrawalPassword={!!user.withdrawalPassword}
+        />
 
         {statsLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between px-3 py-2 bg-muted rounded-md">
-              <div className="text-sm">Available for Withdrawal</div>
-              <div className="font-semibold">${stats.availableWithdrawal.toFixed(2)}</div>
+            <div className="flex items-center justify-between px-3 py-2 bg-primary/10 rounded-md border">
+              <div className="text-sm font-medium">Available for Withdrawal</div>
+              <div className="font-bold text-lg text-primary">${stats.availableWithdrawal.toFixed(2)}</div>
             </div>
             
             <div className="grid grid-cols-2 gap-2">
@@ -249,27 +234,13 @@ export function WithdrawalForm() {
           )}
 
           <div className="pt-2">
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isButtonDisabled}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : "Request Withdrawal"}
-            </Button>
-            
-            {/* Debug info - remove in production */}
-            <div className="text-xs text-muted-foreground mt-2">
-              Debug: Button disabled = {isButtonDisabled.toString()}, 
-              Amount valid = {isValidAmount.toString()}, 
-              Has TRC20 = {(!!user.trc20Address).toString()},
-              Stats loading = {statsLoading.toString()},
-              Profit available = ${stats.profitAmount.toFixed(2)}
-            </div>
+            <WithdrawalButton
+              isProcessing={isProcessing}
+              isValidAmount={isValidAmount}
+              hasRequiredSetup={hasRequiredSetup}
+              hasSufficientFunds={hasSufficientFunds}
+              onSubmit={handleWithdraw}
+            />
           </div>
         </form>
         
