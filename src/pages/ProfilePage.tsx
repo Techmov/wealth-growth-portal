@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserLayout } from "@/components/UserLayout";
@@ -79,7 +78,7 @@ const ProfilePage = () => {
   }, [user, navigate]);
 
   const handleSaveTrc20Address = async () => {
-    if (!trc20Address) {
+    if (!trc20Address.trim()) {
       toast({
         title: "Error",
         description: "Please enter a valid TRC20 address",
@@ -90,11 +89,14 @@ const ProfilePage = () => {
 
     try {
       setIsUpdating(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ trc20_address: trc20Address.trim() })
-      .eq("id", user.id);
+      await updateTrc20Address(trc20Address.trim());
       
+      toast({
+        title: "Success",
+        description: "TRC20 address updated successfully",
+      });
+      
+      setIsEditing(false);
     } catch (error: any) {
       toast({
         title: "Error",
