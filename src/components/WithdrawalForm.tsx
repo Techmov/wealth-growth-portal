@@ -127,8 +127,8 @@ export function WithdrawalForm() {
                 <div className="text-sm">Profit</div>
                 <div className="font-semibold">${stats.profitAmount.toFixed(2)}</div>
               </div>
-              <div className={px-3 py-2 rounded-md ${withdrawalSource === 'referral_bonus' ? 'bg-green-100 border border-green-200' : 'bg-green-50'}}>
-                <div className="text-sm">Referral Bonus</div>
+              <div className={`px-3 py-2 rounded-md ${withdrawalSource === 'referral_bonus' ? 'bg-green-100 border border-green-200' : 'bg-green-50'}`}>
+<div className="text-sm">Referral Bonus</div>
                 <div className="font-semibold">${stats.referralBonus.toFixed(2)}</div>
               </div>
               <div className={px-3 py-2 rounded-md ${withdrawalSource === 'available' ? 'bg-yellow-100 border border-yellow-200' : 'bg-yellow-50'}}>
