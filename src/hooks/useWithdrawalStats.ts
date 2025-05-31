@@ -24,7 +24,7 @@ export function useWithdrawalStats(user: User | null) {
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('balance, total_invested, referral_bonus, escrowed_amount, total_withdrawn')
+        .select('balance, referral_bonus, escrowed_amount, total_withdrawn')
         .eq('id', user.id)
         .single();
 
@@ -40,20 +40,15 @@ export function useWithdrawalStats(user: User | null) {
 
       const pendingAmount = pendingWithdrawals?.reduce((sum, w) => sum + (w.amount || 0), 0) || 0;
 
-      // Calculate profit amount (profit = balance - total invested)
-      const profitAmount = Math.max(0, (profile.balance || 0) - (profile.total_invested || 0));
+      // Calculate available withdrawal (balance + referral_bonus - escrowed_amount)
+      const availableWithdrawal = (profile.balance || 0) + (profile.referral_bonus || 0) - (profile.escrowed_amount || 0);
 
-      // Calculate available withdrawal per your formula:
-      // availableWithdrawal = balance + profitAmount + referral_bonus - escrowed_amount
-      const availableWithdrawal =
-        (profile.balance || 0) +
-        profitAmount +
-        (profile.referral_bonus || 0) -
-        (profile.escrowed_amount || 0);
+      // Profit is availableWithdrawal minus referral bonus
+      const profitAmount = availableWithdrawal - (profile.referral_bonus || 0);
 
       setStats({
         availableWithdrawal: Math.max(0, availableWithdrawal),
-        profitAmount: profitAmount,
+        profitAmount: Math.max(0, profitAmount),
         referralBonus: profile.referral_bonus || 0,
         pendingWithdrawals: pendingAmount,
         escrowedAmount: profile.escrowed_amount || 0,
@@ -67,22 +62,20 @@ export function useWithdrawalStats(user: User | null) {
     }
   };
 
-  const subscriptions = user
-    ? [
-        {
-          channel: `withdrawal-stats-${user.id}`,
-          table: 'withdrawal_requests',
-          filter: `user_id=eq.${user.id}`,
-          callback: fetchStats,
-        },
-        {
-          channel: `profile-stats-${user.id}`,
-          table: 'profiles',
-          filter: `id=eq.${user.id}`,
-          callback: fetchStats,
-        },
-      ]
-    : [];
+  const subscriptions = user ? [
+    {
+      channel: `withdrawal-stats-${user.id}`,
+      table: 'withdrawal_requests',
+      filter: `user_id=eq.${user.id}`,
+      callback: fetchStats
+    },
+    {
+      channel: `profile-stats-${user.id}`,
+      table: 'profiles',
+      filter: `id=eq.${user.id}`,
+      callback: fetchStats
+    }
+  ] : [];
 
   useRealtimeManager(subscriptions);
 
@@ -95,4 +88,5 @@ export function useWithdrawalStats(user: User | null) {
     isLoading,
     refetch: fetchStats,
   };
-}
+        }
+            
